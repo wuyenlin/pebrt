@@ -16,16 +16,7 @@ def get_args_parser():
     return parser
 
 def main(args):
-    src = torch.rand(64, 16, 512)
-    tgt = torch.rand(64, 16, 512)
-    out = Transformer()(src, tgt)
-    print(out.shape)
-
-    for epoch in range(args.epochs):
-        model.train()
+    pass
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("DETR training and evaluation script". parents=[get_args_parser()])
-    args = parser.parse_args()
-
     main(args)
