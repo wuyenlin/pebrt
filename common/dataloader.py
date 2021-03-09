@@ -9,6 +9,17 @@ from numpy import random
 import matplotlib.pyplot as plt
 from PIL import Image, ImageEnhance, ImageFilter
 
+def pop_joints(kpts):
+    '''
+    Get 17 joints from the original 28 
+    '''
+    new_skel = np.zeros([17,3])
+    ext_list = [0,2,4,6,7,9,10,11,14,15,16,
+                18,19,20,23,24,25]
+    for row in range(17):
+        new_skel[row, :] = kpts[ext_list[row], :]
+    return new_skel
+
 class AddGaussianNoise(object):
     def __init__(self, mean=0., std=1.):
         self.std = std
@@ -46,15 +57,23 @@ class Data:
         self.kpts = []
 
         if train:
+            '''
+            For training purpose
+            '''
             for vid in [0,1,2,4,5,6]:
                 for frame in data[vid].keys():
-                    self.kpts.append(data[vid][frame]['keypoints'])
+                    pts = data[vid][frame]['keypoints'].reshape(28,3)
+                    self.kpts.append(pop_joints(pts))
                     self.img_path.append(data[vid][frame]['directory'])
                 
         else:
+            '''
+            For testing purpose
+            '''
             for vid in [7,8]:
                 for frame in data[vid].keys():
-                    self.kpts.append(data[vid][frame]['keypoints'])
+                    pts = data[vid][frame]['keypoints'].reshape(28,3)
+                    self.kpts.append(pop_joints(pts))
                     self.img_path.append(data[vid][frame]['directory'])
 
         self.transforms = transforms
@@ -64,7 +83,7 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            kpts = self.kpts[index].reshape(-1,3)
+            kpts = self.kpts[index]
         except:
             return None
         return img_path, img, kpts
@@ -72,22 +91,19 @@ class Data:
     def __len__(self):
         return len(self.kpts)
     
-    def pop_joints(self):
-        pass
 
 if __name__ == "__main__":
 
-    train_csv = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
-    train_dataset = Data(train_csv, transforms)
+    train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
+    train_dataset = Data(train_npz, transforms)
     trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=False)
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, labels = dataiter.next()
     imshow(torchvision.utils.make_grid(images))
-    print(labels)
     
-    # pts = labels[0]
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    # plt.show()
+    pts = labels[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    plt.show()
