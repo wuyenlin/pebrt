@@ -60,7 +60,7 @@ class Data:
             '''
             For training purpose
             '''
-            for vid in [0,1,2,4,5,6]:
+            for vid in range(6):
                 for frame in data[vid].keys():
                     pts = data[vid][frame]['keypoints'].reshape(28,3)
                     self.kpts.append(pop_joints(pts))
@@ -70,7 +70,7 @@ class Data:
             '''
             For testing purpose
             '''
-            for vid in [7,8]:
+            for vid in range(6,8):
                 for frame in data[vid].keys():
                     pts = data[vid][frame]['keypoints'].reshape(28,3)
                     self.kpts.append(pop_joints(pts))
@@ -95,7 +95,7 @@ class Data:
 if __name__ == "__main__":
 
     train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
-    train_dataset = Data(train_npz, transforms)
+    train_dataset = Data(train_npz, transforms, False)
     trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=False)
     print("data loaded!")
     dataiter = iter(trainloader)
