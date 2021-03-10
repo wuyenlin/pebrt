@@ -55,6 +55,7 @@ class Data:
 
         self.img_path = []
         self.kpts = []
+        self.transforms = transforms
 
         if train:
             '''
@@ -63,7 +64,7 @@ class Data:
             for vid in range(6):
                 for frame in data[vid].keys():
                     pts = data[vid][frame]['keypoints'].reshape(28,3)
-                    self.kpts.append(pop_joints(pts))
+                    self.kpts.append(torch.from_numpy(pop_joints(pts)))
                     self.img_path.append(data[vid][frame]['directory'])
                 
         else:
@@ -73,10 +74,9 @@ class Data:
             for vid in range(6,8):
                 for frame in data[vid].keys():
                     pts = data[vid][frame]['keypoints'].reshape(28,3)
-                    self.kpts.append(pop_joints(pts))
+                    self.kpts.append(torch.from_numpy(pop_joints(pts)))
                     self.img_path.append(data[vid][frame]['directory'])
 
-        self.transforms = transforms
 
     def __getitem__(self, index):
         try:
@@ -96,14 +96,16 @@ if __name__ == "__main__":
 
     train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
     train_dataset = Data(train_npz, transforms, False)
-    trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=False)
+    print(len(train_dataset))
+    print(len(train_dataset.kpts))
+    trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, labels = dataiter.next()
-    imshow(torchvision.utils.make_grid(images))
+    # imshow(torchvision.utils.make_grid(images))
     
-    pts = labels[0]
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    plt.show()
+    # pts = labels[0]
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    # plt.show()
