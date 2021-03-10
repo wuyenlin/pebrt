@@ -20,8 +20,6 @@ class Backbone(nn.Module):
         x = self.model.relu(x)
         x = self.model.maxpool(x)
         x = self.model.layer1(x)
-        # x = self.model.layer2(x)
-        # x = self.model.layer3(x)
         return x
 
 class PositionalEncoder(nn.Module):
@@ -82,7 +80,6 @@ class TransformerEncoder(nn.Module):
         x = self.transformer(x) 
         x = x.permute(1, 2, 0).reshape(bs, c, h, w)
         x = self.avgpool(x)
-        print(x.shape)
         x = self.lin_out(x.squeeze(2).squeeze(2))
 
         # x = self.deconv_layer(x)

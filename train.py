@@ -112,12 +112,12 @@ if __name__ == "__main__":
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
 
-    # optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
-    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
+    # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     train_list, val_list = train(args.epoch, train_loader, val_loader, net, optimizer, scheduler)
 
     exp_name = "log/{}/resnet_e50_bs{}_lr{}".format(args.sess, args.bs, str(args.lr).replace(".",""))
-    PATH = exp_name + ".pth"
+    PATH = exp_name + ".bin"
     torch.save(net.state_dict(), PATH)

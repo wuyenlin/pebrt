@@ -13,7 +13,7 @@ def pop_joints(kpts):
     '''
     Get 17 joints from the original 28 
     '''
-    new_skel = np.zeros([17,3])
+    new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
     ext_list = [0,2,4,6,7,9,10,11,14,15,16,
                 18,19,20,23,24,25]
     for row in range(17):
@@ -54,7 +54,8 @@ class Data:
         data = data["arr_0"].reshape(1,-1)[0]
 
         self.img_path = []
-        self.kpts = []
+        self.gt_pts2d = []
+        self.gt_pts3d = []
         self.transforms = transforms
 
         if train:
@@ -63,8 +64,10 @@ class Data:
             '''
             for vid in range(6):
                 for frame in data[vid].keys():
-                    pts = data[vid][frame]['keypoints'].reshape(28,3)
-                    self.kpts.append(torch.from_numpy(pop_joints(pts)))
+                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(28,2)
+                    self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
+                    pts_3d = (data[vid][frame]['3d_keypoints']/1000).reshape(28,3)
+                    self.gt_pts3d.append(torch.from_numpy(pop_joints(pts_3d)))
                     self.img_path.append(data[vid][frame]['directory'])
                 
         else:
@@ -73,8 +76,10 @@ class Data:
             '''
             for vid in range(6,8):
                 for frame in data[vid].keys():
-                    pts = data[vid][frame]['keypoints'].reshape(28,3)
-                    self.kpts.append(torch.from_numpy(pop_joints(pts)))
+                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(28,2)
+                    self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
+                    pts_3d = (data[vid][frame]['3d_keypoints']/1000).reshape(28,3)
+                    self.gt_pts3d.append(torch.from_numpy(pop_joints(pts_3d)))
                     self.img_path.append(data[vid][frame]['directory'])
 
 
@@ -83,25 +88,26 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            kpts = self.kpts[index]
+            kpts_2d = self.gt_pts2d[index]
+            kpts_3d = self.gt_pts3d[index]
         except:
             return None
-        return img_path, img, kpts
+        return img_path, img, kpts_2d, kpts_3d
 
     def __len__(self):
-        return len(self.kpts)
+        return len(self.img_path)
     
 
 if __name__ == "__main__":
 
     train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
-    train_dataset = Data(train_npz, transforms, False)
+    train_dataset = Data(train_npz, transforms, True)
     print(len(train_dataset))
-    print(len(train_dataset.kpts))
+    print(train_dataset[0])
     trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
-    img_path, images, labels = dataiter.next()
+    img_path, images, labels, _ = dataiter.next()
     # imshow(torchvision.utils.make_grid(images))
     
     # pts = labels[0]
