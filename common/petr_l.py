@@ -6,6 +6,7 @@ from torch.nn import init
 from torchvision import transforms
 from torchvision import models
 from torchsummary import summary
+from common.hrnet import HRNet
 
 class Backbone(nn.Module):
     def __init__(self):
@@ -13,6 +14,7 @@ class Backbone(nn.Module):
         model_ft = models.resnet50(pretrained=True)
         self.model = model_ft
         self.fc = nn.Sequential(
+            nn.Dropout(p=0.8, inplace=False),
             nn.Linear(2048, 256),
             nn.Dropout(p=0.6, inplace=False),
             nn.Linear(256, 34),
@@ -36,7 +38,7 @@ class PositionalEncoder(nn.Module):
     """
     Original PE from Attention is All You Need
     """
-    def __init__(self, d_model, max_seq_len=1000, dropout=0.1):
+    def __init__(self, d_model, max_seq_len=10, dropout=0.1):
         super().__init__()
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
@@ -77,28 +79,55 @@ class TransformerEncoder(nn.Module):
         self.num_joints_out = num_joints_out 
         
     def forward(self, x):
-        x = x.unsqueeze(1)
-        bs, n, j = x.shape
-        x = self.transformer(self.pe(x)) 
-        x = self.lin_out(x)
+        x = x.flatten(1).unsqueeze(1) #(bs,1,34)
+        bs = x.size(0)
+        x = self.pe(x)
+        x = self.transformer(x)
+        x = self.lin_out(x).squeeze(1)
 
-        return x.reshape(bs, n, self.num_joints_out,3)
+        return x.reshape(bs, self.num_joints_out, 3)
 
+def normalize_screen_coordinates(X, w, h): 
+    """
+    referring to common/camera.py of facebookresearch/VideoPose3D 
+    """
+    assert X.shape[-1] == 2
+    
+    # Normalize so that [0, w] is mapped to [-1, 1], while preserving the aspect ratio
+    return X/w*2 - [1, h/w]
+
+def get_joints(heatmap):
+    """
+    turn input heatmap (bs,17,64,48) into coordinates of 17 joints
+    """
+    assert heatmap.shape[1:] == (17,64,48), "{}".format(heatmap.shape)
+    bs = heatmap.size(0)
+    joints_2d = np.zeros([bs,17,2])
+    heatmap = heatmap.cpu().detach().numpy()
+    for i, human in enumerate(heatmap):
+        for j, joint in enumerate(human):
+            pt = np.unravel_index(np.argmax(joint), (64,48))
+            joints_2d[i,j,:] = np.asarray(pt)
+        joints_2d[i,:,:] = normalize_screen_coordinates(joints_2d[i,:,:], 48, 64)
+    assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
+    return torch.Tensor(joints_2d)
 
 class PETR_L(nn.Module):
-    def __init__(self, backbone, transformer):
+    def __init__(self):
         super().__init__()
-        self.backbone = Backbone()
+        self.backbone = HRNet(32, 17, 0.1)
+        self.backbone.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
         self.transformer = TransformerEncoder()
                                     
+
     def forward(self, x):
         x = self.backbone(x)
-        x = self.transformer(x)
+        x = get_joints(x)
+        out_x = self.transformer(x.cuda())
 
-        return x   
+        return out_x
 
 
 if __name__ == "__main__":
-
-    model = PETR_L(Backbone, TransformerEncoder)
-    summary(model, (3,224,224))
+    # model = HRNet(32, 17, 0.1)
+    # model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
