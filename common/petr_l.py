@@ -129,5 +129,6 @@ class PETR_L(nn.Module):
 
 
 if __name__ == "__main__":
+    pass
     # model = HRNet(32, 17, 0.1)
     # model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
