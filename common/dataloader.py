@@ -31,13 +31,6 @@ class AddGaussianNoise(object):
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
-transforms = transforms.Compose([
-        transforms.Resize([224,224]),
-        transforms.CenterCrop(180),
-        transforms.ToTensor(),  
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ]) 
-
 def imshow(img):
     img = img / 2 + 0.5   
     npimg = img.numpy()
@@ -64,7 +57,8 @@ class Data:
             '''
             for vid in range(6):
                 for frame in data[vid].keys():
-                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(28,2)
+                    # TODO: 224/2048 might be wrong
+                    pts_2d = (data[vid][frame]['2d_keypoints']*224/2048).reshape(28,2)
                     self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
                     pts_3d = (data[vid][frame]['3d_keypoints']/1000).reshape(28,3)
                     self.gt_pts3d.append(torch.from_numpy(pop_joints(pts_3d)))
@@ -76,7 +70,7 @@ class Data:
             '''
             for vid in range(6,8):
                 for frame in data[vid].keys():
-                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(28,2)
+                    pts_2d = (data[vid][frame]['2d_keypoints']*224/2048).reshape(28,2)
                     self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
                     pts_3d = (data[vid][frame]['3d_keypoints']/1000).reshape(28,3)
                     self.gt_pts3d.append(torch.from_numpy(pop_joints(pts_3d)))
@@ -99,6 +93,12 @@ class Data:
     
 
 if __name__ == "__main__":
+    transforms = transforms.Compose([
+        transforms.Resize([256,192]),
+        transforms.ToTensor(),  
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
+    ])
 
     train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
     train_dataset = Data(train_npz, transforms, True)
@@ -108,10 +108,10 @@ if __name__ == "__main__":
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, labels, _ = dataiter.next()
-    # imshow(torchvision.utils.make_grid(images))
+    imshow(torchvision.utils.make_grid(images))
     
-    # pts = labels[0]
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    # plt.show()
+    pts = labels[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    plt.show()

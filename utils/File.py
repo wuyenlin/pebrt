@@ -45,15 +45,20 @@ class All(Video):
             return True
         return False
 
-    def save_cropped(self, save_img=False, save_txt=True):
+    def save_cropped(self, save_img=False, save_txt=True, full=False):
         data = {}
         cap = cv.VideoCapture(self.avi_path)
         if (cap.isOpened()==False):
             print("Error opening the video file.")
+
         try:
-            os.mkdir("dataset/S{}/Seq{}/imageSequence/video_{}".format(self.S, self.Se, self.vid))
+            if full:
+                os.mkdir("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S, self.Se, self.vid))
+            else:
+                os.mkdir("dataset/S{}/Seq{}/imageSequence/video_{}".format(self.S, self.Se, self.vid))
         except FileExistsError:
             pass
+
         while (cap.isOpened()):
             print("processing S{} Seq{} video_{}".format(self.S, self.Se, self.vid))
             for k in tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT)))):
@@ -67,13 +72,21 @@ class All(Video):
                     if not self.check_valid(k, start, end): 
                         continue
 
-                    filename = os.path.join("dataset", "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+
+                    if full:
+                        filename = os.path.join("dataset", "S{}/Seq{}/imageSequence/full_video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+                    else:
+                        filename = os.path.join("dataset", "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+
                     if end[0]-start[0]==end[1]-start[1]:
                         data[k] = {}
                         if save_img:
                             try:
                                 cropped_frame = frame[start[1]:end[1], start[0]:end[0]]
-                                cv.imwrite(filename, cropped_frame)
+                                if full:
+                                    cv.imwrite(filename, frame)
+                                else:
+                                    cv.imwrite(filename, cropped_frame)
                             except FileExistsError:
                                 pass
 
@@ -83,14 +96,18 @@ class All(Video):
                             data[k]["3d_keypoints"] = self.objPoint.reshape(1,-1)
 
             break
-        np.savez_compressed("dataset/S{}/Seq{}/imageSequence/video_{}".format(self.S,self.Se,self.vid), data)
+        if full:
+            np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
+        else:
+            np.savez_compressed("dataset/S{}/Seq{}/imageSequence/video_{}".format(self.S,self.Se,self.vid), data)
+
         cap.release()
 
 def save_frame(char):
     for seq in (1,2):
         for vid in [0,1,2,4,5,6,7,8]:
             v = All(char, seq, vid)
-            v.save_cropped(False, True)
+            v.save_cropped(True, True)
 
 if __name__ == "__main__": 
     char_list = sys.argv[1]
