@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 from torch import nn, Tensor
@@ -260,17 +261,14 @@ class HRNet(nn.Module):
 
         x = self.stage4(x)
         x = self.final_layer(x[0])
-        x = self.avgpool(x)
 
         return x
-
 
 if __name__ == '__main__':
     transforms = transforms.Compose([
         transforms.Resize([256,192]),
-        # transforms.CenterCrop(180),
         transforms.ToTensor(),  
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]) 
     model = HRNet(32, 17, 0.1)
     model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
@@ -282,17 +280,23 @@ if __name__ == '__main__':
     output = model(img)
     print(output.shape) #(1,17,64,48)
 
-    # show heatmap
-    # output = torch.einsum("ijk->jk", [output.squeeze(0)])
-    # print(output.shape)
-    # out_cpu = output.cpu().detach().numpy()
-    # print(out_cpu/17)
 
-    # plt.figure(1)
-    # plt.subplot(121)
-    # plt.imshow(Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006139.jpg"))
-    # plt.figure(1)
-    # plt.subplot(122)
-    # plt.imshow(out_cpu)
-    # plt.colorbar()
-    # plt.show()
+    joints_2d = np.zeros([17,2])
+    out = output.cpu().detach().numpy()
+    for i, human in enumerate(out):
+        for j, joint in enumerate(human):
+            pt = np.asarray(np.unravel_index(np.argmax(joint), (64,48)))
+            joints_2d[j,:] = pt
+    print(joints_2d)
+    # # show heatmap
+
+    output = torch.einsum("ijk->jk", [output.squeeze(0)])
+    out_cpu = output.cpu().detach().numpy()
+    plt.figure(1)
+    plt.subplot(121)
+    plt.imshow(Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006139.jpg"))
+    plt.figure(1)
+    plt.subplot(122)
+    plt.imshow(out_cpu)
+    plt.colorbar()
+    plt.show()
