@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from utils.options import args_parser
-from common.model import *
+from common.petr_l import *
 from common.dataloader import *
 from common.loss import *
 
@@ -24,22 +24,22 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
     losses_3d_train = []
     losses_3d_valid = []
 
-    epoch_loss_3d_train = 0.0
-    epoch_loss_3d_valid = 0.0
-
     # for ep in range(epoch):
     for ep in tqdm(range(epoch)):
         start_time = time()
+        epoch_loss_3d_train = 0.0
+        epoch_loss_3d_valid = 0.0
         N = 0
     # train
         for batch_idx, data in enumerate(train_loader,1):
-            _, images, inputs_3d= data
+            _, images, _, inputs_3d= data
             inputs_3d = inputs_3d.to(args.device)
             images = images.to(args.device)
 
             optimizer.zero_grad()
 
             predicted_3d_pos = net(images)
+
             loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
             N += inputs_3d.shape[0]*inputs_3d.shape[1]
@@ -53,13 +53,14 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
     # val
         with torch.no_grad():
             for batch_idx, data in enumerate(val_loader,1):
-                _, images, inputs_3d= data
+                _, images, _, inputs_3d= data
                 inputs_3d = inputs_3d.to(args.device)
                 images = images.to(args.device)
 
                 optimizer.zero_grad()
 
                 predicted_3d_pos = net(images)
+
                 loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
                 N += inputs_3d.shape[0]*inputs_3d.shape[1]
@@ -92,7 +93,7 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
 if __name__ == "__main__":
     args = args_parser()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = PETR(Backbone, TransformerEncoder)
+    net = PETR_L()
     net = net.to(args.device)
 
     model_params = 0
@@ -101,16 +102,15 @@ if __name__ == "__main__":
     print('INFO: Trainable parameter count:', model_params)
 
     transforms = transforms.Compose([
-        transforms.Resize([224,224]),
-        # transforms.CenterCrop(180),
+        transforms.Resize([256,192]),
         transforms.ToTensor(),  
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     train_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=False, collate_fn=collate_fn)
 
     optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
     # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
@@ -118,6 +118,5 @@ if __name__ == "__main__":
 
     train_list, val_list = train(args.epoch, train_loader, val_loader, net, optimizer, scheduler)
 
-    exp_name = "log/{}/resnet_e50_bs{}_lr{}".format(args.sess, args.bs, str(args.lr).replace(".",""))
-    PATH = exp_name + ".bin"
-    torch.save(net.state_dict(), PATH)
+    exp_name = "epoch_{}.bin".format(args.epoch)
+    torch.save(net.state_dict(), exp_name)
