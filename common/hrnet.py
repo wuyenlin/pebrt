@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torch import nn, Tensor
 from PIL import Image
+import matplotlib
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from collections import OrderedDict
@@ -147,6 +148,8 @@ class StageModule(nn.Module):
         return x_fused
 
 
+
+
 class HRNet(nn.Module):
     def __init__(self, c=48, nof_joints=17, bn_momentum=0.1):
         super(HRNet, self).__init__()
@@ -264,11 +267,38 @@ class HRNet(nn.Module):
 
         return x
 
+def normalize_screen_coordinates(X, w, h): 
+    """
+    referring to common/camera.py of facebookresearch/VideoPose3D 
+    """
+    assert X.shape[-1] == 2
+    
+    # Normalize so that [0, w] is mapped to [-1, 1], while preserving the aspect ratio
+    return X/w*2 - [1, h/w]
+
+def get_joints(heatmap):
+    """
+    turn input heatmap (bs,17,64,48) into coordinates of 17 joints
+    """
+    assert heatmap.shape[1:] == (17,56,56), "{}".format(heatmap.shape)
+    bs = heatmap.size(0)
+    joints_2d = np.zeros([bs,17,2])
+    heatmap = heatmap.cpu().detach().numpy()
+    for i, human in enumerate(heatmap):
+        for j, joint in enumerate(human):
+            pt = np.unravel_index(np.argmax(joint), (56,56))
+            joints_2d[i,j,:] = np.asarray(pt)
+        # joints_2d[i,:,:] = normalize_screen_coordinates(joints_2d[i,:,:], 56, 56)
+    assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
+    joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
+    return torch.Tensor(joints_2d)
+
+
 if __name__ == '__main__':
     transforms = transforms.Compose([
         transforms.Resize([256,192]),
         transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
     model = HRNet(32, 17, 0.1)
     model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
@@ -280,23 +310,26 @@ if __name__ == '__main__':
     output = model(img)
     print(output.shape) #(1,17,64,48)
 
-
-    joints_2d = np.zeros([17,2])
     out = output.cpu().detach().numpy()
+    joints_2d = np.zeros([17,2])
     for i, human in enumerate(out):
         for j, joint in enumerate(human):
             pt = np.asarray(np.unravel_index(np.argmax(joint), (64,48)))
             joints_2d[j,:] = pt
     print(joints_2d)
-    # # show heatmap
 
+    # # # show heatmap
     output = torch.einsum("ijk->jk", [output.squeeze(0)])
     out_cpu = output.cpu().detach().numpy()
     plt.figure(1)
-    plt.subplot(121)
+    plt.subplot(131)
     plt.imshow(Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006139.jpg"))
     plt.figure(1)
-    plt.subplot(122)
+    plt.subplot(132)
     plt.imshow(out_cpu)
     plt.colorbar()
+    plt.figure(1)
+    plt.subplot(133)
+    plt.scatter(joints_2d[:,1], joints_2d[:,0])
+    plt.gca().invert_yaxis()
     plt.show()
