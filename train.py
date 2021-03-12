@@ -5,7 +5,6 @@ from common.petr_l import *
 from common.dataloader import *
 from common.loss import *
 
-
 import sys
 import matplotlib.pyplot as plt
 import matplotlib
@@ -99,21 +98,23 @@ if __name__ == "__main__":
     model_params = 0
     for parameter in net.parameters():
         model_params += parameter.numel()
+    for param in net.backbone.parameters():
+        param.requires_grad = False
     print('INFO: Trainable parameter count:', model_params)
 
     transforms = transforms.Compose([
-        transforms.Resize([256,192]),
+        transforms.Resize([224,224]),
         transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
 
     train_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=8, drop_last=False, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
 
-    optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
-    # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    # optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
+    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     train_list, val_list = train(args.epoch, train_loader, val_loader, net, optimizer, scheduler)
