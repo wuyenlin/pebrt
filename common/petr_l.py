@@ -6,39 +6,13 @@ from torch.nn import init
 from torchvision import transforms
 from torchvision import models
 from torchsummary import summary
-from common.hrnet import HRNet
-
-class Backbone(nn.Module):
-    def __init__(self):
-        super().__init__()
-        model_ft = models.resnet50(pretrained=True)
-        self.model = model_ft
-        self.fc = nn.Sequential(
-            nn.Dropout(p=0.8, inplace=False),
-            nn.Linear(2048, 256),
-            nn.Dropout(p=0.6, inplace=False),
-            nn.Linear(256, 34),
-        )
-
-    def forward(self, x):
-        x = self.model.conv1(x)
-        x = self.model.bn1(x)
-        x = self.model.relu(x)
-        x = self.model.maxpool(x)
-        x = self.model.layer1(x)
-        x = self.model.layer2(x)
-        x = self.model.layer3(x)
-        x = self.model.layer4(x)
-        x = self.model.avgpool(x)
-        x = x.view(x.size(0), x.size(1))
-        x = self.fc(x)
-        return x
+from common.hrnet import *
 
 class PositionalEncoder(nn.Module):
     """
     Original PE from Attention is All You Need
     """
-    def __init__(self, d_model, max_seq_len=10, dropout=0.1):
+    def __init__(self, d_model, max_seq_len=1, dropout=0.1):
         super().__init__()
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
@@ -54,6 +28,7 @@ class PositionalEncoder(nn.Module):
  
     def forward(self, x):
         bs, seq_len, d_model = x.size(0), x.size(1), x.size(2)
+        x *= math.sqrt(d_model)
         pe = self.pe[:seq_len, :d_model]
         pe_all = pe.repeat(bs, 1, 1)
 
@@ -87,30 +62,6 @@ class TransformerEncoder(nn.Module):
 
         return x.reshape(bs, self.num_joints_out, 3)
 
-def normalize_screen_coordinates(X, w, h): 
-    """
-    referring to common/camera.py of facebookresearch/VideoPose3D 
-    """
-    assert X.shape[-1] == 2
-    
-    # Normalize so that [0, w] is mapped to [-1, 1], while preserving the aspect ratio
-    return X/w*2 - [1, h/w]
-
-def get_joints(heatmap):
-    """
-    turn input heatmap (bs,17,64,48) into coordinates of 17 joints
-    """
-    assert heatmap.shape[1:] == (17,64,48), "{}".format(heatmap.shape)
-    bs = heatmap.size(0)
-    joints_2d = np.zeros([bs,17,2])
-    heatmap = heatmap.cpu().detach().numpy()
-    for i, human in enumerate(heatmap):
-        for j, joint in enumerate(human):
-            pt = np.unravel_index(np.argmax(joint), (64,48))
-            joints_2d[i,j,:] = np.asarray(pt)
-        joints_2d[i,:,:] = normalize_screen_coordinates(joints_2d[i,:,:], 48, 64)
-    assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
-    return torch.Tensor(joints_2d)
 
 class PETR_L(nn.Module):
     def __init__(self):
@@ -119,10 +70,9 @@ class PETR_L(nn.Module):
         self.backbone.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
         self.transformer = TransformerEncoder()
                                     
-
     def forward(self, x):
         x = self.backbone(x)
-        x = get_joints(x)
+        x = hmap_joints(x)
         out_x = self.transformer(x.cuda())
 
         return out_x
