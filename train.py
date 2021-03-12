@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-from utils.options import args_parser
-from common.petr_l import *
+from common.options import args_parser
+from common.petr import *
 from common.dataloader import *
 from common.loss import *
 
@@ -83,23 +83,33 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
             plt.ylabel('MPJPE (m)')
             plt.xlabel('Epoch')
             plt.xlim((3, epoch))
-            plt.savefig('loss_3d.png')
+            plt.savefig('./checkpoint/loss_3d.png')
 
             plt.close('all')
+
+        if ep%10 == 0:
+            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
+            torch.save(net.state_dict(), exp_name)
+
     print('Finished Training.')
     return losses_3d_train , losses_3d_valid
 
 if __name__ == "__main__":
     args = args_parser()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = PETR_L()
+    net = PETR(lift=args.lift)
     net = net.to(args.device)
+    if args.lift:
+        print("INFO: Model loaded. Using Lifting model.")
+        # freeze HRNet
+        for param in net.backbone.parameters():
+            param.requires_grad = False
+    else:
+        print("INFO: Model loaded. Using End-to-end model.")
 
     model_params = 0
     for parameter in net.parameters():
         model_params += parameter.numel()
-    for param in net.backbone.parameters():
-        param.requires_grad = False
     print('INFO: Trainable parameter count:', model_params)
 
     transforms = transforms.Compose([
@@ -114,10 +124,8 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
 
     # optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
-    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    optimizer = optim.Adadelta(net.parameters(), lr=args.lr, rho=0.9, eps=1e-06, weight_decay=0)
+    # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     train_list, val_list = train(args.epoch, train_loader, val_loader, net, optimizer, scheduler)
-
-    exp_name = "epoch_{}.bin".format(args.epoch)
-    torch.save(net.state_dict(), exp_name)
