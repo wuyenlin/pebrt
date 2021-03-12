@@ -336,7 +336,6 @@ if __name__ == '__main__':
     ]) 
     model = HRNet(32, 17, 0.1)
     model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
-    # model.load_state_dict(torch.load('./finetune_epoch_50.bin'))
     img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
     img = transforms(img).cuda()
     img = img.unsqueeze(0)
@@ -351,7 +350,9 @@ if __name__ == '__main__':
         for j, joint in enumerate(human):
             pt = np.asarray(np.unravel_index(np.argmax(joint), (64,48)))
             joints_2d[j,:] = pt
-    print(joints_2d)
+        
+    joints_2d = coco_mpi(joints_2d)
+    # print(coco_mpi(joints_2d))
 
     # # # show heatmap
     output = torch.einsum("ijk->jk", [output.squeeze(0)])
