@@ -2,14 +2,14 @@ import os, math
 import numpy as np
 import torch, torchvision
 import torch.nn as nn
-from torch.nn import init
 from torchvision import transforms
-from torchvision import models
 from torchsummary import summary
 try:
     from common.hrnet import *
+    from common.pos_embed import *
 except ModuleNotFoundError:
     from hrnet import *
+    from pos_embed import *
 
 
 class PatchEmbedding(nn.Module):
@@ -34,44 +34,21 @@ class PatchEmbedding(nn.Module):
         return x, (H,W)
 
 
-class PositionalEncoder(nn.Module):
-    """
-    Original PE from Attention is All You Need
-    """
-    def __init__(self, d_model, max_seq_len=200, dropout=0.1):
-        super().__init__()
-        self.d_model = d_model
-        self.dropout = nn.Dropout(dropout)
-        pe = torch.zeros(max_seq_len, d_model)
-        for pos in range(max_seq_len):
-            for i in range(0, d_model, 2):
-                pe[pos, i] = math.sin(pos / (10000 ** ((2 * i)/d_model)))
-                pe[pos, i + 1] = math.cos(pos / (10000 ** ((2 * (i + 1))/d_model)))
-
-        self.pe = pe
-        if torch.cuda.is_available():
-            self.pe = pe.cuda()
- 
-    def forward(self, x):
-        bs, seq_len, d_model = x.size(0), x.size(1), x.size(2)
-        x *= math.sqrt(d_model)
-        pe = self.pe[:seq_len, :d_model]
-        pe_all = pe.repeat(bs, 1, 1)
-
-        assert x.shape == pe_all.shape, "{},{}".format(x.shape, pe_all.shape)
-        x += pe_all
-        return x
-
-
 class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
     """
     def __init__(self, d_model=34, nhead=2, num_layers=6, 
                     num_joints_in=17, num_joints_out=17,
+                    embed_dim=768, num_patches=196,
                     lift=True):
         super().__init__()
-        self.pe = PositionalEncoder(d_model)
+        if lift:
+            print("INFO: Using default positional encoder")
+            self.pe = PositionalEncoder(d_model)
+        else:
+            print("INFO: Using ViT positional embedding")
+            self.pe = PostionalEmbedding(num_patches, embed_dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead)
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
 
@@ -114,7 +91,7 @@ class PETR(nn.Module):
             self.backbone = HRNet(32, 17, 0.1)
             pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
             self.backbone.load_state_dict(torch.load(pretrained_weight))
-            print("Pre-trained weights loaded from {}".format(pretrained_weight))
+            print("INFO: Pre-trained weights loaded from {}".format(pretrained_weight))
             self.transformer = TransformerEncoder(lift=self.lift)
         else:
             self.patch_embed = PatchEmbedding()
