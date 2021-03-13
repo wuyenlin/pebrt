@@ -3,7 +3,7 @@ import numpy as np
 import torch, torchvision
 import torch.nn as nn
 from torchvision import transforms
-from torchsummary import summary
+
 
 class PositionalEncoder(nn.Module):
     """
@@ -34,13 +34,13 @@ class PositionalEncoder(nn.Module):
         return x
 
 
-class PostionalEmbedding(nn.Module):
+class PositionalEmbedding(nn.Module):
     """
     Positional embedding used in Vision Transformer (An Image is Worth 16x16 Words)
     """
-    def __init__(self, num_patches, emb_dim, dropout=0.1):
+    def __init__(self, num_patches, d_model, dropout=0.1):
         super().__init__()
-        self.pos_embed = nn.Parameter(torch.randn(1, num_patches, emb_dim))
+        self.pos_embed = nn.Parameter(torch.randn(1, num_patches, d_model))
         self.dropout = nn.Dropout(dropout) if dropout>0 else None
 
     def forward(self, x):
@@ -49,3 +49,11 @@ class PostionalEmbedding(nn.Module):
             x = self.dropout(x)
         
         return x
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    pe = PositionalEmbedding(196, 768)
+    a = torch.zeros(1,196,768)
+    output = pe(a)
+    plt.imshow(output[0].detach().numpy())
+    plt.show()
