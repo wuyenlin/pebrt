@@ -2,8 +2,7 @@ import os, math
 import numpy as np
 import torch, torchvision
 import torch.nn as nn
-from torchvision import transforms
-from torchsummary import summary
+
 try:
     from common.hrnet import *
     from common.pos_embed import *
@@ -40,15 +39,14 @@ class TransformerEncoder(nn.Module):
     """
     def __init__(self, d_model=34, nhead=2, num_layers=6, 
                     num_joints_in=17, num_joints_out=17,
-                    embed_dim=768, num_patches=196,
-                    lift=True):
+                    num_patches=196, lift=True):
         super().__init__()
         if lift:
             print("INFO: Using default positional encoder")
             self.pe = PositionalEncoder(d_model)
         else:
             print("INFO: Using ViT positional embedding")
-            self.pe = PostionalEmbedding(num_patches, embed_dim)
+            self.pe = PositionalEmbedding(num_patches, d_model)
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead)
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
 
@@ -95,7 +93,7 @@ class PETR(nn.Module):
             self.transformer = TransformerEncoder(lift=self.lift)
         else:
             self.patch_embed = PatchEmbedding()
-            self.transformer = TransformerEncoder(d_model=768,lift=self.lift)
+            self.transformer = TransformerEncoder(d_model=768, nhead=12, num_layers=12,lift=self.lift)
                                     
 
     def forward(self, x):
@@ -111,6 +109,7 @@ class PETR(nn.Module):
 
 
 if __name__ == "__main__":
+    from torchvision import transforms
     transforms = transforms.Compose([
         transforms.Resize([224,224]),
         transforms.ToTensor(),  
