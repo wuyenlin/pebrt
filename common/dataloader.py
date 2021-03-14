@@ -1,4 +1,5 @@
 import os
+import cv2 as cv
 import torch
 import torchvision
 from torchvision import transforms
@@ -14,8 +15,9 @@ def pop_joints(kpts):
     Get 17 joints from the original 28 
     '''
     new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
-    ext_list = [0,2,4,6,7,9,10,11,14,15,16,
-                18,19,20,23,24,25]
+    ext_list = [0,2,4,5,6,         # spine+head
+                9,10,11,14,15,16,  # arms
+                18,19,20,23,24,25] # legs
     for row in range(17):
         new_skel[row, :] = kpts[ext_list[row], :]
     return new_skel
@@ -58,10 +60,12 @@ class Data:
             for vid in range(6):
                 for frame in data[vid].keys():
                     # TODO: 224/2048 might be wrong
-                    pts_2d = (data[vid][frame]['2d_keypoints']*224/2048).reshape(28,2)
+                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
                     self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
-                    pts_3d = (data[vid][frame]['3d_keypoints']/1000).reshape(28,3)
-                    self.gt_pts3d.append(torch.from_numpy(pop_joints(pts_3d)))
+
+                    pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
+                    cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
+                    self.gt_pts3d.append(torch.from_numpy(pop_joints(cam_3d/1000)))
                     self.img_path.append(data[vid][frame]['directory'])
                 
         else:
@@ -70,10 +74,12 @@ class Data:
             '''
             for vid in range(6,8):
                 for frame in data[vid].keys():
-                    pts_2d = (data[vid][frame]['2d_keypoints']*224/2048).reshape(28,2)
+                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
                     self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
-                    pts_3d = (data[vid][frame]['3d_keypoints']/1000).reshape(28,3)
-                    self.gt_pts3d.append(torch.from_numpy(pop_joints(pts_3d)))
+
+                    pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
+                    cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
+                    self.gt_pts3d.append(torch.from_numpy(pop_joints(cam_3d/1000)))
                     self.img_path.append(data[vid][frame]['directory'])
 
 
@@ -91,27 +97,71 @@ class Data:
     def __len__(self):
         return len(self.img_path)
     
+    def get_intrinsic(self, camera):
+        """
+        Parse camera matrix from calibration file
+        """
+        calib = open("./dataset/S1/Seq1/camera.calibration","r")
+        content = calib.readlines()
+        content = [line.strip() for line in content]
+        # 3x3 intrinsic matrix
+        intrinsic = np.array(content[7*camera+5].split(" ")[3:], dtype=np.float32)
+        intrinsic = np.reshape(intrinsic, (4,-1))
+        intrinsic = intrinsic[0:3,0:3]
+        self.intrinsic = intrinsic 
+
+    def to_camera_coordinate(self, pts_2d, pts_3d, camera):
+        self.get_intrinsic(camera)
+        ret, rvec, tvec = cv.solvePnP(pts_3d, pts_2d, self.intrinsic, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
+
+        # get extrinsic matrix
+        assert ret
+        R = cv.Rodrigues(rvec)[0]
+        t = tvec
+        E = np.concatenate((R,t), axis=1)
+    
+        pts_3d = cv.convertPointsToHomogeneous(pts_3d).transpose().squeeze(1)
+        cam_coor = E @ pts_3d
+        cam_3d = cam_coor.transpose()
+        return cam_3d
 
 if __name__ == "__main__":
     transforms = transforms.Compose([
-        transforms.Resize([256,192]),
+        transforms.Resize([224,224]),
         transforms.ToTensor(),  
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
 
     train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
-    train_dataset = Data(train_npz, transforms, True)
+    train_dataset = Data(train_npz, transforms, False)
     print(len(train_dataset))
     print(train_dataset[0])
     trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
-    img_path, images, labels, _ = dataiter.next()
+    img_path, images, kpts, labels = dataiter.next()
     imshow(torchvision.utils.make_grid(images))
     
+    bones = (
+    (0,1), (0,3), (1,2), (3,4),  # spine + head
+    (0,5), (0,8),
+    (5,6), (6,7), (8,9), (9,10), # arms
+    (2,14), (2,11),
+    (11,12), (12,13), (14,15), (15,16), # legs
+    )
+
     pts = labels[0]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    for bone in bones:
+        xS = (pts[bone[0],0], pts[bone[1],0])
+        yS = (pts[bone[0],1], pts[bone[1],1])
+        zS = (pts[bone[0],2], pts[bone[1],2])
+        
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-70, azim=-90)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
     plt.show()
