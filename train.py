@@ -17,7 +17,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from time import time
 
-def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
+def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
     print("Training starts...")
 
     losses_3d_train = []
@@ -37,7 +37,7 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
 
             optimizer.zero_grad()
 
-            predicted_3d_pos = net(images)
+            predicted_3d_pos = model(images)
 
             loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -58,7 +58,7 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
 
                 optimizer.zero_grad()
 
-                predicted_3d_pos = net(images)
+                predicted_3d_pos = model(images)
 
                 loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -87,9 +87,9 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
 
             plt.close('all')
 
-        if ep%10 == 0:
+        if ep%10 == 0 and ep != 0:
             exp_name = "./checkpoint/epoch_{}.bin".format(ep)
-            torch.save(net.state_dict(), exp_name)
+            torch.save(model.state_dict(), exp_name)
 
     print('Finished Training.')
     return losses_3d_train , losses_3d_valid
@@ -97,18 +97,18 @@ def train(epoch, train_loader, val_loader, net, optimizer, scheduler):
 if __name__ == "__main__":
     args = args_parser()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = PETR(lift=args.lift)
-    net = net.to(args.device)
+    model = PETR(lift=args.lift)
+    model = model.to(args.device)
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
         # freeze HRNet
-        for param in net.backbone.parameters():
+        for param in model.backbone.parameters():
             param.requires_grad = False
     else:
         print("INFO: Model loaded. Using End-to-end model.")
 
     model_params = 0
-    for parameter in net.parameters():
+    for parameter in model.parameters():
         model_params += parameter.numel()
     print('INFO: Trainable parameter count:', model_params)
 
@@ -123,9 +123,10 @@ if __name__ == "__main__":
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
 
-    # optimizer = optim.Adam(net.parameters(), lr=args.lr, amsgrad=True)
-    optimizer = optim.Adadelta(net.parameters(), lr=args.lr, rho=0.9, eps=1e-06, weight_decay=0)
-    # optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, amsgrad=True)
+    # optimizer = optim.Adadelta(model.parameters(), lr=args.lr, rho=0.9, eps=1e-06, weight_decay=0.1)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    print("INFO: Using optimizer {}".format(optimizer))
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    train_list, val_list = train(args.epoch, train_loader, val_loader, net, optimizer, scheduler)
+    train_list, val_list = train(args.epoch, train_loader, val_loader, model, optimizer, scheduler)
