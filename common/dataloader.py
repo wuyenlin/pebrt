@@ -54,34 +54,20 @@ class Data:
         self.transforms = transforms
 
         if train:
-            '''
-            For training purpose
-            '''
-            for vid in range(6):
-                for frame in data[vid].keys():
-                    # TODO: 224/2048 might be wrong
-                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
-                    self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
-
-                    pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
-                    cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
-                    self.gt_pts3d.append(torch.from_numpy(pop_joints(cam_3d/1000)))
-                    self.img_path.append(data[vid][frame]['directory'])
-                
+            vid_list = np.arange(6)
         else:
-            '''
-            For testing purpose
-            '''
-            for vid in range(6,8):
-                for frame in data[vid].keys():
-                    pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
-                    self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
+            vid_list = np.arange(6,8)
 
-                    pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
-                    cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
-                    self.gt_pts3d.append(torch.from_numpy(pop_joints(cam_3d/1000)))
-                    self.img_path.append(data[vid][frame]['directory'])
+        for vid in vid_list:
+            for frame in data[vid].keys():
+                pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
+                self.gt_pts2d.append(torch.from_numpy(pop_joints(pts_2d)))
 
+                pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
+                cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
+                cam_3d = self.normalize(pop_joints(cam_3d))
+                self.gt_pts3d.append(torch.from_numpy(cam_3d))
+                self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
         try:
@@ -107,23 +93,30 @@ class Data:
         # 3x3 intrinsic matrix
         intrinsic = np.array(content[7*camera+5].split(" ")[3:], dtype=np.float32)
         intrinsic = np.reshape(intrinsic, (4,-1))
-        intrinsic = intrinsic[0:3,0:3]
-        self.intrinsic = intrinsic 
+        self.intrinsic = intrinsic[:3, :3]
 
     def to_camera_coordinate(self, pts_2d, pts_3d, camera):
         self.get_intrinsic(camera)
-        ret, rvec, tvec = cv.solvePnP(pts_3d, pts_2d, self.intrinsic, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
+        ret, R, t= cv.solvePnP(pts_3d, pts_2d, self.intrinsic, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
 
         # get extrinsic matrix
         assert ret
-        R = cv.Rodrigues(rvec)[0]
-        t = tvec
+        R = cv.Rodrigues(R)[0]
         E = np.concatenate((R,t), axis=1)
     
         pts_3d = cv.convertPointsToHomogeneous(pts_3d).transpose().squeeze(1)
         cam_coor = E @ pts_3d
         cam_3d = cam_coor.transpose()
         return cam_3d
+    
+    def normalize(self, pts_3d):
+        assert pts_3d.shape == (17,3)
+        norm_pts = np.zeros_like(pts_3d)
+        for col in range(3):
+            norm_pts[:,col] = pts_3d[:,col]/np.linalg.norm(pts_3d[:,col])
+        
+        return norm_pts
+
 
 if __name__ == "__main__":
     transforms = transforms.Compose([
@@ -133,7 +126,7 @@ if __name__ == "__main__":
     ])
 
     train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
-    train_dataset = Data(train_npz, transforms, False)
+    train_dataset = Data(train_npz, transforms, True)
     print(len(train_dataset))
     print(train_dataset[0])
     trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
@@ -160,7 +153,9 @@ if __name__ == "__main__":
         zS = (pts[bone[0],2], pts[bone[1],2])
         
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-70, azim=-90)
+    ax.view_init(elev=-80, azim=-90)
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
