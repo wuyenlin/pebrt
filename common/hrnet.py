@@ -2,10 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch import nn, Tensor
-from PIL import Image
-import matplotlib
-import matplotlib.pyplot as plt
-from torchvision import transforms
+
 from collections import OrderedDict
 import copy
 from typing import Optional, List
@@ -299,7 +296,7 @@ def coco_mpi(coco_joints):
     mpi_joints[14,:] = coco_joints[11,:]
     mpi_joints[15,:] = coco_joints[13,:]
     mpi_joints[16,:] = coco_joints[15,:]
-    # spine
+    # spine (manual interpolation)
     mpi_joints[0,:] = (coco_joints[5,:] + coco_joints[6,:])/2
     mpi_joints[2,:] = (coco_joints[11,:] + coco_joints[12,:])/2
     mpi_joints[1,:] = (mpi_joints[0,:] + mpi_joints[2,:])/2
@@ -324,16 +321,23 @@ def hmap_joints(heatmap):
         joints_2d[i,:,:] = coco_mpi(joints_2d[i,:,:])
         joints_2d[i,:,:] = normalize_screen_coordinates(joints_2d[i,:,:], 56, 56)
     assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
+    # np.unravel_index gives (y,x) coordinates. need to swap it to (x,y)
     joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
     return torch.Tensor(joints_2d)
 
+
 if __name__ == '__main__':
+    from PIL import Image
+    import matplotlib
+    import matplotlib.pyplot as plt
+    from torchvision import transforms
+
     transforms = transforms.Compose([
-        transforms.Resize([256,192]),
-        # transforms.Resize([224,224]),
+        transforms.Resize([224,224]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
+
     model = HRNet(32, 17, 0.1)
     model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
     img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
@@ -348,11 +352,18 @@ if __name__ == '__main__':
     joints_2d = np.zeros([17,2])
     for i, human in enumerate(out):
         for j, joint in enumerate(human):
-            pt = np.asarray(np.unravel_index(np.argmax(joint), (64,48)))
+            pt = np.asarray(np.unravel_index(np.argmax(joint), (56,56)))
             joints_2d[j,:] = pt
         
     joints_2d = coco_mpi(joints_2d)
-    # print(coco_mpi(joints_2d))
+
+    bones = (
+    (0,1), (0,3), (1,2), (3,4),  # spine + head
+    (0,5), (0,8),
+    (5,6), (6,7), (8,9), (9,10), # arms
+    (2,14), (2,11),
+    (11,12), (12,13), (14,15), (15,16), # legs
+    )
 
     # # # show heatmap
     output = torch.einsum("ijk->jk", [output.squeeze(0)])
@@ -367,6 +378,10 @@ if __name__ == '__main__':
     plt.figure(1)
     plt.subplot(133)
     plt.scatter(joints_2d[:,1], joints_2d[:,0])
+    for bone in bones:
+        xS = (joints_2d[bone[0],1], joints_2d[bone[1],1])
+        yS = (joints_2d[bone[0],0], joints_2d[bone[1],0])
+        plt.plot(xS,yS)
     plt.xlim(0,56)
     plt.ylim(0,56)
     plt.gca().invert_yaxis()
