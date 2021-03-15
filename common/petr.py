@@ -12,7 +12,7 @@ except ModuleNotFoundError:
 
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=224, patch_size=16, in_channel=3, embed_dim=768):
+    def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
         super().__init__()
         self.img_size = (img_size, img_size)
         self.patch_size = (patch_size, patch_size)
@@ -39,11 +39,12 @@ class TransformerEncoder(nn.Module):
     """
     def __init__(self, d_model=34, nhead=2, num_layers=6, 
                     num_joints_in=17, num_joints_out=17,
-                    num_patches=196, lift=True):
+                    num_patches=256, lift=True):
         super().__init__()
         if lift:
             print("INFO: Using default positional encoder")
             self.pe = PositionalEncoder(d_model)
+            self.tanh = nn.Tanh()
         else:
             print("INFO: Using ViT positional embedding")
             self.pe = PositionalEmbedding(num_patches, d_model)
@@ -66,6 +67,7 @@ class TransformerEncoder(nn.Module):
             x = self.pe(x)
             x = self.transformer(x)
             x = self.lin_out(x).squeeze(1)
+            x = self.tanh(x)
 
         else:
         #(bs,196,768)
@@ -89,11 +91,12 @@ class PETR(nn.Module):
             self.backbone = HRNet(32, 17, 0.1)
             pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
             self.backbone.load_state_dict(torch.load(pretrained_weight))
-            print("INFO: Pre-trained weights loaded from {}".format(pretrained_weight))
-            self.transformer = TransformerEncoder(lift=self.lift)
+            print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
+            self.transformer = TransformerEncoder(num_layers=12,lift=self.lift)
         else:
             self.patch_embed = PatchEmbedding()
             self.transformer = TransformerEncoder(d_model=768, nhead=12, num_layers=12,lift=self.lift)
+            self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
     def forward(self, x):
@@ -102,20 +105,27 @@ class PETR(nn.Module):
             x = hmap_joints(x)
             out_x = self.transformer(x.cuda())
         else:
-            x = self.patch_embed(x)
-            out_x = self.transformer(x[0])
+            bs = x.shape[0]
+            x = self.patch_embed(x)[0]
+            joint_token = self.joint_token.repeat(bs,1,1)
+            emb = torch.cat([joint_token, x], dim=1)
+            out_x = self.transformer(emb)
 
         return out_x
 
 
 if __name__ == "__main__":
     from torchvision import transforms
+    from PIL import Image
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+
     transforms = transforms.Compose([
         transforms.Resize([224,224]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
-    model = PETR(lift=False)
+    model = PETR(lift=True)
     model = model.cuda()
     img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
     img = transforms(img)
@@ -124,3 +134,10 @@ if __name__ == "__main__":
     img = img.cuda()
     output = model(img)
     print(output.shape)
+    
+
+    output = output.cpu().detach().numpy()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
+    plt.show()
