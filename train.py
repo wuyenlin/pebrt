@@ -40,7 +40,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
 
             predicted_3d_pos = model(images)
 
-            loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
+            loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
             N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -61,7 +61,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
 
                 predicted_3d_pos = model(images)
 
-                loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
+                loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
                 N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -103,9 +103,9 @@ if __name__ == "__main__":
     model = model.to(args.device)
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
-        # freeze HRNet
         backbone_params = 0
         if args.freeze:
+            print("INFO: Freezing HRNet")
             for param in model.backbone.parameters():
                 param.requires_grad = False
                 backbone_params += param.numel()
@@ -132,9 +132,8 @@ if __name__ == "__main__":
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, amsgrad=True)
-    # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
-    # optimizer = optim.Adadelta(model.parameters(), lr=args.lr, rho=0.9, eps=1e-06, weight_decay=0.1)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr, amsgrad=True)
+    optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
     print("INFO: Using optimizer {}".format(optimizer))
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
