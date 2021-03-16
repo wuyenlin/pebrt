@@ -2,6 +2,7 @@
 
 from common.options import args_parser
 from common.petr import *
+from common.detr import *
 from common.dataloader import *
 from common.loss import *
 
@@ -87,9 +88,10 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
 
             plt.close('all')
 
-        if ep%10 == 0 and ep != 0:
+        if (ep)%10 == 0 and ep != 0:
             exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save(model.state_dict(), exp_name)
+            print("Saved param")
 
     print('Finished Training.')
     return losses_3d_train , losses_3d_valid
@@ -102,30 +104,37 @@ if __name__ == "__main__":
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
         # freeze HRNet
-        for param in model.backbone.parameters():
-            param.requires_grad = False
+        backbone_params = 0
+        if args.freeze:
+            for param in model.backbone.parameters():
+                param.requires_grad = False
+                backbone_params += param.numel()
     else:
         print("INFO: Model loaded. Using End-to-end model.")
 
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    print('INFO: Trainable parameter count:', model_params)
+    if args.freeze:
+        model_params -= backbone_params
+    
+    print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
     transforms = transforms.Compose([
         transforms.Resize([224,224]),
+        # transforms.Resize([256,256]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
 
     train_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr, amsgrad=True)
+    # optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
     # optimizer = optim.Adadelta(model.parameters(), lr=args.lr, rho=0.9, eps=1e-06, weight_decay=0.1)
-    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     print("INFO: Using optimizer {}".format(optimizer))
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
