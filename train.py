@@ -24,7 +24,6 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
     losses_3d_train = []
     losses_3d_valid = []
 
-    # for ep in range(epoch):
     for ep in tqdm(range(epoch)):
         start_time = time()
         epoch_loss_3d_train = 0.0
@@ -75,7 +74,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
                 elapsed,
                 losses_3d_train[-1] * 1000,
                 losses_3d_valid[-1]  *1000))
-        if ep > 3:
+        if args.export_training_curves and ep > 3:
             plt.figure()
             epoch_x = np.arange(3, len(losses_3d_train)) + 1
             plt.plot(epoch_x, losses_3d_train[3:], '--', color='C0')
@@ -101,6 +100,10 @@ if __name__ == "__main__":
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(lift=args.lift)
     model = model.to(args.device)
+    if args.chkpt is not None:
+        model.load_state_dict(torch.load(args.chkpt))
+        print("INFO: Checkpoint loaded from {}".format(args.chkpt))
+
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
         backbone_params = 0
@@ -115,14 +118,13 @@ if __name__ == "__main__":
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    if args.freeze:
+    if args.lift and args.freeze:
         model_params -= backbone_params
     
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
     transforms = transforms.Compose([
-        transforms.Resize([224,224]),
-        # transforms.Resize([256,256]),
+        transforms.Resize([256,256]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
@@ -132,7 +134,6 @@ if __name__ == "__main__":
     val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr, amsgrad=True)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
     print("INFO: Using optimizer {}".format(optimizer))
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
