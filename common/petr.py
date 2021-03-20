@@ -61,18 +61,16 @@ class TransformerEncoder(nn.Module):
         self.lift = lift
 
     def forward(self, x):
+        bs = x.size(0)
         if self.lift:
             x = x.flatten(1).unsqueeze(1) #(bs,1,34)
-            bs = x.size(0)
             x = self.pe(x)
             x = self.transformer(x)
             x = self.lin_out(x).squeeze(1)
             x = self.tanh(x)
 
         else:
-        #(bs,196,768)
-            bs = x.size(0)
-            x = self.pe(x)
+            x = self.pe(x)   #(bs,196,768)
             x = self.transformer(x)
             x = self.lin_out(x[:,0])
 
@@ -92,10 +90,10 @@ class PETR(nn.Module):
             pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
             self.backbone.load_state_dict(torch.load(pretrained_weight))
             print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
-            self.transformer = TransformerEncoder(num_layers=12,lift=self.lift)
+            self.transformer = TransformerEncoder(num_layers=8)
         else:
             self.patch_embed = PatchEmbedding()
-            self.transformer = TransformerEncoder(d_model=768, nhead=12, num_layers=12,lift=self.lift)
+            self.transformer = TransformerEncoder(d_model=768, nhead=12, num_layers=12, lift=self.lift)
             self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
