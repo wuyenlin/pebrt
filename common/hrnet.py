@@ -146,7 +146,6 @@ class StageModule(nn.Module):
 
 
 
-
 class HRNet(nn.Module):
     def __init__(self, c=48, nof_joints=17, bn_momentum=0.1):
         super(HRNet, self).__init__()
@@ -264,15 +263,6 @@ class HRNet(nn.Module):
 
         return x
 
-def normalize_screen_coordinates(X, w, h): 
-    """
-    referring to common/camera.py of facebookresearch/VideoPose3D 
-    """
-    assert X.shape[-1] == 2
-    
-    # Normalize so that [0, w] is mapped to [-1, 1], while preserving the aspect ratio
-    return X/w*2 - [1, h/w]
-
 
 def coco_mpi(coco_joints):
     """
@@ -310,16 +300,16 @@ def hmap_joints(heatmap):
     turn input heatmap (bs,17,h,w) into coordinates of 17 joints
     return tensor of (17,2) joints on x,y coordinates for a bs
     """
-    assert heatmap.shape[1:] == (17,56,56), "{}".format(heatmap.shape)
+    assert heatmap.shape[1:] == (17,64,64), "{}".format(heatmap.shape)
     bs = heatmap.size(0)
     joints_2d = np.zeros([bs,17,2])
     heatmap = heatmap.cpu().detach().numpy()
     for i, human in enumerate(heatmap):
         for j, joint in enumerate(human):
-            pt = np.unravel_index(np.argmax(joint), (56,56))
+            pt = np.unravel_index(np.argmax(joint), (64,64))
             joints_2d[i,j,:] = np.asarray(pt)
         joints_2d[i,:,:] = coco_mpi(joints_2d[i,:,:])
-        joints_2d[i,:,:] = normalize_screen_coordinates(joints_2d[i,:,:], 56, 56)
+        joints_2d[i,:,:] = joints_2d[i,:,:] - joints_2d[i,2,:]
     assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
     # np.unravel_index gives (y,x) coordinates. need to swap it to (x,y)
     joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
