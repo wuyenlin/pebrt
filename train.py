@@ -6,10 +6,9 @@ from common.detr import *
 from common.dataloader import *
 from common.loss import *
 
-import sys
 import matplotlib.pyplot as plt
 import matplotlib
-
+matplotlib.use('Agg')
 from tqdm import tqdm
 import torch
 import torch.nn as nn
@@ -17,6 +16,7 @@ from torchvision import transforms
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from time import time
+
 
 def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
     print("Training starts...")
@@ -27,10 +27,10 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
     for ep in tqdm(range(epoch)):
         start_time = time()
         epoch_loss_3d_train = 0.0
-        epoch_loss_3d_valid = 0.0
         N = 0
+        model.train()
     # train
-        for batch_idx, data in enumerate(train_loader,1):
+        for data in train_loader:
             _, images, _, inputs_3d= data
             inputs_3d = inputs_3d.to(args.device)
             images = images.to(args.device)
@@ -51,7 +51,12 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
         losses_3d_train.append(epoch_loss_3d_train / N)
     # val
         with torch.no_grad():
-            for batch_idx, data in enumerate(val_loader,1):
+            model.load_state_dict(model.state_dict())
+            model.eval()
+            epoch_loss_3d_valid = 0.0
+            N = 0
+
+            for data in val_loader:
                 _, images, _, inputs_3d= data
                 inputs_3d = inputs_3d.to(args.device)
                 images = images.to(args.device)
