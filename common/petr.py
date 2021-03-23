@@ -10,6 +10,11 @@ except ModuleNotFoundError:
     from hrnet import *
     from pos_embed import *
 
+"""
+Direction 3D pose regression method uses the model referring to Vision Transformer
+Its implementation in PyTorch is availble at https://github.com/asyml/vision-transformer-pytorch.
+Part of this file is borrowed from their src/model.py.
+"""
 
 class PatchEmbedding(nn.Module):
     def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
@@ -81,15 +86,17 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, lift=True):
+    def __init__(self, lift=True, chkpt=None):
+        # TODO: skip loading HRNet pretrained weight if loading checkpoint
         super().__init__()
         
         self.lift = lift
         if self.lift:
             self.backbone = HRNet(32, 17, 0.1)
-            pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
-            self.backbone.load_state_dict(torch.load(pretrained_weight))
-            print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
+            if chkpt is None:
+                pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
+                self.backbone.load_state_dict(torch.load(pretrained_weight))
+                print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
             self.transformer = TransformerEncoder(num_layers=8)
         else:
             self.patch_embed = PatchEmbedding()
@@ -119,7 +126,7 @@ if __name__ == "__main__":
     from mpl_toolkits.mplot3d import Axes3D
 
     transforms = transforms.Compose([
-        transforms.Resize([224,224]),
+        transforms.Resize([256,256]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
@@ -132,10 +139,3 @@ if __name__ == "__main__":
     img = img.cuda()
     output = model(img)
     print(output.shape)
-    
-
-    output = output.cpu().detach().numpy()
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
-    plt.show()
