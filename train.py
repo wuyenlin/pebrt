@@ -79,6 +79,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
                 elapsed,
                 losses_3d_train[-1] * 1000,
                 losses_3d_valid[-1]  *1000))
+
         if args.export_training_curves and ep > 3:
             plt.figure()
             epoch_x = np.arange(3, len(losses_3d_train)) + 1
@@ -94,8 +95,14 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
 
         if (ep)%10 == 0 and ep != 0:
             exp_name = "./checkpoint/epoch_{}.bin".format(ep)
-            torch.save(model.state_dict(), exp_name)
-            print("Saved param")
+            torch.save({
+                "epoch": ep,
+                "lr_scheduler": scheduler.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "model": model.state_dict(),
+                "args": args,
+            }, exp_name)
+            print("Parameters saved to ", exp_name)
 
     print('Finished Training.')
     return losses_3d_train , losses_3d_valid
@@ -103,7 +110,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
 if __name__ == "__main__":
     args = args_parser()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETR(lift=args.lift)
+    model = PETR(lift=args.lift, chkpt=args.chkpt)
     model = model.to(args.device)
     if args.chkpt is not None:
         model.load_state_dict(torch.load(args.chkpt))
@@ -140,7 +147,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
-    print("INFO: Using optimizer {}".format(optimizer))
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    print("INFO: Using optimizer {}".format(optimizer))
 
     train_list, val_list = train(args.epoch, train_loader, val_loader, model, optimizer, scheduler)
