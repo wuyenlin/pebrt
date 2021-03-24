@@ -17,7 +17,7 @@ Part of this file is borrowed from their src/model.py.
 """
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
+    def __init__(self, img_size=384, patch_size=16, in_channel=3, embed_dim=768):
         super().__init__()
         self.img_size = (img_size, img_size)
         self.patch_size = (patch_size, patch_size)
@@ -86,17 +86,15 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, lift=True, chkpt=None):
-        # TODO: skip loading HRNet pretrained weight if loading checkpoint
+    def __init__(self, lift=True):
         super().__init__()
         
         self.lift = lift
         if self.lift:
             self.backbone = HRNet(32, 17, 0.1)
-            if chkpt is None:
-                pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
-                self.backbone.load_state_dict(torch.load(pretrained_weight))
-                print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
+            pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
+            self.backbone.load_state_dict(torch.load(pretrained_weight))
+            print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
             self.transformer = TransformerEncoder(num_layers=8)
         else:
             self.patch_embed = PatchEmbedding()
@@ -126,7 +124,7 @@ if __name__ == "__main__":
     from mpl_toolkits.mplot3d import Axes3D
 
     transforms = transforms.Compose([
-        transforms.Resize([256,256]),
+        transforms.Resize([384,384]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
