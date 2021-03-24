@@ -189,9 +189,9 @@ if __name__ == "__main__":
         val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
         param_dicts = [
-            {"params": [p for n, p in model.parameters() if "backbone" not in n and p.requires_grad]},
+            {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
             {
-                "params": [p for n, p in model.parameters() if "backbone" in n and p.requires_grad],
+                "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
                 "lr": args.lr_backbone,
             },
         ]
