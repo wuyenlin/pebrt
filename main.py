@@ -18,13 +18,20 @@ from torch.utils.data import Dataset, DataLoader
 from time import time
 
 
-def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
+transforms = transforms.Compose([
+    transforms.Resize([384,384]),
+    transforms.ToTensor(),  
+    transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
+])
+
+
+def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_scheduler):
     print("Training starts...")
 
     losses_3d_train = []
     losses_3d_valid = []
 
-    for ep in tqdm(range(epoch)):
+    for ep in tqdm(range(start_epoch, epoch)):
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
@@ -71,7 +78,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
 
             losses_3d_valid.append(epoch_loss_3d_valid / N)
 
-        scheduler.step()
+        lr_scheduler.step()
         elapsed = (time() - start_time)/60
 
         print('[%d] time %.2f 3d_train %f 3d_valid %f' % (
@@ -97,7 +104,7 @@ def train(epoch, train_loader, val_loader, model, optimizer, scheduler):
             exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
-                "lr_scheduler": scheduler.state_dict(),
+                "lr_scheduler": lr_scheduler.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "model": model.state_dict(),
                 "args": args,
@@ -148,19 +155,19 @@ def evaluate(test_loader, model):
     return e1, e2, ev
 
 
-if __name__ == "__main__":
-    args = args_parser()
+def main(args):
+
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETR(lift=args.lift, chkpt=args.chkpt)
+    model = PETR(lift=args.lift)
     model = model.to(args.device)
-    if args.chkpt is not None:
-        model.load_state_dict(torch.load(args.chkpt))
-        print("INFO: Checkpoint loaded from {}".format(args.chkpt))
+    if args.resume is not None:
+        model.load_state_dict(torch.load(args.resume))
+        print("INFO: Checkpoint loaded from {}".format(args.resume))
 
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
         backbone_params = 0
-        if args.freeze:
+        if args.lr_backbone == 0:
             print("INFO: Freezing HRNet")
             for param in model.backbone.parameters():
                 param.requires_grad = False
@@ -171,37 +178,49 @@ if __name__ == "__main__":
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    if args.lift and args.freeze:
+    if args.lift and args.lr_backbone == 0:
         model_params -= backbone_params
     
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
-    transforms = transforms.Compose([
-        transforms.Resize([384,384]),
-        transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-    ])
-
-    if args.train:
-        train_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-        train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
-        val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
-        val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
-
-        param_dicts = [
-            {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-            {
-                "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-                "lr": args.lr_backbone,
-            },
-        ]
-        optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop, gamma=0.1)
-        print("INFO: Using optimizer {}".format(optimizer))
-
-        train_list, val_list = train(args.epoch, train_loader, val_loader, model, optimizer, scheduler)
-
     if args.eval:
-        test_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=8, collate_fn=collate_fn)
+        test_dataset = Data(args.dataset, transforms, False)
+        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=16, collate_fn=collate_fn)
         e1, e2, ev = evaluate(test_loader, model)
+        return e1, e2, ev
+
+    train_dataset = Data(args.dataset, transforms)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
+    val_dataset = Data(args.dataset, transforms, False)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
+
+    param_dicts = [
+        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+        {
+            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+            "lr": args.lr_backbone,
+        },
+    ]
+    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop, gamma=0.1)
+
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location='cpu')
+        model.load_state_dict(checkpoint['model'])
+
+        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+            args.start_epoch = checkpoint['epoch'] + 1
+
+    print("INFO: Using optimizer {}".format(optimizer))
+
+    train_list, val_list = train(args.start_epoch, args.epoch, 
+                                train_loader, val_loader, model, 
+                                optimizer, lr_scheduler)
+
+
+
+if __name__ == "__main__":
+    args = args_parser()
+    main(args)
