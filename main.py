@@ -177,22 +177,24 @@ if __name__ == "__main__":
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
     transforms = transforms.Compose([
-        transforms.Resize([256,256]),
+        transforms.Resize([384,384]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
 
-    train_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
-    val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
+    if args.train:
+        train_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
+        train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
+        val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
+        val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01, amsgrad=False)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-    print("INFO: Using optimizer {}".format(optimizer))
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop, gamma=0.1)
+        print("INFO: Using optimizer {}".format(optimizer))
 
-    train_list, val_list = train(args.epoch, train_loader, val_loader, model, optimizer, scheduler)
+        train_list, val_list = train(args.epoch, train_loader, val_loader, model, optimizer, scheduler)
 
-    test_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
-    test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=8, collate_fn=collate_fn)
-    e1, e2, ev = evaluate(test_loader, model)
+    if args.eval:
+        test_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms)
+        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=8, collate_fn=collate_fn)
+        e1, e2, ev = evaluate(test_loader, model)
