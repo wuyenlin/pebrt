@@ -188,7 +188,14 @@ if __name__ == "__main__":
         val_dataset = Data("dataset/S1/Seq1/imageSequence/S1seq1.npz", transforms, False)
         val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=True, collate_fn=collate_fn)
 
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        param_dicts = [
+            {"params": [p for n, p in model.parameters() if "backbone" not in n and p.requires_grad]},
+            {
+                "params": [p for n, p in model.parameters() if "backbone" in n and p.requires_grad],
+                "lr": args.lr_backbone,
+            },
+        ]
+        optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop, gamma=0.1)
         print("INFO: Using optimizer {}".format(optimizer))
 
