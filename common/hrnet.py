@@ -300,13 +300,13 @@ def hmap_joints(heatmap):
     turn input heatmap (bs,17,h,w) into coordinates of 17 joints
     return tensor of (17,2) joints on x,y coordinates for a bs
     """
-    assert heatmap.shape[1:] == (17,64,64), "{}".format(heatmap.shape)
+    assert heatmap.shape[1:] == (17,96,96), "{}".format(heatmap.shape)
     bs = heatmap.size(0)
     joints_2d = np.zeros([bs,17,2])
     heatmap = heatmap.cpu().detach().numpy()
     for i, human in enumerate(heatmap):
         for j, joint in enumerate(human):
-            pt = np.unravel_index(np.argmax(joint), (64,64))
+            pt = np.unravel_index(np.argmax(joint), (96,96))
             joints_2d[i,j,:] = np.asarray(pt)
         joints_2d[i,:,:] = coco_mpi(joints_2d[i,:,:])
         joints_2d[i,:,:] = joints_2d[i,:,:] - joints_2d[i,2,:]
@@ -323,26 +323,27 @@ if __name__ == '__main__':
     from torchvision import transforms
 
     transforms = transforms.Compose([
-        transforms.Resize([224,224]),
+        transforms.Resize([384,384]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
 
     model = HRNet(32, 17, 0.1)
     model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
-    img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
+    img_file = "./h36.jpg"
+    img = Image.open(img_file)
     img = transforms(img).cuda()
     img = img.unsqueeze(0)
 
     model = model.cuda()
     output = model(img)
-    print(output.shape) #(1,17,64,48)
+    print(output.shape) 
 
     out = output.cpu().detach().numpy()
     joints_2d = np.zeros([17,2])
     for i, human in enumerate(out):
         for j, joint in enumerate(human):
-            pt = np.asarray(np.unravel_index(np.argmax(joint), (56,56)))
+            pt = np.asarray(np.unravel_index(np.argmax(joint), (96,96)))
             joints_2d[j,:] = pt
         
     joints_2d = coco_mpi(joints_2d)
@@ -360,7 +361,7 @@ if __name__ == '__main__':
     out_cpu = output.cpu().detach().numpy()
     plt.figure(1)
     plt.subplot(131)
-    plt.imshow(Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg"))
+    plt.imshow(Image.open(img_file))
     plt.figure(1)
     plt.subplot(132)
     plt.imshow(out_cpu)
@@ -372,7 +373,7 @@ if __name__ == '__main__':
         xS = (joints_2d[bone[0],1], joints_2d[bone[1],1])
         yS = (joints_2d[bone[0],0], joints_2d[bone[1],0])
         plt.plot(xS,yS)
-    plt.xlim(0,56)
-    plt.ylim(0,56)
+    plt.xlim(0,128)
+    plt.ylim(0,128)
     plt.gca().invert_yaxis()
     plt.show()
