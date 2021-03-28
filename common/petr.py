@@ -6,9 +6,12 @@ import torch.nn as nn
 try:
     from common.hrnet import *
     from common.pos_embed import *
+    # from common.misc import *
+
 except ModuleNotFoundError:
     from hrnet import *
     from pos_embed import *
+    # from misc import *
 
 """
 Direction 3D pose regression method uses the model referring to Vision Transformer
@@ -114,17 +117,16 @@ class PETR(nn.Module):
             emb = torch.cat([joint_token, x], dim=1)
             out_x = self.transformer(emb)
 
-        return out_x
+        return x, out_x
 
 
 if __name__ == "__main__":
     from torchvision import transforms
     from PIL import Image
     import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
 
     transforms = transforms.Compose([
-        transforms.Resize([384,384]),
+        transforms.Resize([256,256]),
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
@@ -135,5 +137,5 @@ if __name__ == "__main__":
     img = img.unsqueeze(0)
     print(img.shape)
     img = img.cuda()
-    output = model(img)
+    _, output = model(img)
     print(output.shape)
