@@ -2,16 +2,14 @@ import os, math
 import numpy as np
 import torch, torchvision
 import torch.nn as nn
+import matplotlib.pyplot as plt
 
 try:
     from common.hrnet import *
     from common.pos_embed import *
-    # from common.misc import *
-
 except ModuleNotFoundError:
     from hrnet import *
     from pos_embed import *
-    # from misc import *
 
 """
 Direction 3D pose regression method uses the model referring to Vision Transformer
@@ -20,7 +18,7 @@ Part of this file is borrowed from their src/model.py.
 """
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=384, patch_size=16, in_channel=3, embed_dim=768):
+    def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
         super().__init__()
         self.img_size = (img_size, img_size)
         self.patch_size = (patch_size, patch_size)
@@ -123,7 +121,6 @@ class PETR(nn.Module):
 if __name__ == "__main__":
     from torchvision import transforms
     from PIL import Image
-    import matplotlib.pyplot as plt
 
     transforms = transforms.Compose([
         transforms.Resize([256,256]),
