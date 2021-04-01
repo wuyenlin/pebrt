@@ -24,7 +24,7 @@ transforms = transforms.Compose([
 ])
 
 
-def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_scheduler):
+def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
     print("Training starts...")
 
     losses_3d_train = []
@@ -114,7 +114,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_sch
     return losses_3d_train , losses_3d_valid
 
 
-def evaluate(test_loader, model):
+def evaluate(test_loader, model, device):
     print("Testing starts...")
     epoch_loss_3d_pos = 0.0
     epoch_loss_3d_pos_procrustes = 0.0
@@ -188,7 +188,7 @@ def main(args):
         test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, 
                         num_workers=args.num_workers, collate_fn=collate_fn)
-        e1, e2, ev = evaluate(test_loader, model)
+        e1, e2, ev = evaluate(test_loader, model, device)
         return e1, e2, ev
 
     train_dataset = Data(args.dataset, transforms)
@@ -226,7 +226,7 @@ def main(args):
     print("INFO: Using optimizer {}".format(optimizer))
 
     train_list, val_list = train(args.start_epoch, args.epoch, 
-                                train_loader, val_loader, model, 
+                                train_loader, val_loader, model, device, 
                                 optimizer, lr_scheduler)
 
 
