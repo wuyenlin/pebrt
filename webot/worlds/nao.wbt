@@ -16,22 +16,5 @@ RectangleArena {
   floorTileSize 0.25 0.25
   wallHeight 0.05
 }
-WoodenBox {
-  translation 0.161962 0.05 -0.478623
-  name "wooden box(1)"
-  size 0.1 0.1 0.1
-}
-WoodenBox {
-  translation -0.416607 0.05 0.0748508
-  name "wooden box(2)"
-  size 0.1 0.1 0.1
-  mass 0.5
-}
-WoodenBox {
-  translation 0.275353 0.05 0.177511
-  name "wooden box(3)"
-  size 0.1 0.1 0.1
-}
-E-puck {
-  controller "my"
+Nao {
 }

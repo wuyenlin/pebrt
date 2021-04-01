@@ -5,5 +5,5 @@ sceneTreePerspectives: 000000ff0000000100000002000000c0000000fa01000000020100000
 maximizedDockId: -1
 centralWidgetVisible: 1
 orthographicViewHeight: 1
-textFiles: 0 "../../../home/ylwu/webots/projects/robots/boston_dynamics/atlas/controllers/hello_world_demo/hello_world_demo.c"
+textFiles: 1 "controllers/EPuckGoForward/EPuckGoForward.cpp" "controllers/my/my.cpp"
 consoles: Console:All:All

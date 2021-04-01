@@ -1,0 +1,1097 @@
+#VRML_SIM R2021a utf8
+# license: Apache License 2.0
+# license url: http://www.apache.org/licenses/LICENSE-2.0
+# This is a proto file for Webots for the Human
+# Extracted from: human.urdf
+
+PROTO Human [
+  field  SFVec3f     translation     0 0 0
+  field  SFRotation  rotation        1 0 0 -1.5708
+  field  SFString    name            "Human"  # Is `Robot.name`.
+  field  SFString    controller      "void"   # Is `Robot.controller`.
+  field  MFString    controllerArgs  []       # Is `Robot.controllerArgs`.
+  field  SFString    customData      ""       # Is `Robot.customData`.
+  field  SFBool      supervisor      FALSE    # Is `Robot.supervisor`.
+  field  SFBool      synchronization TRUE     # Is `Robot.synchronization`.
+  field  SFBool      selfCollision   FALSE    # Is `Robot.selfCollision`.
+  field  SFBool      staticBase      TRUE     # Defines if the robot base should be pinned to the static environment.
+  field  MFNode      toolSlot        []       # Extend the robot with new nodes at the end of the arm.
+]
+{
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    controller IS controller
+    controllerArgs IS controllerArgs
+    customData IS customData
+    supervisor IS supervisor
+    synchronization IS synchronization
+    selfCollision IS selfCollision
+    children [
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          axis 1.000000 0.000000 0.000000
+          anchor 0.000000 0.000000 0.000000
+          dampingConstant 0.0
+          staticFriction 0.0
+        }
+        device [
+          RotationalMotor {
+            name "hip_base_x"
+            maxVelocity 1.0
+            minPosition -0.349066
+            maxPosition 0.349066
+            maxTorque 1.0
+          }
+          PositionSensor {
+            name "hip_base_x_sensor"
+          }
+        ]
+        endPoint Solid {
+          translation 0.000000 0.000000 0.000000
+          rotation 0.000000 1.000000 0.000000 0.000000
+          children [
+            HingeJoint {
+              jointParameters HingeJointParameters {
+                axis 0.000000 -1.000000 0.000000
+                anchor 0.000000 0.000000 0.000000
+                dampingConstant 0.0
+                staticFriction 0.0
+              }
+              device [
+                RotationalMotor {
+                  name "hip_base_y"
+                  maxVelocity 1.0
+                  minPosition -0.174533
+                  maxPosition 0.349066
+                  maxTorque 1.0
+                }
+                PositionSensor {
+                  name "hip_base_y_sensor"
+                }
+              ]
+              endPoint Solid {
+                translation 0.000000 0.000000 0.000000
+                rotation 0.000000 1.000000 0.000000 0.000000
+                children [
+                  HingeJoint {
+                    jointParameters HingeJointParameters {
+                      axis 0.000000 0.000000 -1.000000
+                      anchor 0.000000 0.000000 0.000000
+                      dampingConstant 0.0
+                      staticFriction 0.0
+                    }
+                    device [
+                      RotationalMotor {
+                        name "hip_base_z"
+                        maxVelocity 1.0
+                        minPosition -1.57079632679
+                        maxPosition 1.57079632679
+                        maxTorque 1.0
+                      }
+                      PositionSensor {
+                        name "hip_base_z_sensor"
+                      }
+                    ]
+                    endPoint Solid {
+                      translation 0.000000 0.000000 0.000000
+                      rotation 0.000000 1.000000 0.000000 0.000000
+                      children [
+                        Transform {
+                          translation 0.000000 0.000000 0.173850
+                          rotation 0.000000 1.000000 0.000000 0.000000
+                          children [
+                            Shape {
+                              appearance PBRAppearance {
+                                baseColor 0.500000 0.500000 0.500000
+                                transparency 0.000000
+                                roughness 1.000000
+                                metalness 0
+                                emissiveColor 0.000000 0.000000 0.000000
+                              }
+                              geometry Box {
+                                 size 0.1 0.28678 0.3477
+                              }
+                            }
+                          ]
+                        }
+                        Solid {
+                          translation 0.000000 0.000000 0.347700
+                          rotation 0.000000 1.000000 0.000000 0.000000
+                          children [
+                            HingeJoint {
+                              jointParameters HingeJointParameters {
+                                axis 1.000000 0.000000 0.000000
+                                anchor 0.000000 0.000000 0.000000
+                                dampingConstant 0.0
+                                staticFriction 0.0
+                              }
+                              device [
+                                RotationalMotor {
+                                  name "neck_x"
+                                  maxVelocity 1.0
+                                  minPosition -1.0472
+                                  maxPosition 1.0472
+                                  maxTorque 1.0
+                                }
+                                PositionSensor {
+                                  name "neck_x_sensor"
+                                }
+                              ]
+                              endPoint Solid {
+                                translation 0.000000 0.000000 0.000000
+                                rotation 0.000000 1.000000 0.000000 0.000000
+                                children [
+                                  HingeJoint {
+                                    jointParameters HingeJointParameters {
+                                      axis 0.000000 -1.000000 0.000000
+                                      anchor 0.000000 0.000000 0.000000
+                                      dampingConstant 0.0
+                                      staticFriction 0.0
+                                    }
+                                    device [
+                                      RotationalMotor {
+                                        name "neck_y"
+                                        maxVelocity 1.0
+                                        minPosition -0.174533
+                                        maxPosition 0.785398
+                                        maxTorque 1.0
+                                      }
+                                      PositionSensor {
+                                        name "neck_y_sensor"
+                                      }
+                                    ]
+                                    endPoint Solid {
+                                      translation 0.000000 0.000000 0.000000
+                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                      children [
+                                        HingeJoint {
+                                          jointParameters HingeJointParameters {
+                                            axis 0.000000 0.000000 1.000000
+                                            anchor 0.000000 0.000000 0.000000
+                                            dampingConstant 0.0
+                                            staticFriction 0.0
+                                          }
+                                          device [
+                                            RotationalMotor {
+                                              name "neck_z"
+                                              maxVelocity 1.0
+                                              minPosition -1.57079632679
+                                              maxPosition 1.57079632679
+                                              maxTorque 1.0
+                                            }
+                                            PositionSensor {
+                                              name "neck_z_sensor"
+                                            }
+                                          ]
+                                          endPoint Solid {
+                                            translation 0.000000 0.000000 0.000000
+                                            rotation 0.000000 1.000000 0.000000 0.000000
+                                            children [
+                                              Transform {
+                                                translation 0.000000 0.000000 0.064600
+                                                rotation 1.000000 0.000000 0.000000 1.570796
+                                                children [
+                                                  Shape {
+                                                    appearance PBRAppearance {
+                                                      baseColor 0.500000 0.500000 0.500000
+                                                      transparency 0.000000
+                                                      roughness 1.000000
+                                                      metalness 0
+                                                      emissiveColor 0.000000 0.000000 0.000000
+                                                    }
+                                                    geometry Cylinder {
+                                                      radius 0.05
+                                                      height 0.1293
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                              Solid {
+                                                translation 0.000000 0.000000 0.115000
+                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                name "nose"
+                                              }
+                                            ]
+                                            name "main_neck"
+                                          }
+                                        }
+                                      ]
+                                      name "neck_1"
+                                    }
+                                  }
+                                ]
+                                name "neck_0"
+                              }
+                            }
+                            Solid {
+                              translation 0.000000 0.098390 0.000000
+                              rotation 0.000000 1.000000 0.000000 0.000000
+                              children [
+                                HingeJoint {
+                                  jointParameters HingeJointParameters {
+                                    axis 1.000000 0.000000 0.000000
+                                    anchor 0.000000 0.000000 0.000000
+                                    dampingConstant 0.0
+                                    staticFriction 0.0
+                                  }
+                                  device [
+                                    RotationalMotor {
+                                      name "left_shoulder_x"
+                                      maxVelocity 1.0
+                                      minPosition -2.35619
+                                      maxPosition 2.35619
+                                      maxTorque 1.0
+                                    }
+                                    PositionSensor {
+                                      name "left_shoulder_x_sensor"
+                                    }
+                                  ]
+                                  endPoint Solid {
+                                    translation 0.000000 0.000000 0.000000
+                                    rotation 0.000000 1.000000 0.000000 0.000000
+                                    children [
+                                      HingeJoint {
+                                        jointParameters HingeJointParameters {
+                                          axis 0.000000 -1.000000 -0.000000
+                                          anchor 0.000000 0.000000 0.000000
+                                          dampingConstant 0.0
+                                          staticFriction 0.0
+                                        }
+                                        device [
+                                          RotationalMotor {
+                                            name "left_shoulder_y"
+                                            maxVelocity 1.0
+                                            maxPosition 2.35619
+                                            maxTorque 1.0
+                                          }
+                                          PositionSensor {
+                                            name "left_shoulder_y_sensor"
+                                          }
+                                        ]
+                                        endPoint Solid {
+                                          translation 0.000000 0.000000 0.000000
+                                          rotation 0.000000 1.000000 0.000000 3.141590
+                                          children [
+                                            HingeJoint {
+                                              jointParameters HingeJointParameters {
+                                                axis 0.000000 0.000000 1.000000
+                                                anchor 0.000000 0.000000 0.000000
+                                                dampingConstant 0.0
+                                                staticFriction 0.0
+                                              }
+                                              device [
+                                                RotationalMotor {
+                                                  name "left_shoulder_z"
+                                                  maxVelocity 1.0
+                                                  minPosition -2.35619
+                                                  maxPosition 0.785398
+                                                  maxTorque 1.0
+                                                }
+                                                PositionSensor {
+                                                  name "left_shoulder_z_sensor"
+                                                }
+                                              ]
+                                              endPoint Solid {
+                                                translation 0.000000 0.000000 0.000000
+                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                children [
+                                                  Transform {
+                                                    translation 0.000000 0.091600 0.000000
+                                                    rotation 0.000000 1.000000 0.000000 1.570796
+                                                    children [
+                                                      Shape {
+                                                        appearance PBRAppearance {
+                                                          baseColor 0.500000 0.500000 0.500000
+                                                          transparency 0.000000
+                                                          roughness 1.000000
+                                                          metalness 0
+                                                          emissiveColor 0.000000 0.000000 0.000000
+                                                        }
+                                                        geometry Cylinder {
+                                                          radius 0.025
+                                                          height 0.1832
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                  Solid {
+                                                    translation 0.000000 0.167000 0.000000
+                                                    rotation 0.000000 1.000000 0.000000 0.000000
+                                                    children [
+                                                      HingeJoint {
+                                                        jointParameters HingeJointParameters {
+                                                          axis -1.000000 0.000000 0.000000
+                                                          anchor 0.000000 0.000000 0.000000
+                                                          dampingConstant 0.0
+                                                          staticFriction 0.0
+                                                        }
+                                                        device [
+                                                          RotationalMotor {
+                                                            name "left_elbow_x"
+                                                            maxVelocity 1.0
+                                                            maxPosition 1.57079632679
+                                                            maxTorque 1.0
+                                                          }
+                                                          PositionSensor {
+                                                            name "left_elbow_x_sensor"
+                                                          }
+                                                        ]
+                                                        endPoint Solid {
+                                                          translation 0.000000 0.000000 0.000000
+                                                          rotation 0.000000 1.000000 0.000000 0.000000
+                                                          children [
+                                                            HingeJoint {
+                                                              jointParameters HingeJointParameters {
+                                                                axis 0.000000 1.000000 0.000000
+                                                                anchor 0.000000 0.000000 0.000000
+                                                                dampingConstant 0.0
+                                                                staticFriction 0.0
+                                                              }
+                                                              device [
+                                                                RotationalMotor {
+                                                                  name "left_elbow_y"
+                                                                  maxVelocity 1.0
+                                                                  maxTorque 1.0
+                                                                }
+                                                                PositionSensor {
+                                                                  name "left_elbow_y_sensor"
+                                                                }
+                                                              ]
+                                                              endPoint Solid {
+                                                                translation 0.000000 0.000000 0.000000
+                                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                                children [
+                                                                  HingeJoint {
+                                                                    jointParameters HingeJointParameters {
+                                                                      axis 0.000000 0.000000 1.000000
+                                                                      anchor 0.000000 0.000000 0.000000
+                                                                      dampingConstant 0.0
+                                                                      staticFriction 0.0
+                                                                    }
+                                                                    device [
+                                                                      RotationalMotor {
+                                                                        name "left_elbow_z"
+                                                                        maxVelocity 1.0
+                                                                        maxTorque 1.0
+                                                                      }
+                                                                      PositionSensor {
+                                                                        name "left_elbow_z_sensor"
+                                                                      }
+                                                                    ]
+                                                                    endPoint Solid {
+                                                                      translation 0.000000 0.000000 0.000000
+                                                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                                                      children [
+                                                                        Transform {
+                                                                          translation 0.000000 0.119900 0.000000
+                                                                          rotation 0.000000 1.000000 0.000000 1.570796
+                                                                          children [
+                                                                            Shape {
+                                                                              appearance PBRAppearance {
+                                                                                baseColor 0.500000 0.500000 0.500000
+                                                                                transparency 0.000000
+                                                                                roughness 1.000000
+                                                                                metalness 0
+                                                                                emissiveColor 0.000000 0.000000 0.000000
+                                                                              }
+                                                                              geometry Cylinder {
+                                                                                radius 0.02
+                                                                                height 0.2398
+                                                                              }
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                        Solid {
+                                                                          translation 0.000000 0.169800 0.000000
+                                                                          rotation 0.000000 1.000000 0.000000 0.000000
+                                                                          name "left_wrist_base"
+                                                                        }
+                                                                      ]
+                                                                      name "main_left_elbow"
+                                                                    }
+                                                                  }
+                                                                ]
+                                                                name "left_elbow_1"
+                                                              }
+                                                            }
+                                                          ]
+                                                          name "left_elbow_0"
+                                                        }
+                                                      }
+                                                    ]
+                                                    name "left_elbow_base"
+                                                  }
+                                                ]
+                                                name "main_left_shoulder"
+                                              }
+                                            }
+                                          ]
+                                          name "left_shoulder_1"
+                                        }
+                                      }
+                                    ]
+                                    name "left_shoulder_0"
+                                  }
+                                }
+                              ]
+                              name "left_shoulder_base"
+                            }
+                            Solid {
+                              translation 0.000000 -0.098390 0.000000
+                              rotation 0.000000 0.000000 1.000000 3.141590
+                              children [
+                                HingeJoint {
+                                  jointParameters HingeJointParameters {
+                                    axis 1.000000 0.000000 0.000000
+                                    anchor 0.000000 0.000000 0.000000
+                                    dampingConstant 0.0
+                                    staticFriction 0.0
+                                  }
+                                  device [
+                                    RotationalMotor {
+                                      name "right_shoulder_x"
+                                      maxVelocity 1.0
+                                      minPosition -2.35619
+                                      maxPosition 2.35619
+                                      maxTorque 1.0
+                                    }
+                                    PositionSensor {
+                                      name "right_shoulder_x_sensor"
+                                    }
+                                  ]
+                                  endPoint Solid {
+                                    translation 0.000000 0.000000 0.000000
+                                    rotation 0.000000 1.000000 0.000000 0.000000
+                                    children [
+                                      HingeJoint {
+                                        jointParameters HingeJointParameters {
+                                          axis 0.000000 1.000000 0.000000
+                                          anchor 0.000000 0.000000 0.000000
+                                          dampingConstant 0.0
+                                          staticFriction 0.0
+                                        }
+                                        device [
+                                          RotationalMotor {
+                                            name "right_shoulder_y"
+                                            maxVelocity 1.0
+                                            maxPosition 2.35619
+                                            maxTorque 1.0
+                                          }
+                                          PositionSensor {
+                                            name "right_shoulder_y_sensor"
+                                          }
+                                        ]
+                                        endPoint Solid {
+                                          translation 0.000000 0.000000 0.000000
+                                          rotation 0.000000 1.000000 0.000000 0.000000
+                                          children [
+                                            HingeJoint {
+                                              jointParameters HingeJointParameters {
+                                                axis 0.000000 0.000000 -1.000000
+                                                anchor 0.000000 0.000000 0.000000
+                                                dampingConstant 0.0
+                                                staticFriction 0.0
+                                              }
+                                              device [
+                                                RotationalMotor {
+                                                  name "right_shoulder_z"
+                                                  maxVelocity 1.0
+                                                  minPosition -0.785398
+                                                  maxPosition 2.35619
+                                                  maxTorque 1.0
+                                                }
+                                                PositionSensor {
+                                                  name "right_shoulder_z_sensor"
+                                                }
+                                              ]
+                                              endPoint Solid {
+                                                translation 0.000000 0.000000 0.000000
+                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                children [
+                                                  Transform {
+                                                    translation 0.000000 0.091600 0.000000
+                                                    rotation 0.707107 0.000000 -0.707107 3.141593
+                                                    children [
+                                                      Shape {
+                                                        appearance PBRAppearance {
+                                                          baseColor 0.500000 0.500000 0.500000
+                                                          transparency 0.000000
+                                                          roughness 1.000000
+                                                          metalness 0
+                                                          emissiveColor 0.000000 0.000000 0.000000
+                                                        }
+                                                        geometry Cylinder {
+                                                          radius 0.025
+                                                          height 0.1832
+                                                        }
+                                                      }
+                                                    ]
+                                                  }
+                                                  Solid {
+                                                    translation 0.000000 0.167000 0.000000
+                                                    rotation 0.000000 1.000000 0.000000 0.000000
+                                                    children [
+                                                      HingeJoint {
+                                                        jointParameters HingeJointParameters {
+                                                          axis 1.000000 0.000000 0.000000
+                                                          anchor 0.000000 0.000000 0.000000
+                                                          dampingConstant 0.0
+                                                          staticFriction 0.0
+                                                        }
+                                                        device [
+                                                          RotationalMotor {
+                                                            name "right_elbow_x"
+                                                            maxVelocity 1.0
+                                                            maxPosition 1.57079632679
+                                                            maxTorque 1.0
+                                                          }
+                                                          PositionSensor {
+                                                            name "right_elbow_x_sensor"
+                                                          }
+                                                        ]
+                                                        endPoint Solid {
+                                                          translation 0.000000 0.000000 0.000000
+                                                          rotation 0.000000 1.000000 0.000000 0.000000
+                                                          children [
+                                                            HingeJoint {
+                                                              jointParameters HingeJointParameters {
+                                                                axis 0.000000 1.000000 0.000000
+                                                                anchor 0.000000 0.000000 0.000000
+                                                                dampingConstant 0.0
+                                                                staticFriction 0.0
+                                                              }
+                                                              device [
+                                                                RotationalMotor {
+                                                                  name "right_elbow_y"
+                                                                  maxVelocity 1.0
+                                                                  maxTorque 1.0
+                                                                }
+                                                                PositionSensor {
+                                                                  name "right_elbow_y_sensor"
+                                                                }
+                                                              ]
+                                                              endPoint Solid {
+                                                                translation 0.000000 0.000000 0.000000
+                                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                                children [
+                                                                  HingeJoint {
+                                                                    jointParameters HingeJointParameters {
+                                                                      axis 0.000000 0.000000 1.000000
+                                                                      anchor 0.000000 0.000000 0.000000
+                                                                      dampingConstant 0.0
+                                                                      staticFriction 0.0
+                                                                    }
+                                                                    device [
+                                                                      RotationalMotor {
+                                                                        name "right_elbow_z"
+                                                                        maxVelocity 1.0
+                                                                        maxTorque 1.0
+                                                                      }
+                                                                      PositionSensor {
+                                                                        name "right_elbow_z_sensor"
+                                                                      }
+                                                                    ]
+                                                                    endPoint Solid {
+                                                                      translation 0.000000 0.000000 0.000000
+                                                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                                                      children [
+                                                                        Transform {
+                                                                          translation 0.000000 0.119900 0.000000
+                                                                          rotation 0.000000 1.000000 0.000000 1.570796
+                                                                          children [
+                                                                            Shape {
+                                                                              appearance PBRAppearance {
+                                                                                baseColor 0.500000 0.500000 0.500000
+                                                                                transparency 0.000000
+                                                                                roughness 1.000000
+                                                                                metalness 0
+                                                                                emissiveColor 0.000000 0.000000 0.000000
+                                                                              }
+                                                                              geometry Cylinder {
+                                                                                radius 0.02
+                                                                                height 0.2398
+                                                                              }
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                        Solid {
+                                                                          translation 0.000000 0.169800 0.000000
+                                                                          rotation 0.000000 1.000000 0.000000 0.000000
+                                                                          name "right_wrist_base"
+                                                                        }
+                                                                      ]
+                                                                      name "main_right_elbow"
+                                                                    }
+                                                                  }
+                                                                ]
+                                                                name "right_elbow_1"
+                                                              }
+                                                            }
+                                                          ]
+                                                          name "right_elbow_0"
+                                                        }
+                                                      }
+                                                    ]
+                                                    name "right_elbow_base"
+                                                  }
+                                                ]
+                                                name "main_right_shoulder"
+                                              }
+                                            }
+                                          ]
+                                          name "right_shoulder_1"
+                                        }
+                                      }
+                                    ]
+                                    name "right_shoulder_0"
+                                  }
+                                }
+                              ]
+                              name "right_shoulder_base"
+                            }
+                          ]
+                          name "neck_base"
+                        }
+                        Solid {
+                          translation 0.000000 0.076200 0.000000
+                          rotation 0.000000 1.000000 0.000000 0.000000
+                          children [
+                            HingeJoint {
+                              jointParameters HingeJointParameters {
+                                axis 1.000000 0.000000 0.000000
+                                anchor 0.000000 0.000000 0.000000
+                                dampingConstant 0.0
+                                staticFriction 0.0
+                              }
+                              device [
+                                RotationalMotor {
+                                  name "left_hip_x"
+                                  maxVelocity 1.0
+                                  minPosition -1.0472
+                                  maxPosition 1.0472
+                                  maxTorque 1.0
+                                }
+                                PositionSensor {
+                                  name "left_hip_x_sensor"
+                                }
+                              ]
+                              endPoint Solid {
+                                translation 0.000000 0.000000 0.000000
+                                rotation 0.000000 1.000000 0.000000 0.000000
+                                children [
+                                  HingeJoint {
+                                    jointParameters HingeJointParameters {
+                                      axis 0.000000 1.000000 0.000000
+                                      anchor 0.000000 0.000000 0.000000
+                                      dampingConstant 0.0
+                                      staticFriction 0.0
+                                    }
+                                    device [
+                                      RotationalMotor {
+                                        name "left_hip_y"
+                                        maxVelocity 1.0
+                                        maxPosition 2.79253
+                                        maxTorque 1.0
+                                      }
+                                      PositionSensor {
+                                        name "left_hip_y_sensor"
+                                      }
+                                    ]
+                                    endPoint Solid {
+                                      translation 0.000000 0.000000 0.000000
+                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                      children [
+                                        HingeJoint {
+                                          jointParameters HingeJointParameters {
+                                            axis 0.000000 0.000000 -1.000000
+                                            anchor 0.000000 0.000000 0.000000
+                                            dampingConstant 0.0
+                                            staticFriction 0.0
+                                          }
+                                          device [
+                                            RotationalMotor {
+                                              name "left_hip_z"
+                                              maxVelocity 1.0
+                                              minPosition -0.349066
+                                              maxPosition 0.349066
+                                              maxTorque 1.0
+                                            }
+                                            PositionSensor {
+                                              name "left_hip_z_sensor"
+                                            }
+                                          ]
+                                          endPoint Solid {
+                                            translation 0.000000 0.000000 0.000000
+                                            rotation 0.000000 1.000000 0.000000 0.000000
+                                            children [
+                                              Transform {
+                                                translation 0.000000 0.000000 -0.125300
+                                                rotation 1.000000 0.000000 0.000000 1.570796
+                                                children [
+                                                  Shape {
+                                                    appearance PBRAppearance {
+                                                      baseColor 0.500000 0.500000 0.500000
+                                                      transparency 0.000000
+                                                      roughness 1.000000
+                                                      metalness 0
+                                                      emissiveColor 0.000000 0.000000 0.000000
+                                                    }
+                                                    geometry Cylinder {
+                                                      radius 0.05
+                                                      height 0.2506
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                              Solid {
+                                                translation 0.000000 0.000000 -0.232600
+                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                children [
+                                                  HingeJoint {
+                                                    jointParameters HingeJointParameters {
+                                                      axis 1.000000 0.000000 0.000000
+                                                      anchor 0.000000 0.000000 0.000000
+                                                      dampingConstant 0.0
+                                                      staticFriction 0.0
+                                                    }
+                                                    device [
+                                                      RotationalMotor {
+                                                        name "left_knee_x"
+                                                        maxVelocity 1.0
+                                                        maxTorque 1.0
+                                                      }
+                                                      PositionSensor {
+                                                        name "left_knee_x_sensor"
+                                                      }
+                                                    ]
+                                                    endPoint Solid {
+                                                      translation 0.000000 0.000000 0.000000
+                                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                                      children [
+                                                        HingeJoint {
+                                                          jointParameters HingeJointParameters {
+                                                            axis 0.000000 -1.000000 0.000000
+                                                            anchor 0.000000 0.000000 0.000000
+                                                            dampingConstant 0.0
+                                                            staticFriction 0.0
+                                                          }
+                                                          device [
+                                                            RotationalMotor {
+                                                              name "left_knee_y"
+                                                              maxVelocity 1.0
+                                                              maxPosition 2.35619
+                                                              maxTorque 1.0
+                                                            }
+                                                            PositionSensor {
+                                                              name "left_knee_y_sensor"
+                                                            }
+                                                          ]
+                                                          endPoint Solid {
+                                                            translation 0.000000 0.000000 0.000000
+                                                            rotation 0.000000 1.000000 0.000000 0.000000
+                                                            children [
+                                                              HingeJoint {
+                                                                jointParameters HingeJointParameters {
+                                                                  axis 0.000000 0.000000 1.000000
+                                                                  anchor 0.000000 0.000000 0.000000
+                                                                  dampingConstant 0.0
+                                                                  staticFriction 0.0
+                                                                }
+                                                                device [
+                                                                  RotationalMotor {
+                                                                    name "left_knee_z"
+                                                                    maxVelocity 1.0
+                                                                    maxTorque 1.0
+                                                                  }
+                                                                  PositionSensor {
+                                                                    name "left_knee_z_sensor"
+                                                                  }
+                                                                ]
+                                                                endPoint Solid {
+                                                                  translation 0.000000 0.000000 0.000000
+                                                                  rotation 0.000000 1.000000 0.000000 0.000000
+                                                                  children [
+                                                                    Transform {
+                                                                      translation 0.000000 0.000000 -0.138500
+                                                                      rotation 1.000000 0.000000 0.000000 1.570796
+                                                                      children [
+                                                                        Shape {
+                                                                          appearance PBRAppearance {
+                                                                            baseColor 0.500000 0.500000 0.500000
+                                                                            transparency 0.000000
+                                                                            roughness 1.000000
+                                                                            metalness 0
+                                                                            emissiveColor 0.000000 0.000000 0.000000
+                                                                          }
+                                                                          geometry Cylinder {
+                                                                            radius 0.035
+                                                                            height 0.277
+                                                                          }
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                    Solid {
+                                                                      translation 0.000000 0.000000 -0.192000
+                                                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                                                      name "left_ankle_base"
+                                                                    }
+                                                                  ]
+                                                                  name "main_left_knee"
+                                                                }
+                                                              }
+                                                            ]
+                                                            name "left_knee_1"
+                                                          }
+                                                        }
+                                                      ]
+                                                      name "left_knee_0"
+                                                    }
+                                                  }
+                                                ]
+                                                name "left_knee_base"
+                                              }
+                                            ]
+                                            name "main_left_hip"
+                                          }
+                                        }
+                                      ]
+                                      name "left_hip_1"
+                                    }
+                                  }
+                                ]
+                                name "left_hip_0"
+                              }
+                            }
+                          ]
+                          name "left_hip_base"
+                        }
+                        Solid {
+                          translation 0.000000 -0.076200 0.000000
+                          rotation -0.000000 0.000000 1.000000 3.141593
+                          children [
+                            HingeJoint {
+                              jointParameters HingeJointParameters {
+                                axis 1.000000 0.000000 0.000000
+                                anchor 0.000000 0.000000 0.000000
+                                dampingConstant 0.0
+                                staticFriction 0.0
+                              }
+                              device [
+                                RotationalMotor {
+                                  name "right_hip_x"
+                                  maxVelocity 1.0
+                                  minPosition -1.0472
+                                  maxPosition 1.0472
+                                  maxTorque 1.0
+                                }
+                                PositionSensor {
+                                  name "right_hip_x_sensor"
+                                }
+                              ]
+                              endPoint Solid {
+                                translation 0.000000 0.000000 0.000000
+                                rotation 0.000000 1.000000 0.000000 0.000000
+                                children [
+                                  HingeJoint {
+                                    jointParameters HingeJointParameters {
+                                      axis 0.000000 -1.000000 0.000000
+                                      anchor 0.000000 0.000000 0.000000
+                                      dampingConstant 0.0
+                                      staticFriction 0.0
+                                    }
+                                    device [
+                                      RotationalMotor {
+                                        name "right_hip_y"
+                                        maxVelocity 1.0
+                                        maxPosition 1.5708
+                                        maxTorque 1.0
+                                      }
+                                      PositionSensor {
+                                        name "right_hip_y_sensor"
+                                      }
+                                    ]
+                                    endPoint Solid {
+                                      translation 0.000000 0.000000 0.000000
+                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                      children [
+                                        HingeJoint {
+                                          jointParameters HingeJointParameters {
+                                            axis 0.000000 0.000000 -1.000000
+                                            anchor 0.000000 0.000000 0.000000
+                                            dampingConstant 0.0
+                                            staticFriction 0.0
+                                          }
+                                          device [
+                                            RotationalMotor {
+                                              name "right_hip_z"
+                                              maxVelocity 1.0
+                                              minPosition -0.349066
+                                              maxPosition 0.349066
+                                              maxTorque 1.0
+                                            }
+                                            PositionSensor {
+                                              name "right_hip_z_sensor"
+                                            }
+                                          ]
+                                          endPoint Solid {
+                                            translation 0.000000 0.000000 0.000000
+                                            rotation 0.000000 1.000000 0.000000 0.000000
+                                            children [
+                                              Transform {
+                                                translation 0.000000 0.000000 -0.125300
+                                                rotation 1.000000 0.000000 0.000000 1.570796
+                                                children [
+                                                  Shape {
+                                                    appearance PBRAppearance {
+                                                      baseColor 0.500000 0.500000 0.500000
+                                                      transparency 0.000000
+                                                      roughness 1.000000
+                                                      metalness 0
+                                                      emissiveColor 0.000000 0.000000 0.000000
+                                                    }
+                                                    geometry Cylinder {
+                                                      radius 0.05
+                                                      height 0.2506
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                              Solid {
+                                                translation 0.000000 0.000000 -0.232600
+                                                rotation 0.000000 1.000000 0.000000 0.000000
+                                                children [
+                                                  HingeJoint {
+                                                    jointParameters HingeJointParameters {
+                                                      axis 1.000000 0.000000 0.000000
+                                                      anchor 0.000000 0.000000 0.000000
+                                                      dampingConstant 0.0
+                                                      staticFriction 0.0
+                                                    }
+                                                    device [
+                                                      RotationalMotor {
+                                                        name "right_knee_x"
+                                                        maxVelocity 1.0
+                                                        maxTorque 1.0
+                                                      }
+                                                      PositionSensor {
+                                                        name "right_knee_x_sensor"
+                                                      }
+                                                    ]
+                                                    endPoint Solid {
+                                                      translation 0.000000 0.000000 0.000000
+                                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                                      children [
+                                                        HingeJoint {
+                                                          jointParameters HingeJointParameters {
+                                                            axis 0.000000 1.000000 0.000000
+                                                            anchor 0.000000 0.000000 0.000000
+                                                            dampingConstant 0.0
+                                                            staticFriction 0.0
+                                                          }
+                                                          device [
+                                                            RotationalMotor {
+                                                              name "right_knee_y"
+                                                              maxVelocity 1.0
+                                                              maxPosition 2.35619
+                                                              maxTorque 1.0
+                                                            }
+                                                            PositionSensor {
+                                                              name "right_knee_y_sensor"
+                                                            }
+                                                          ]
+                                                          endPoint Solid {
+                                                            translation 0.000000 0.000000 0.000000
+                                                            rotation 0.000000 1.000000 0.000000 0.000000
+                                                            children [
+                                                              HingeJoint {
+                                                                jointParameters HingeJointParameters {
+                                                                  axis 0.000000 0.000000 1.000000
+                                                                  anchor 0.000000 0.000000 0.000000
+                                                                  dampingConstant 0.0
+                                                                  staticFriction 0.0
+                                                                }
+                                                                device [
+                                                                  RotationalMotor {
+                                                                    name "right_knee_z"
+                                                                    maxVelocity 1.0
+                                                                    maxTorque 1.0
+                                                                  }
+                                                                  PositionSensor {
+                                                                    name "right_knee_z_sensor"
+                                                                  }
+                                                                ]
+                                                                endPoint Solid {
+                                                                  translation 0.000000 0.000000 0.000000
+                                                                  rotation 0.000000 1.000000 0.000000 0.000000
+                                                                  children [
+                                                                    Transform {
+                                                                      translation 0.000000 0.000000 -0.138500
+                                                                      rotation 1.000000 0.000000 0.000000 1.570796
+                                                                      children [
+                                                                        Shape {
+                                                                          appearance PBRAppearance {
+                                                                            baseColor 0.500000 0.500000 0.500000
+                                                                            transparency 0.000000
+                                                                            roughness 1.000000
+                                                                            metalness 0
+                                                                            emissiveColor 0.000000 0.000000 0.000000
+                                                                          }
+                                                                          geometry Cylinder {
+                                                                            radius 0.035
+                                                                            height 0.277
+                                                                          }
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                    Solid {
+                                                                      translation 0.000000 0.000000 -0.192000
+                                                                      rotation 0.000000 1.000000 0.000000 0.000000
+                                                                      name "right_ankle_base"
+                                                                    }
+                                                                  ]
+                                                                  name "main_right_knee"
+                                                                }
+                                                              }
+                                                            ]
+                                                            name "right_knee_1"
+                                                          }
+                                                        }
+                                                      ]
+                                                      name "right_knee_0"
+                                                    }
+                                                  }
+                                                ]
+                                                name "right_knee_base"
+                                              }
+                                            ]
+                                            name "main_right_hip"
+                                          }
+                                        }
+                                      ]
+                                      name "right_hip_1"
+                                    }
+                                  }
+                                ]
+                                name "right_hip_0"
+                              }
+                            }
+                          ]
+                          name "right_hip_base"
+                        }
+                      ]
+                      name "main_trunk"
+                    }
+                  }
+                ]
+                name "trunk_1"
+              }
+            }
+          ]
+          name "trunk_0"
+        }
+      }
+    ]
+    name IS name 
+  }
+}
