@@ -7,7 +7,11 @@ from collections import OrderedDict
 import copy
 from typing import Optional, List
 
-from misc import *
+try:
+    from common.misc import *
+except ModuleNotFoundError:
+    from misc import *
+
 
 class Bottleneck(nn.Module):
     expansion = 4
