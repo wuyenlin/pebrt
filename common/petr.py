@@ -93,7 +93,7 @@ class PETR(nn.Module):
         self.lift = lift
         if self.lift:
             self.backbone = HRNet(32, 17, 0.1)
-            pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
+            pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
             self.backbone.load_state_dict(torch.load(pretrained_weight))
             print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
             self.transformer = TransformerEncoder(num_layers=8)
