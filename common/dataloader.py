@@ -4,17 +4,19 @@ import torch
 import torchvision
 from torchvision import transforms
 import torchvision.transforms.functional as F
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
 from PIL import Image, ImageEnhance, ImageFilter
+
 
 def imshow(img):
     img = img / 2 + 0.5   
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
+
 
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
@@ -51,7 +53,8 @@ class Data:
         for vid in vid_list:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
-                self.gt_pts2d.append(torch.from_numpy(self.pop_joints(pts_2d)))
+                pro_pts_2d = self.shift_pose(self.pop_joints(pts_2d)*96/2048)
+                self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
@@ -114,9 +117,8 @@ class Data:
         return cam_3d
 
     
-    def shift_pose(self, cam_3d):
-        assert cam_3d.shape == (17,3)
-        return cam_3d - cam_3d[2,:]
+    def shift_pose(self, cam):
+        return cam - cam[2,:]
 
 
 if __name__ == "__main__":
@@ -126,15 +128,15 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
 
-    train_npz = "dataset/S1/Seq1/imageSequence/S1seq1.npz"
+    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
     train_dataset = Data(train_npz, transforms, True)
     print(len(train_dataset))
-    print(train_dataset[0])
+    # print(train_dataset[0])
     trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, kpts, labels = dataiter.next()
-    imshow(torchvision.utils.make_grid(images))
+    # imshow(torchvision.utils.make_grid(images))
     
     bones = (
     (0,1), (0,3), (1,2), (3,4),  # spine + head
@@ -146,7 +148,9 @@ if __name__ == "__main__":
 
     pts = labels[0]
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(121)
+    plt.imshow(Image.open(img_path[0]))
+    ax = fig.add_subplot(122, projection='3d')
     ax.scatter(pts[:,0], pts[:,1], pts[:,2])
     for bone in bones:
         xS = (pts[bone[0],0], pts[bone[1],0])
