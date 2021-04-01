@@ -2,7 +2,6 @@
 
 from common.options import args_parser
 from common.petr import *
-from common.detr import *
 from common.dataloader import *
 from common.loss import *
 
@@ -14,12 +13,12 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 from time import time
 
 
 transforms = transforms.Compose([
-    transforms.Resize([384,384]),
+    transforms.Resize([256,256]),
     transforms.ToTensor(),  
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ])
@@ -38,13 +37,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_sch
         model.train()
     # train
         for data in train_loader:
-            _, images, _, inputs_3d= data
-            inputs_3d = inputs_3d.to(args.device)
-            images = images.to(args.device)
+            _, images, _, inputs_3d = data
+            inputs_3d = inputs_3d.to(device)
+            images = images.to(device)
 
             optimizer.zero_grad()
 
-            predicted_3d_pos = model(images)
+            _, predicted_3d_pos = model(images)
 
             loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -64,13 +63,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_sch
             N = 0
 
             for data in val_loader:
-                _, images, _, inputs_3d= data
-                inputs_3d = inputs_3d.to(args.device)
-                images = images.to(args.device)
+                _, images, _, inputs_3d = data
+                inputs_3d = inputs_3d.to(device)
+                images = images.to(device)
 
                 optimizer.zero_grad()
 
-                predicted_3d_pos = model(images)
+                _, predicted_3d_pos = model(images)
 
                 loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -85,7 +84,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_sch
                 ep + 1,
                 elapsed,
                 losses_3d_train[-1] * 1000,
-                losses_3d_valid[-1]  *1000))
+                losses_3d_valid[-1] * 1000))
 
         if args.export_training_curves and ep > 3:
             plt.figure()
@@ -100,7 +99,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_sch
 
             plt.close('all')
 
-        if (ep)%10 == 0 and ep != 0:
+        if (ep)%5 == 0 and ep != 0:
             exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
@@ -126,10 +125,10 @@ def evaluate(test_loader, model):
         N = 0
         for data in test_loader:
             _, images, _, inputs_3d = data
-            inputs_3d = inputs_3d.to(args.device)
-            images = images.to(args.device)
+            inputs_3d = inputs_3d.to(device)
+            images = images.to(device)
 
-            predicted_3d_pos = model(images)
+            _, predicted_3d_pos = model(images)
             error = mpjpe(predicted_3d_pos, inputs_3d)
 
             epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
@@ -157,12 +156,14 @@ def evaluate(test_loader, model):
 
 def main(args):
 
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
     model = PETR(lift=args.lift)
-    model = model.to(args.device)
-    if args.resume is not None:
-        model.load_state_dict(torch.load(args.resume))
-        print("INFO: Checkpoint loaded from {}".format(args.resume))
+    model = model.to(device)
+
+    if args.distributed:
+        model = nn.DataParallel(model, device_ids=[args.gpu])
+        print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
+
 
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
@@ -185,14 +186,19 @@ def main(args):
 
     if args.eval:
         test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=16, collate_fn=collate_fn)
+        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, 
+                        num_workers=args.num_workers, collate_fn=collate_fn)
         e1, e2, ev = evaluate(test_loader, model)
         return e1, e2, ev
 
     train_dataset = Data(args.dataset, transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, 
+                        num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, 
+                        num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+    
+
 
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
@@ -201,8 +207,12 @@ def main(args):
             "lr": args.lr_backbone,
         },
     ]
+
     optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop, gamma=0.1)
+    if not args.lift:
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
     if args.resume:
         checkpoint = torch.load(args.resume, map_location='cpu')
@@ -218,7 +228,6 @@ def main(args):
     train_list, val_list = train(args.start_epoch, args.epoch, 
                                 train_loader, val_loader, model, 
                                 optimizer, lr_scheduler)
-
 
 
 if __name__ == "__main__":
