@@ -107,15 +107,15 @@ class PETR(nn.Module):
         if self.lift:
             x = self.backbone(x)
             x = hmap_joints(x)
-            out_x = self.transformer(x.cuda())
+            x = self.transformer(x)
         else:
             bs = x.shape[0]
             x = self.patch_embed(x)[0]
             joint_token = self.joint_token.repeat(bs,1,1)
             emb = torch.cat([joint_token, x], dim=1)
-            out_x = self.transformer(emb)
+            x = self.transformer(emb)
 
-        return x, out_x
+        return x
 
 
 if __name__ == "__main__":

@@ -20,8 +20,6 @@ class PositionalEncoder(nn.Module):
                 pe[pos, i + 1] = math.cos(pos / (10000 ** ((2 * (i + 1))/d_model)))
 
         self.pe = pe
-        if torch.cuda.is_available():
-            self.pe = pe.cuda()
  
     def forward(self, x):
         bs, seq_len, d_model = x.size(0), x.size(1), x.size(2)
