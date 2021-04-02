@@ -6,37 +6,10 @@ import matplotlib.pyplot as plt
 
 try:
     from common.hrnet import *
-    from common.pos_embed import *
+    from common.embed import *
 except ModuleNotFoundError:
     from hrnet import *
-    from pos_embed import *
-
-"""
-Direction 3D pose regression method uses the model referring to Vision Transformer
-Its implementation in PyTorch is availble at https://github.com/asyml/vision-transformer-pytorch.
-Part of this file is borrowed from their src/model.py.
-"""
-
-class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
-        super().__init__()
-        self.img_size = (img_size, img_size)
-        self.patch_size = (patch_size, patch_size)
-        self.H, self.W = self.img_size[0]/self.patch_size[0] , self.img_size[1]/self.patch_size[1] 
-        self.num_patches = self.H * self.W
-        self.in_channel = in_channel
-        self.embed_dim = embed_dim
-
-        self.proj = nn.Conv2d(in_channel, embed_dim, kernel_size=patch_size, stride=patch_size)
-        self.norm = nn.LayerNorm(embed_dim)
-
-    def forward(self, x):
-        bs, c, h, w = x.shape
-        x = self.proj(x).flatten(2).transpose(1,2)
-        x = self.norm(x)
-        H, W = h/self.patch_size[0] , w/self.patch_size[1]
-
-        return x, (H,W)
+    from embed import *
 
 
 class TransformerEncoder(nn.Module):
