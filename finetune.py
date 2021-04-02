@@ -2,6 +2,7 @@
 
 from common.options import args_parser
 from common.petr import *
+from common.detr import *
 from common.dataloader import *
 from common.loss import *
 
@@ -13,7 +14,7 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import Dataset, DataLoader
 from time import time
 
 
@@ -23,11 +24,8 @@ transforms = transforms.Compose([
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ])
 
-def collate_fn(batch):
-    batch = list(filter(lambda x: x is not None, batch))
-    return torch.utils.data.dataloader.default_collate(batch)
 
-def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
+def train(start_epoch, epoch, train_loader, val_loader, model, optimizer, lr_scheduler):
     print("Training starts...")
 
     losses_3d_train = []
@@ -40,9 +38,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, images, _, inputs_3d = data
-            inputs_3d = inputs_3d.to(device)
-            images = images.to(device)
+            _, images, _, inputs_3d= data
+            inputs_3d = inputs_3d.to(args.device)
+            images = images.to(args.device)
 
             optimizer.zero_grad()
 
@@ -66,9 +64,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, images, _, inputs_3d = data
-                inputs_3d = inputs_3d.to(device)
-                images = images.to(device)
+                _, images, _, inputs_3d= data
+                inputs_3d = inputs_3d.to(args.device)
+                images = images.to(args.device)
 
                 optimizer.zero_grad()
 
@@ -98,12 +96,12 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.ylabel('MPJPE (m)')
             plt.xlabel('Epoch')
             plt.xlim((3, epoch))
-            plt.savefig('../checkpoint/loss_3d.png')
+            plt.savefig('./checkpoint/loss_3d.png')
 
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "../checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -117,7 +115,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     return losses_3d_train , losses_3d_valid
 
 
-def evaluate(test_loader, model, device):
+def evaluate(test_loader, model):
     print("Testing starts...")
     epoch_loss_3d_pos = 0.0
     epoch_loss_3d_pos_procrustes = 0.0
@@ -128,8 +126,8 @@ def evaluate(test_loader, model, device):
         N = 0
         for data in test_loader:
             _, images, _, inputs_3d = data
-            inputs_3d = inputs_3d.to(device)
-            images = images.to(device)
+            inputs_3d = inputs_3d.to(args.device)
+            images = images.to(args.device)
 
             _, predicted_3d_pos = model(images)
             error = mpjpe(predicted_3d_pos, inputs_3d)
@@ -159,24 +157,18 @@ def evaluate(test_loader, model, device):
 
 def main(args):
 
-    device = torch.device(args.device)
-    model = PETR(device, lift=args.lift)
-    model = model.to(device)
-
-    if args.distributed:
-        gpus = list(range(torch.cuda.device_count()))
-        model = nn.DataParallel(model, device_ids=gpus)
-        print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
-
+    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = PETR(lift=args.lift)
+    model = model.to(args.device)
 
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
         backbone_params = 0
         if args.lr_backbone == 0:
             print("INFO: Freezing HRNet")
-            #for param in model.backbone.parameters():
-            #    param.requires_grad = False
-            #    backbone_params += param.numel()
+            for param in model.backbone.parameters():
+                param.requires_grad = False
+                backbone_params += param.numel()
     else:
         print("INFO: Model loaded. Using End-to-end model.")
 
@@ -190,16 +182,14 @@ def main(args):
 
     if args.eval:
         test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
-        e1, e2, ev = evaluate(test_loader, model, device)
+        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=16, collate_fn=collate_fn)
+        e1, e2, ev = evaluate(test_loader, model)
         return e1, e2, ev
 
     train_dataset = Data(args.dataset, transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
-    
-
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=16, drop_last=False, collate_fn=collate_fn)
 
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
@@ -208,26 +198,22 @@ def main(args):
             "lr": args.lr_backbone,
         },
     ]
-
     optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-    if not args.lift:
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
     if args.resume:
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
 
-        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            args.start_epoch = checkpoint['epoch'] + 1
+        # if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+        #     optimizer.load_state_dict(checkpoint['optimizer'])
+        #     lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+        #     args.start_epoch = checkpoint['epoch'] + 1
 
     print("INFO: Using optimizer {}".format(optimizer))
 
     train_list, val_list = train(args.start_epoch, args.epoch, 
-                                train_loader, val_loader, model, device, 
+                                train_loader, val_loader, model, 
                                 optimizer, lr_scheduler)
 
 

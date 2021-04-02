@@ -43,13 +43,13 @@ class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
     """
-    def __init__(self, d_model=34, nhead=2, num_layers=6, 
+    def __init__(self, device, d_model=34, nhead=2, num_layers=6, 
                     num_joints_in=17, num_joints_out=17,
                     num_patches=256, lift=True):
         super().__init__()
         if lift:
             print("INFO: Using default positional encoder")
-            self.pe = PositionalEncoder(d_model)
+            self.pe = PositionalEncoder(d_model, device)
             self.tanh = nn.Tanh()
         else:
             print("INFO: Using ViT positional embedding")
@@ -87,19 +87,20 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, lift=True):
+    def __init__(self, device, lift=True):
         super().__init__()
         
         self.lift = lift
+        self.device = device
         if self.lift:
             self.backbone = HRNet(32, 17, 0.1)
             pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
             self.backbone.load_state_dict(torch.load(pretrained_weight))
             print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
-            self.transformer = TransformerEncoder(num_layers=8)
+            self.transformer = TransformerEncoder(device, num_layers=8)
         else:
             self.patch_embed = PatchEmbedding()
-            self.transformer = TransformerEncoder(d_model=768, nhead=12, num_layers=12, lift=self.lift)
+            self.transformer = TransformerEncoder(device, d_model=768, nhead=12, num_layers=12, lift=self.lift)
             self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
@@ -107,15 +108,15 @@ class PETR(nn.Module):
         if self.lift:
             x = self.backbone(x)
             x = hmap_joints(x)
-            x = self.transformer(x)
+            out_x = self.transformer(x.to(self.device))
         else:
             bs = x.shape[0]
             x = self.patch_embed(x)[0]
             joint_token = self.joint_token.repeat(bs,1,1)
             emb = torch.cat([joint_token, x], dim=1)
-            x = self.transformer(emb)
+            out_x = self.transformer(emb)
 
-        return x
+        return x, out_x
 
 
 if __name__ == "__main__":
@@ -127,7 +128,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
-    model = PETR(lift=True)
+    model = PETR(device, lift=True)
     model = model.cuda()
     img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
     img = transforms(img)

@@ -9,11 +9,11 @@ class PositionalEncoder(nn.Module):
     """
     Original PE from Attention is All You Need
     """
-    def __init__(self, d_model, max_seq_len=200, dropout=0.1):
+    def __init__(self, d_model, device, max_seq_len=200, dropout=0.1):
         super().__init__()
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
-        pe = torch.zeros(max_seq_len, d_model)
+        pe = torch.zeros(max_seq_len, d_model, device=device)
         for pos in range(max_seq_len):
             for i in range(0, d_model, 2):
                 pe[pos, i] = math.sin(pos / (10000 ** ((2 * i)/d_model)))
