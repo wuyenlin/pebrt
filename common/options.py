@@ -22,9 +22,11 @@ def args_parser():
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--lift', type=bool, default=True, help="use Lifting or End-to-end version of PETR")
     parser.add_argument('--export_training_curves', type=bool, default="False", help="Save train/val curves in .png file")
-    parser.add_argument('--dataset', type=str, default="dataset/S1/Seq1/imageSequence/S1.npz")
+    parser.add_argument('--dataset', type=str, default="./dataset/S1/Seq1/imageSequence/S1.npz")
     parser.add_argument('--device', default="cuda:0", help="device used")
     parser.add_argument('--resume', type=str, default=None, help="Loading model checkpoint")
+    parser.add_argument('--distributed', action='store_true')
+
     
 
     args = parser.parse_args()

@@ -16,6 +16,7 @@ def mpjpe(predicted, target):
         target = target.cuda()
     return torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1))
 
+
 def p_mpjpe(predicted, target):
     """
     Pose error: MPJPE after rigid alignment (scale, rotation, and translation),
@@ -57,17 +58,18 @@ def p_mpjpe(predicted, target):
     # Return MPJPE
     return np.mean(np.linalg.norm(predicted_aligned - target, axis=len(target.shape)-1))
     
-def n_mpjpe(predicted, target):
+
+def mean_velocity_error(predicted, target):
     """
-    Normalized MPJPE (scale only), adapted from:
-    https://github.com/hrhodin/UnsupervisedGeometryAwareRepresentationLearning/blob/master/losses/poses.py
+    Mean per-joint velocity error (i.e. mean Euclidean distance of the 1st derivative)
     """
     assert predicted.shape == target.shape
     
-    norm_predicted = torch.mean(torch.sum(predicted**2, dim=3, keepdim=True), dim=2, keepdim=True)
-    norm_target = torch.mean(torch.sum(target*predicted, dim=3, keepdim=True), dim=2, keepdim=True)
-    scale = norm_target / norm_predicted
-    return mpjpe(scale * predicted, target)
+    velocity_predicted = np.diff(predicted, axis=0)
+    velocity_target = np.diff(target, axis=0)
+    
+    return np.mean(np.linalg.norm(velocity_predicted - velocity_target, axis=len(target.shape)-1))
+
 
 def punish(predicted, bone1, bone2, weights):
     """
@@ -101,7 +103,7 @@ def anth_mpjpe(predicted, target):
     """
     Added own implementation of weighted MPJPE by ensuring:
     1. symmetric bones have the same length
-    2. wrists are correctly detected
+    2. wrists and ankles are correctly detected
     """
     assert predicted.shape == target.shape, "{}, {}".format(predicted.shape, target.shape)
     w = torch.ones(predicted.shape[0], predicted.shape[1]) # (64,17)
@@ -113,10 +115,9 @@ def anth_mpjpe(predicted, target):
 
     for bone in bones:
         w = punish(predicted, bone[0], bone[1], w)
-    w[:,7] = 2
-    w[:,10] = 2
-    w[:,13] = 2
-    w[:,16] = 2
+
+    # focus on correct prediction of wrists and ankles
+    w[:,7], w[:,10], w[:,13], w[:,16] = 2, 2, 2, 2
 
     if torch.cuda.is_available():
         predicted = predicted.cuda()
@@ -125,6 +126,10 @@ def anth_mpjpe(predicted, target):
 
     return torch.mean(w * torch.norm(predicted - target, dim=len(target.shape)-1))
 
+
+def human_model(H):
+    """Implementation of Winter human model"""
+    pass
 
 if __name__ == "__main__":
     a = torch.rand([16,17,2])

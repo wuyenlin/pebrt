@@ -26,6 +26,7 @@ The dataset MPI-INF-3DHP used in this project can be downloaded [here](http://gv
 After downloading the dataset, run the following command to extract frames:
 ```
 python3 utils/File.py
-python3 merge.py
+python3 utils/merge.py
 ```
 
+- [ ] Run on distributed systems (for SLI)

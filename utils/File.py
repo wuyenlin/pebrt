@@ -84,7 +84,7 @@ class All(Video):
                             try:
                                 cropped_frame = frame[start[1]:end[1], start[0]:end[0]]
                                 if full:
-                                    cv.imwrite(filename, frame)
+                                    cv.imwrite(filename, cv.resize(frame, (512,512), interpolation=cv.INTER_AREA))
                                 else:
                                     cv.imwrite(filename, cropped_frame)
                             except FileExistsError:
@@ -107,7 +107,7 @@ def save_frame(char):
     for seq in (1,2):
         for vid in [0,1,2,4,5,6,7,8]:
             v = All(char, seq, vid)
-            v.save_cropped(True, True)
+            v.save_cropped(True, True, False)
 
 if __name__ == "__main__": 
     char_list = sys.argv[1]

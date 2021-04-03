@@ -6,50 +6,23 @@ import matplotlib.pyplot as plt
 
 try:
     from common.hrnet import *
-    from common.pos_embed import *
+    from common.embed import *
 except ModuleNotFoundError:
     from hrnet import *
-    from pos_embed import *
-
-"""
-Direction 3D pose regression method uses the model referring to Vision Transformer
-Its implementation in PyTorch is availble at https://github.com/asyml/vision-transformer-pytorch.
-Part of this file is borrowed from their src/model.py.
-"""
-
-class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
-        super().__init__()
-        self.img_size = (img_size, img_size)
-        self.patch_size = (patch_size, patch_size)
-        self.H, self.W = self.img_size[0]/self.patch_size[0] , self.img_size[1]/self.patch_size[1] 
-        self.num_patches = self.H * self.W
-        self.in_channel = in_channel
-        self.embed_dim = embed_dim
-
-        self.proj = nn.Conv2d(in_channel, embed_dim, kernel_size=patch_size, stride=patch_size)
-        self.norm = nn.LayerNorm(embed_dim)
-
-    def forward(self, x):
-        bs, c, h, w = x.shape
-        x = self.proj(x).flatten(2).transpose(1,2)
-        x = self.norm(x)
-        H, W = h/self.patch_size[0] , w/self.patch_size[1]
-
-        return x, (H,W)
+    from embed import *
 
 
 class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
     """
-    def __init__(self, d_model=34, nhead=2, num_layers=6, 
+    def __init__(self, device, d_model=34, nhead=2, num_layers=6, 
                     num_joints_in=17, num_joints_out=17,
                     num_patches=256, lift=True):
         super().__init__()
         if lift:
             print("INFO: Using default positional encoder")
-            self.pe = PositionalEncoder(d_model)
+            self.pe = PositionalEncoder(d_model, device)
             self.tanh = nn.Tanh()
         else:
             print("INFO: Using ViT positional embedding")
@@ -87,19 +60,20 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, lift=True):
+    def __init__(self, device, lift=True):
         super().__init__()
         
         self.lift = lift
+        self.device = device
         if self.lift:
             self.backbone = HRNet(32, 17, 0.1)
-            pretrained_weight = "./weights/pose_hrnet_w32_256x192.pth"
+            pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
             self.backbone.load_state_dict(torch.load(pretrained_weight))
             print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
-            self.transformer = TransformerEncoder(num_layers=8)
+            self.transformer = TransformerEncoder(device, num_layers=8)
         else:
             self.patch_embed = PatchEmbedding()
-            self.transformer = TransformerEncoder(d_model=768, nhead=12, num_layers=12, lift=self.lift)
+            self.transformer = TransformerEncoder(device, d_model=768, nhead=12, num_layers=12, lift=self.lift)
             self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
@@ -107,7 +81,7 @@ class PETR(nn.Module):
         if self.lift:
             x = self.backbone(x)
             x = hmap_joints(x)
-            out_x = self.transformer(x.cuda())
+            out_x = self.transformer(x.to(self.device))
         else:
             bs = x.shape[0]
             x = self.patch_embed(x)[0]
@@ -127,7 +101,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
-    model = PETR(lift=True)
+    model = PETR(device, lift=True)
     model = model.cuda()
     img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
     img = transforms(img)

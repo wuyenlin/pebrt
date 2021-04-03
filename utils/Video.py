@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import scipy.io as sio
 from numpy.linalg import norm, matrix_rank
 import numpy as np
 import time, sys, math
@@ -130,67 +131,7 @@ class Video:
         self.proj_xS = proj_xS
         self.proj_yS = proj_yS
 
-    def animate(self, show_skel=False, show_bbox=False, show_fps=False, show_axis=False):
-        self.calib(0) # use first frame to set Camera Matrix for the entire video
-        cap = cv.VideoCapture(self.avi_path)
-        if (cap.isOpened()==False):
-            print("Error opening the video file.")
-        k = 0
-        new_ft = 0
-        prev_ft = 0
-        nuc_list = []
-        while (cap.isOpened()):
-            if k == len(self.annot2D[self.camera][0]):
-                print("Done!")
-                break
-            ret, frame = cap.read()
-            if ret:
-                self.get_joints(k)
-                if show_skel:
-                    for i in range(len(self.proj_xS)):
-                        cv.circle(frame, (self.proj_xS[i],self.proj_yS[i]), radius=7, color=(255,255,255), thickness=-1)
-                    for pair in self.joint_pairs:
-                        pt1 = (self.proj_xS[pair[0]], self.proj_yS[pair[0]])
-                        pt2 = (self.proj_xS[pair[1]], self.proj_yS[pair[1]])
-                        cv.line(frame, pt1, pt2, color=(0,0,255), thickness=3)
 
-                if show_bbox:
-                    x1,y1,x2,y2 = self.draw_bbox(k)
-                    start, end = (x1,y1), (x2,y2)
-                    cv.rectangle(frame, start, end, color=(0,255,255), thickness=3)
-                    print(end[0]-start[0], end[1]-start[1])
-
-                self.get_arrow(k)
-                if (self.valid_arrow(self.arrow_root) or self.valid_arrow(self.arrow_end)):
-                    cv.arrowedLine(frame, self.arrow_root, self.arrow_end, (255,200,0), 10, 1, 0)
-
-                if show_fps:
-                    font = cv.FONT_HERSHEY_SIMPLEX
-                    new_ft = time.time()
-                    fps = 1/(new_ft-prev_ft)
-                    prev_ft = new_ft
-                    fps = str(round(fps,2))
-                    cv.putText(frame, "FPS: {}".format(fps), (7,70), font, 3, (0,0,0), 10, cv.LINE_AA)
-                    cv.putText(frame, "FPS: {}".format(fps), (7,70), font, 3, (0,10,200), 4, cv.LINE_AA)
-
-                if show_axis:
-                    self.draw_axis(frame)
-                
-                cv.imshow("Result on {}".format(self.avi_path), frame)
-            if cv.waitKey(25) & 0xFF == ord('q'):
-                break
-            k += 1
-            if k == 1000:
-                break
-        cap.release()
-        cv.destroyAllWindows()
-
-        x = [i for i in range(1, len(nuc_list)+1)]
-        plt.plot(x, nuc_list)
-        plt.xlabel("Frame")
-        plt.ylabel("Sum of all bone length (mm)")
-        plt.show()
 
 if __name__ == "__main__":
-    v = Video(1,1,1)
-    v.animate(show_skel=True)
+    pass
