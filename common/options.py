@@ -20,7 +20,7 @@ def args_parser():
     # dataset
     parser.add_argument('--num_workers', default=2, type=int)
     parser.add_argument('--eval', action='store_true')
-    parser.add_argument('--lift', type=bool, default=True, help="use Lifting or End-to-end version of PETR")
+    parser.add_argument('--lift', action='store_true', help='using lifting model')
     parser.add_argument('--export_training_curves', type=bool, default="False", help="Save train/val curves in .png file")
     parser.add_argument('--dataset', type=str, default="./dataset/S1/Seq1/imageSequence/S1.npz")
     parser.add_argument('--device', default="cuda:0", help="device used")

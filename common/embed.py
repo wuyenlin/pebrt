@@ -67,7 +67,7 @@ class PositionalEmbedding(nn.Module):
     """
     def __init__(self, num_patches, d_model, dropout=0.1):
         super().__init__()
-        self.pos_embed = nn.Parameter(torch.randn(1, num_patches, d_model))
+        self.pos_embed = nn.Parameter(torch.randn(1, num_patches+1, d_model))
         self.dropout = nn.Dropout(dropout) if dropout>0 else None
 
     def forward(self, x):

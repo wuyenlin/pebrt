@@ -168,7 +168,6 @@ def main(args):
         model = nn.DataParallel(model, device_ids=gpus)
         print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
 
-
     if args.lift:
         print("INFO: Model loaded. Using Lifting model.")
         backbone_params = 0
