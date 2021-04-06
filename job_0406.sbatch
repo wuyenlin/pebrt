@@ -2,12 +2,13 @@
 
 #SBATCH --partition=general
 #SBATCH --qos=long
-#SBATCH --job-name=mpi_job_test      
+#SBATCH --time=11:30:00
+#SBATCH --job-name=vit
 #SBATCH --mail-type=BEGIN,END,FAIL  
 #SBATCH --ntasks=1          
 #SBATCH --cpus-per-task=1          
-#SBATCH --gres=gpu:1
-#SBATCH --mem=6144
+#SBATCH --gres=gpu:turing:1
+#SBATCH --mem=4096
 
 echo "Date              = $(date)"
 echo "Hostname          = $(hostname -s)"
@@ -20,4 +21,4 @@ echo "Number of Cores/Task Allocated = $SLURM_CPUS_PER_TASK"
 module use /opt/insy/modulefiles
 module load cuda/10.0 cudnn/10.0-7.4.2.24
 module list
-srun python3 main.py
+srun python3 main.py --lift

@@ -1,1 +1,1 @@
-sinteractive --ntasks=1 --cpus-per-task=1 --mem=6144 --gres=gpu:1 bash -il
+sinteractive --ntasks=1 --cpus-per-task=1 --mem=4096 --gres=gpu:turing:1 bash -il
