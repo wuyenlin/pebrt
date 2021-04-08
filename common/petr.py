@@ -77,11 +77,33 @@ class PETR(nn.Module):
             self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
+    def _decode_joints(self, device, heatmap):
+        """
+        turn input heatmap (bs,17,h,w) into coordinates of 17 joints
+        return tensor of (17,2) joints on x,y coordinates for a batch
+        """
+        assert heatmap.shape[1:] == (17,64,64), "{}".format(heatmap.shape)
+        bs = heatmap.size(0)
+        joints_2d = np.zeros([bs,17,2])
+        heatmap = heatmap.cpu().detach().numpy()
+        for i, human in enumerate(heatmap):
+            for j, joint in enumerate(human):
+                pt = np.unravel_index(np.argmax(joint), (64,64))
+                joints_2d[i,j,:] = np.asarray(pt, dtype=np.float64)
+            joints_2d[i,:,:] = coco_mpi(joints_2d[i,:,:])
+            # reposition root joint at origin
+            joints_2d[i,:,:] = joints_2d[i,:,:] - joints_2d[i,2,:]
+        assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
+        # np.unravel_index gives (y,x) coordinates. need to swap it to (x,y)
+        joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
+        return torch.tensor(joints_2d, device=device)
+
+
     def forward(self, x):
         if self.lift:
             x = self.backbone(x)
-            x = hmap_joints(x)
-            out_x = self.transformer(x.to(self.device))
+            x = self._decode_joints(self.device, x)
+            out_x = self.transformer(x.float())
         else:
             bs = x.shape[0]
             x = self.patch_embed(x)[0]
