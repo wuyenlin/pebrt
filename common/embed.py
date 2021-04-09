@@ -13,7 +13,7 @@ class PositionalEncoder(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
-        pe = torch.zeros(max_seq_len, d_model, device=device)
+        pe = torch.zeros(max_seq_len, d_model)
         for pos in range(max_seq_len):
             for i in range(0, d_model, 2):
                 pe[pos, i] = math.sin(pos / (10000 ** ((2 * i)/d_model)))
@@ -26,6 +26,7 @@ class PositionalEncoder(nn.Module):
         x *= math.sqrt(d_model)
         pe = self.pe[:seq_len, :d_model]
         pe_all = pe.repeat(bs, 1, 1)
+        pe_all = pe_all.to(x.device)
 
         assert x.shape == pe_all.shape, "{},{}".format(x.shape, pe_all.shape)
         x += pe_all
