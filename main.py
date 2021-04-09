@@ -157,8 +157,9 @@ def evaluate(test_loader, model, device):
 def main(args):
 
     device = torch.device(args.device)
-    model = PETR(lift=args.lift)
+    model = PETR(device, lift=args.lift)
     model = model.to(device)
+    print(torch.cuda.get_device_name(torch.cuda.current_device()))
 
     if args.distributed:
         gpus = list(range(torch.cuda.device_count()))
@@ -166,7 +167,7 @@ def main(args):
         print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
 
     if args.lift:
-        print("INFO: Model loaded. Using Lifting model.")
+        print("INFO: Model loaded on {}. Using Lifting model.".format(device))
         backbone_params = 0
         if args.lr_backbone == 0:
             print("INFO: Freezing HRNet")

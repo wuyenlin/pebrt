@@ -60,10 +60,11 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, lift=True):
+    def __init__(self, device, lift=True):
         super().__init__()
         
         self.lift = lift
+        self.device = device
         if self.lift:
             self.backbone = HRNet(32, 17, 0.1)
             pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
@@ -76,7 +77,7 @@ class PETR(nn.Module):
             self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
-    def _decode_joints(self, heatmap):
+    def _decode_joints(self, heatmap, device):
         """
         turn input heatmap (bs,17,h,w) into coordinates of 17 joints
         return tensor of (17,2) joints on x,y coordinates for a batch
@@ -96,13 +97,13 @@ class PETR(nn.Module):
         assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
         # np.unravel_index gives (y,x) coordinates. need to swap it to (x,y)
         joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
-        return torch.tensor(joints_2d, device=heatmap.device)
+        return torch.tensor(joints_2d, device=device)
 
 
     def forward(self, x):
         if self.lift:
             x = self.backbone(x)
-            x = self._decode_joints(x)
+            x = self._decode_joints(x, self.device)
             out_x = self.transformer(x.float())
         else:
             bs = x.shape[0]
