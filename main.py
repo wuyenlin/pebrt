@@ -23,9 +23,6 @@ transforms = transforms.Compose([
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ])
 
-def collate_fn(batch):
-    batch = list(filter(lambda x: x is not None, batch))
-    return torch.utils.data.dataloader.default_collate(batch)
 
 def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
     print("Training starts...")
@@ -160,7 +157,7 @@ def evaluate(test_loader, model, device):
 def main(args):
 
     device = torch.device(args.device)
-    model = PETR(device, lift=args.lift)
+    model = PETR(lift=args.lift)
     model = model.to(device)
 
     if args.distributed:
@@ -226,7 +223,7 @@ def main(args):
     print("INFO: Using optimizer {}".format(optimizer))
 
     train_list, val_list = train(args.start_epoch, args.epoch, 
-                                train_loader, val_loader, model, device, 
+                                train_loader, val_loader, model, device,
                                 optimizer, lr_scheduler)
 
 

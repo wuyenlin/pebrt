@@ -9,7 +9,7 @@ class PositionalEncoder(nn.Module):
     """
     Original PE from Attention is All You Need
     """
-    def __init__(self, d_model, device, max_seq_len=200, dropout=0.1):
+    def __init__(self, d_model, max_seq_len=200, dropout=0.1):
         super().__init__()
         self.d_model = d_model
         self.dropout = nn.Dropout(dropout)
@@ -29,6 +29,7 @@ class PositionalEncoder(nn.Module):
         pe_all = pe_all.to(x.device)
 
         assert x.shape == pe_all.shape, "{},{}".format(x.shape, pe_all.shape)
+        assert x.device == pe_all.device, "{},{}".format(x.device, pe_all.device)
         x += pe_all
         return x
 

@@ -283,7 +283,7 @@ if __name__ == '__main__':
     ]) 
 
     model = HRNet(32, 17, 0.1)
-    model.load_state_dict(torch.load('./weights/pose_hrnet_w32_256x192.pth'))
+    model.load_state_dict(torch.load('../weights/pose_hrnet_w32_256x192.pth'))
     img_file = "./h36.jpg"
     img_file = "dataset/S5/Seq2/imageSequence/video_8/frame000659.jpg"
     img = Image.open(img_file)

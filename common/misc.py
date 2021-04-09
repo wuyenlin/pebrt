@@ -31,4 +31,3 @@ def coco_mpi(coco_joints):
     mpi_joints[3,:] = (mpi_joints[0,:] + mpi_joints[4,:])/2
 
     return mpi_joints
-
