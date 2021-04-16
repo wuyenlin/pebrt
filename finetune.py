@@ -98,12 +98,12 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.ylabel('MPJPE (m)')
             plt.xlabel('Epoch')
             plt.xlim((3, epoch))
-            plt.savefig('../checkpoint/loss_3d.png')
+            plt.savefig('./checkpoint/loss_3d.png')
 
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "../checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -193,6 +193,7 @@ def main(args):
         e1, e2, ev = evaluate(test_loader, model, device)
         return e1, e2, ev
 
+    print("INFO: Trained on ", args.dataset.split("/")[-1])
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)

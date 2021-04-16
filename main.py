@@ -45,7 +45,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             _, predicted_3d_pos = model(images)
 
-            loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
+            loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
             N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -71,7 +71,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
                 _, predicted_3d_pos = model(images)
 
-                loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
+                loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
                 N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -95,12 +95,12 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.ylabel('MPJPE (m)')
             plt.xlabel('Epoch')
             plt.xlim((3, epoch))
-            plt.savefig('../checkpoint/loss_3d.png')
+            plt.savefig('./checkpoint/loss_3d.png')
 
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "../checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
