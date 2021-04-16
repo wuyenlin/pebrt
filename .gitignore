@@ -1,5 +1,6 @@
 dataset/
 checkpoint/
+anth_checkpoint/
 weights/
 *.bin
 *.out
