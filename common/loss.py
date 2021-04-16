@@ -93,8 +93,8 @@ def punish(predicted, bone1, bone2, weights):
     diff = abs(len2-len1) > 0.1
     diff = list(map(int, diff))
     diff = torch.FloatTensor(diff) + 1
-    weights[:,bone1[0]] = diff
-    weights[:,bone2[0]] = diff
+    weights[:,bone1[0]], weights[:,bone1[1]] = diff, diff
+    weights[:,bone2[0]], weights[:,bone2[1]] = diff, diff
 
     return weights
 
