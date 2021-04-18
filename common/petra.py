@@ -18,14 +18,11 @@ class TransformerEncoder(nn.Module):
     """
     def __init__(self, d_model=34, nhead=2, num_layers=6, 
                     num_joints_in=17, num_joints_out=17,
-                    num_patches=256, lift=True):
+                    num_patches=256):
         super().__init__()
 
-        self.lift = lift
-        if lift:
-            print("INFO: Using default positional encoder")
-            self.pe = PositionalEncoder(d_model)
-            self.tanh = nn.Tanh()
+        print("INFO: Using default positional encoder")
+        self.pe = PositionalEncoder(d_model)
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead)
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
         self.lin_out = nn.Linear(d_model, 30)
@@ -53,7 +50,6 @@ class PETRA(nn.Module):
     def __init__(self, device):
         super().__init__()
         
-        self.lift = lift
         self.device = device
         self.backbone = HRNet(32, 17, 0.1)
         pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
@@ -86,10 +82,9 @@ class PETRA(nn.Module):
 
 
     def forward(self, x):
-        if self.lift:
-            x = self.backbone(x)
-            x = self._decode_joints(x, self.device)
-            out_x = self.transformer(x.float())
+        x = self.backbone(x)
+        x = self._decode_joints(x, self.device)
+        out_x = self.transformer(x.float())
 
         return x, out_x
 
