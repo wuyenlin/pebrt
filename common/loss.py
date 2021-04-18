@@ -1,6 +1,8 @@
-import math
+import math, cmath
+from math import sin, cos
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def mpjpe(predicted, target):
@@ -126,10 +128,6 @@ def anth_mpjpe(predicted, target):
 
     return torch.mean(w * torch.norm(predicted - target, dim=len(target.shape)-1))
 
-
-def human_model(H):
-    """Implementation of Winter human model"""
-    pass
 
 if __name__ == "__main__":
     a = torch.rand([16,17,2])
