@@ -115,11 +115,12 @@ class Human:
         r_hip = self.bones['r_hip']
         r_knee = self.bones['r_thigh'] + r_hip
         r_ankle = self.bones['r_calf'] + r_knee
-        model = [neck, lower_spine, root, chin, nose,
+        model = np.array([neck, lower_spine, root, chin, nose,
                 l_shoulder, l_elbow, l_wrist, r_shoulder, r_elbow, r_wrist,
-                l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle]
+                l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle])
+        
         self.model = model
-        print(model)
+        return model
 
     def vis_model(self):
         fig = plt.figure()
@@ -144,5 +145,7 @@ if __name__ == "__main__":
     h = Human(1.8)
 
     a = np.random.rand(30)
-    h.update_pose(a)
+    model = h.update_pose(a)
+    print(model)
+    print(model.shape)
     h.vis_model()

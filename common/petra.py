@@ -35,10 +35,10 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, x):
         bs = x.size(0)
-        x = x.flatten(1).unsqueeze(1) #(bs,1,30)
+        x = x.flatten(1).unsqueeze(1) #(bs,1,34)
         x = self.pe(x)
         x = self.transformer(x)
-        x = self.lin_out(x).squeeze(1)
+        x = self.lin_out(x).squeeze(1) #(bs,30)
 
         return x
 
@@ -80,11 +80,20 @@ class PETRA(nn.Module):
         joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
         return torch.tensor(joints_2d, device=device)
 
+    def fk(self, out_x):
+        bs = out_x.size(0)
+        for person in bs:
+            h = Human(1.7)
+            prediction = h.update_pose(out_x[person, :])
+
+
 
     def forward(self, x):
         x = self.backbone(x)
         x = self._decode_joints(x, self.device)
         out_x = self.transformer(x.float())
+        h = Human(1.7)
+        out_x = h.update_pose(out_x)
 
         return x, out_x
 
