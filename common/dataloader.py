@@ -11,13 +11,6 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageEnhance, ImageFilter
 
 
-def imshow(img):
-    img = img / 2 + 0.5   
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
-
-
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
     return torch.utils.data.dataloader.default_collate(batch)
@@ -121,53 +114,15 @@ class Data:
         return cam - cam[2,:]
 
 
-
-def test():
-    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
-    train_dataset = Data(train_npz, transforms, True)
-    print(len(train_dataset))
-    trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
-    print("data loaded!")
-    dataiter = iter(trainloader)
-    img_path, images, kpts, labels = dataiter.next()
-    # imshow(torchvision.utils.make_grid(images))
-    
-    bones = (
-    (0,1), (0,3), (1,2), (3,4),  # spine + head
-    (0,5), (0,8),
-    (5,6), (6,7), (8,9), (9,10), # arms
-    (2,14), (2,11),
-    (11,12), (12,13), (14,15), (15,16), # legs
-    )
-
-    pts = labels[0]
-    fig = plt.figure()
-    ax = fig.add_subplot(121)
-    plt.imshow(Image.open(img_path[0]))
-    ax = fig.add_subplot(122, projection='3d')
-    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    for bone in bones:
-        xS = (pts[bone[0],0], pts[bone[1],0])
-        yS = (pts[bone[0],1], pts[bone[1],1])
-        zS = (pts[bone[0],2], pts[bone[1],2])
-        
-        ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-    plt.show()
-
-
 def exp():
     train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
     train_dataset = Data(train_npz, transforms, True)
-    trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, drop_last=True)
+    trainloader = DataLoader(train_dataset, batch_size=4, 
+                        shuffle=True, num_workers=16, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, kpts, labels = dataiter.next()
+    # from common.misc import imshow
     # imshow(torchvision.utils.make_grid(images))
     
     bones = (
@@ -206,14 +161,4 @@ if __name__ == "__main__":
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
-    # test()
-    rmat_z = np.array([[0,-1,0],[1,0,0],[0,0,1]])
-    rmat_x = np.array([[1,0,0],[0,0,-1],[0,1,0]])
-    rot = rmat_z @ rmat_x
-    angles, mtxR, mtxQ, Qx, Qy, Qz = cv.RQDecomp3x3(rot)
-    print(rot)
-    print("\n")
-    print(angles)
-    print(Qx)
-    print(Qy)
-    print(Qz)
+    exp()
