@@ -94,6 +94,9 @@ class Human:
 
 
     def update_pose(self, ang=None):
+        """
+        returns a numpy array of (17,3)
+        """
         self.update_bones(ang)
 
         root = self.root
