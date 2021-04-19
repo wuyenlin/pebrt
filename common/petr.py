@@ -77,7 +77,7 @@ class PETR(nn.Module):
             self.joint_token = nn.Parameter(torch.zeros(1,1,768))
                                     
 
-    def _decode_joints(self, heatmap, device):
+    def _decode_joints(self, heatmap):
         """
         turn input heatmap (bs,17,h,w) into coordinates of 17 joints
         return tensor of (17,2) joints on x,y coordinates for a batch
@@ -97,13 +97,13 @@ class PETR(nn.Module):
         assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
         # np.unravel_index gives (y,x) coordinates. need to swap it to (x,y)
         joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
-        return torch.tensor(joints_2d, device=device)
+        return torch.tensor(joints_2d, device=self.device)
 
 
     def forward(self, x):
         if self.lift:
             x = self.backbone(x)
-            x = self._decode_joints(x, self.device)
+            x = self._decode_joints(x)
             out_x = self.transformer(x.float())
         else:
             bs = x.shape[0]
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
-    model = PETR(lift=True)
+    model = PETR(device="cuda:0", lift=True)
     model = model.cuda()
     img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
     img = transforms(img)
