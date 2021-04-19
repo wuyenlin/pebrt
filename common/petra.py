@@ -7,9 +7,11 @@ import matplotlib.pyplot as plt
 try:
     from common.hrnet import *
     from common.embed import *
+    from common.human import *
 except ModuleNotFoundError:
     from hrnet import *
     from embed import *
+    from human import *
 
 
 class TransformerEncoder(nn.Module):
@@ -58,7 +60,7 @@ class PETRA(nn.Module):
         self.transformer = TransformerEncoder(num_layers=8)
 
 
-    def _decode_joints(self, heatmap, device):
+    def _decode_joints(self, heatmap):
         """
         turn input heatmap (bs,17,h,w) into coordinates of 17 joints
         return tensor of (17,2) joints on x,y coordinates for a batch
@@ -75,25 +77,30 @@ class PETRA(nn.Module):
             joints_2d[i,:,:] = coco_mpi(joints_2d[i,:,:])
             # reposition root joint at origin
             joints_2d[i,:,:] = joints_2d[i,:,:] - joints_2d[i,2,:]
-        assert joints_2d.shape == (bs,17,2), "{}".format(joints_2d.shape)
         # np.unravel_index gives (y,x) coordinates. need to swap it to (x,y)
         joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
-        return torch.tensor(joints_2d, device=device)
+        return torch.tensor(joints_2d, device=self.device)
+
 
     def fk(self, out_x):
+        """
+        Perform Forward Kinematics on human skeleton model
+        return (bs, 17, 3)
+        """
         bs = out_x.size(0)
-        for person in bs:
+        prediction = np.zeros([bs,17,3])
+        for i in range(bs):
             h = Human(1.7)
-            prediction = h.update_pose(out_x[person, :])
+            prediction[i,:,:] = h.update_pose(out_x[i, :])
+        return torch.tensor(prediction, device=self.device, requires_grad=True)
 
 
 
     def forward(self, x):
         x = self.backbone(x)
-        x = self._decode_joints(x, self.device)
+        x = self._decode_joints(x)
         out_x = self.transformer(x.float())
-        h = Human(1.7)
-        out_x = h.update_pose(out_x)
+        out_x = self.fk(out_x)
 
         return x, out_x
 
