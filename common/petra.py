@@ -25,6 +25,7 @@ class TransformerEncoder(nn.Module):
 
         print("INFO: Using default positional encoder")
         self.pe = PositionalEncoder(d_model)
+        self.tanh = nn.Tanh()
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead)
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
         self.lin_out = nn.Linear(d_model, 30)
@@ -36,11 +37,11 @@ class TransformerEncoder(nn.Module):
 
 
     def forward(self, x):
-        bs = x.size(0)
         x = x.flatten(1).unsqueeze(1) #(bs,1,34)
         x = self.pe(x)
         x = self.transformer(x)
         x = self.lin_out(x).squeeze(1) #(bs,30)
+        x = self.tanh(x)*1.57
 
         return x
 
@@ -93,7 +94,6 @@ class PETRA(nn.Module):
             h = Human(1.7)
             prediction[i,:,:] = h.update_pose(out_x[i, :])
         return torch.tensor(prediction, device=self.device, requires_grad=True)
-
 
 
     def forward(self, x):

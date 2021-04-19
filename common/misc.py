@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+import cv2 as cv
+import math, cmath
+from math import sin, cos
 
 
 def coco_mpi(coco_joints):
@@ -32,3 +35,59 @@ def coco_mpi(coco_joints):
 
     return mpi_joints
 
+
+def rot(a, b, r):
+    """
+    General rotation matrix
+    a : yaw
+    b : pitch
+    r : roll
+    returns a rotation matrix R given yaw, pitch, and roll angles
+    """
+    row1 = np.array([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+    row2 = np.array([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+    row3 = np.array([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+    R = np.array([row1, row2, row3])
+    assert cmath.isclose(np.linalg.det(R), 1)
+    return R
+
+
+def rotation_matrix_from_vectors(vec1, vec2):
+    """ Find the rotation matrix that aligns vec1 to vec2
+    :param vec1: A 3d "source" vector
+    :param vec2: A 3d "destination" vector
+    :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    
+    Such that b = R @ a
+
+    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
+    """
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    c = np.dot(a, b)
+    s = np.linalg.norm(v)
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    angles = cv.RQDecomp3x3(R)[0]
+    return R, angles 
+
+
+def imshow(img):
+    img = img / 2 + 0.5   
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()
+
+
+if __name__ == "__main__":
+    a = np.array([1,0,0])
+    b = np.array([0,0,1])
+    R, _ = rotation_matrix_from_vectors(a,b)
+    print(R)
+    c = R@a
+    c_hat = c/np.linalg.norm(c)
+    b_hat = b/np.linalg.norm(b)
+    print(c_hat)
+    print(b_hat)
+    angles = cv.RQDecomp3x3(R)[0]
+    print(angles)

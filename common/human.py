@@ -3,6 +3,11 @@ from math import sin, cos
 import numpy as np
 import matplotlib.pyplot as plt
 
+try:
+    from common.misc import *
+except ModuleNotFoundError:
+    from misc import *
+
 
 class Human:
     """Implementation of Winter human model"""
@@ -25,6 +30,7 @@ class Human:
         (11,12), (12,13), (14,15), (15,16), # legs
         )
     
+
     def _init_bones(self):
         """get bones as vectors"""
         self.bones = {
@@ -49,39 +55,23 @@ class Human:
         }
 
 
-    def _rot(self, a, b, r):
-        """
-        General rotation matrix
-        a : yaw
-        b : pitch
-        r : roll
-        returns a rotation matrix R given yaw, pitch, and roll angles
-        """
-        row1 = np.array([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
-        row2 = np.array([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
-        row3 = np.array([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
-        R = np.array([row1, row2, row3])
-        assert cmath.isclose(np.linalg.det(R), 1)
-        return R
-
-
     def _sort_angles(self, ang):
         """process the PETR output (26 angles in rad) and sort them in a dict"""
         self.angles = {
-            'lower_spine': self._rot(ang[0], ang[1], ang[2]),
-            'upper_spine': self._rot(ang[3], ang[4], ang[5]),
-            'neck': self._rot(ang[6], ang[7], ang[8]),
-            'head': self._rot(ang[9], ang[10], ang[11]),
+            'lower_spine': rot(ang[0], ang[1], ang[2]),
+            'upper_spine': rot(ang[3], ang[4], ang[5]),
+            'neck': rot(ang[6], ang[7], ang[8]),
+            'head': rot(ang[9], ang[10], ang[11]),
 
-            'l_upper_arm': self._rot(ang[12], ang[13], ang[14]),
-            'l_lower_arm': self._rot(ang[15], ang[16], 0),
-            'r_upper_arm': self._rot(ang[17], ang[18], ang[19]),
-            'r_lower_arm': self._rot(ang[20], ang[21], 0),
+            'l_upper_arm': rot(ang[12], ang[13], ang[14]),
+            'l_lower_arm': rot(ang[15], ang[16], 0),
+            'r_upper_arm': rot(ang[17], ang[18], ang[19]),
+            'r_lower_arm': rot(ang[20], ang[21], 0),
 
-            'l_thigh': self._rot(ang[22], ang[23], ang[24]),
-            'l_calf': self._rot(ang[25], 0, 0),
-            'r_thigh': self._rot(ang[26], ang[27], ang[28]),
-            'r_calf': self._rot(ang[29], 0, 0)
+            'l_thigh': rot(ang[22], ang[23], ang[24]),
+            'l_calf': rot(ang[25], 0, 0),
+            'r_thigh': rot(ang[26], ang[27], ang[28]),
+            'r_calf': rot(ang[29], 0, 0)
         }
 
 
@@ -124,6 +114,7 @@ class Human:
         
         self.model = model
         return model
+
 
     def vis_model(self):
         fig = plt.figure()
