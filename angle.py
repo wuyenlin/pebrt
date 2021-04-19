@@ -159,8 +159,9 @@ def main(args):
 
     device = torch.device(args.device)
     model = PETRA(device)
+    print("INFO: Using PETRA")
     model = model.to(device)
-    print(torch.cuda.get_device_name(torch.cuda.current_device()))
+    print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 
     if args.distributed:
         gpus = list(range(torch.cuda.device_count()))
@@ -204,7 +205,7 @@ def main(args):
         },
     ]
 
-    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.Adam(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
