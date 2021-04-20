@@ -12,17 +12,17 @@ except ModuleNotFoundError:
 class Human:
     """Implementation of Winter human model"""
     def __init__(self, H):
-        self.half_face = 0.056*H
-        self.neck = 0.062*H
+        self.half_face = 0.066*H
+        self.neck = 0.052*H
         self.upper_spine, self.lower_spine = 0.144*H, 0.144*H
         self.clavicle = 0.129*H
-        self.upper_arm, self.lower_arm = 0.188*H, 0.145*H
+        self.upper_arm, self.lower_arm = 0.186*H, 0.146*H
 
-        self.pelvis = 0.095*H
+        self.pelvis = 0.191*H
         self.thigh, self.calf = 0.245*H, 0.246*H
 
         self.root = np.array([0.0, 0.0, 0.0])
-        self.bones = (
+        self.indices = (
         (0,1), (0,3), (1,2), (3,4),  # spine + head
         (0,5), (0,8),
         (5,6), (6,7), (8,9), (9,10), # arms
@@ -34,10 +34,10 @@ class Human:
     def _init_bones(self):
         """get bones as vectors"""
         self.bones = {
-            'lower_spine': np.array([0, self.lower_spine, 0]),
-            'upper_spine': np.array([0, self.upper_spine, 0]),
-            'neck': np.array([0, self.neck, 0]),
-            'head': np.array([0, self.half_face, 0]),
+            'lower_spine': np.array([0, -self.lower_spine, 0]),
+            'upper_spine': np.array([0, -self.upper_spine, 0]),
+            'neck': np.array([0, -self.neck, 0]),
+            'head': np.array([0, -self.half_face, 0]),
 
             'l_clavicle': np.array([self.clavicle, 0, 0]),
             'l_upper_arm': np.array([self.upper_arm, 0, 0]),
@@ -47,11 +47,11 @@ class Human:
             'r_lower_arm': np.array([-self.lower_arm, 0, 0]),
 
             'l_hip': np.array([self.pelvis/2, 0, 0]),
-            'l_thigh': np.array([0, -self.thigh, 0]),
-            'l_calf': np.array([0, -self.calf, 0]),
+            'l_thigh': np.array([0, self.thigh, 0]),
+            'l_calf': np.array([0, self.calf, 0]),
             'r_hip': np.array([-self.pelvis/2, 0, 0]),
-            'r_thigh': np.array([0, -self.thigh, 0]),
-            'r_calf': np.array([0, -self.calf, 0])
+            'r_thigh': np.array([0, self.thigh, 0]),
+            'r_calf': np.array([0, self.calf, 0])
         }
 
 
@@ -122,16 +122,16 @@ class Human:
         for p in self.model:
             ax.scatter(p[0], p[1], p[2], c='r')
 
-        # output = self.model
-        # for bone in self.bones:
-        #     xS = (output[:,bone[0],0].tolist()[0], output[:,bone[1],0].tolist()[0])
-        #     yS = (output[:,bone[0],1].tolist()[0], output[:,bone[1],1].tolist()[0])
-        #     zS = (output[:,bone[0],2].tolist()[0], output[:,bone[1],2].tolist()[0])
-            # ax.plot(xS, yS, zS)
-        ax.view_init(elev=100, azim=-90)
+        for index in self.indices:
+            xS = (self.model[index[0]][0], self.model[index[1]][0])
+            yS = (self.model[index[0]][1], self.model[index[1]][1])
+            zS = (self.model[index[0]][2], self.model[index[1]][2])
+            ax.plot(xS, yS, zS)
+        ax.view_init(elev=-80, azim=-90)
         ax.autoscale()
-        plt.xlabel("X axis label")
-        plt.ylabel("Y axis label")
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Z")
         plt.show()
 
 
@@ -140,6 +140,5 @@ if __name__ == "__main__":
 
     a = np.random.rand(30)
     model = h.update_pose(a)
-    print(model)
     print(model.shape)
     h.vis_model()
