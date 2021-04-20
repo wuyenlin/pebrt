@@ -9,6 +9,11 @@ import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
 from PIL import Image, ImageEnhance, ImageFilter
+try:
+    from common.human import Human
+except ModuleNotFoundError:
+    from human import Human
+
 
 
 def collate_fn(batch):
@@ -34,8 +39,8 @@ class Data:
         data = data["arr_0"].reshape(1,-1)[0]
 
         self.img_path = []
-        self.gt_pts2d = []
         self.gt_pts3d = []
+        self.gt_angle = []
         self.transforms = transforms
 
         if train:
@@ -46,12 +51,14 @@ class Data:
         for vid in vid_list:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
-                pro_pts_2d = self.zero_center(self.pop_joints(pts_2d)*96/2048)
-                self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
+                # pro_pts_2d = self.zero_center(self.pop_joints(pts_2d)*96/2048)
+                # self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
-                self.gt_pts3d.append(torch.from_numpy(self.zero_center(cam_3d)/1000))
+                gt_3d = self.zero_center(cam_3d)/1000
+                self.gt_pts3d.append(torch.from_numpy(gt_3d))
+                # self.gt_angle.append(torch.from numpy(angles)) <- dump angles (1,30) array
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
@@ -59,11 +66,11 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            kpts_2d = self.gt_pts2d[index]
+            angles = self.gt_angle[index]
             kpts_3d = self.gt_pts3d[index]
         except:
             return None
-        return img_path, img, kpts_2d, kpts_3d
+        return img_path, img, angles, kpts_3d
 
     def __len__(self):
         return len(self.img_path)
@@ -112,6 +119,15 @@ class Data:
     
     def zero_center(self, cam):
         return cam - cam[2,:]
+
+    
+    def ik(self, gt_pts3d):
+        """
+        Perform Inverse Kinematics to obtain Euler angles of each bone
+        """
+        h = Human(1.7)
+        h.update_bones()
+        pass
 
 
 def exp():
