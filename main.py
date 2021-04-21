@@ -23,9 +23,6 @@ transforms = transforms.Compose([
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ])
 
-def collate_fn(batch):
-    batch = list(filter(lambda x: x is not None, batch))
-    return torch.utils.data.dataloader.default_collate(batch)
 
 def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
     print("Training starts...")
@@ -48,7 +45,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             _, predicted_3d_pos = model(images)
 
-            loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
+            loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
             N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -74,7 +71,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
                 _, predicted_3d_pos = model(images)
 
-                loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
+                loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
                 N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -98,12 +95,12 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.ylabel('MPJPE (m)')
             plt.xlabel('Epoch')
             plt.xlim((3, epoch))
-            plt.savefig('../checkpoint/loss_3d.png')
+            plt.savefig('./checkpoint/loss_3d.png')
 
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "../checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -162,15 +159,15 @@ def main(args):
     device = torch.device(args.device)
     model = PETR(device, lift=args.lift)
     model = model.to(device)
+    print(torch.cuda.get_device_name(torch.cuda.current_device()))
 
     if args.distributed:
         gpus = list(range(torch.cuda.device_count()))
         model = nn.DataParallel(model, device_ids=gpus)
         print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
 
-
     if args.lift:
-        print("INFO: Model loaded. Using Lifting model.")
+        print("INFO: Model loaded on {}. Using Lifting model.".format(device))
         backbone_params = 0
         if args.lr_backbone == 0:
             print("INFO: Freezing HRNet")
@@ -227,7 +224,7 @@ def main(args):
     print("INFO: Using optimizer {}".format(optimizer))
 
     train_list, val_list = train(args.start_epoch, args.epoch, 
-                                train_loader, val_loader, model, device, 
+                                train_loader, val_loader, model, device,
                                 optimizer, lr_scheduler)
 
 
