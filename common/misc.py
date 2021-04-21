@@ -80,14 +80,14 @@ def imshow(img):
 
 
 if __name__ == "__main__":
-    a = np.array([1,0,0])
-    b = np.array([0,0,1])
-    R, _ = rotation_matrix_from_vectors(a,b)
+    a = np.array([3,0,0])
+    b = np.array([0,2,0])
+    R, ang = rotation_matrix_from_vectors(a,b)
     print(R)
     c = R@a
+    print(np.linalg.norm(c))
     c_hat = c/np.linalg.norm(c)
     b_hat = b/np.linalg.norm(b)
     print(c_hat)
     print(b_hat)
-    angles = cv.RQDecomp3x3(R)[0]
-    print(angles)
+    print(ang)
