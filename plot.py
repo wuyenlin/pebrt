@@ -28,8 +28,8 @@ def att():
     _, output = model(img)
 
 
-def extract_bone(pred, bone):
-    out = (pred[:,bone[0],0].tolist()[0], pred[:,bone[1],0].tolist()[0])
+def extract_bone(pred, bone, k):
+    out = (pred[:,bone[0],k].tolist()[0], pred[:,bone[1],k].tolist()[0])
     return out
 
 
@@ -100,9 +100,9 @@ def viz(bones, group, comp=False):
         ax = fig.add_subplot(num_row, len(img_list), k+len(img_list), projection='3d')
         ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
         for bone in bones:
-            xS = extract_bone(output, bone)
-            yS = extract_bone(output, bone)
-            zS = extract_bone(output, bone)
+            xS = extract_bone(output, bone, 0)
+            yS = extract_bone(output, bone, 1)
+            zS = extract_bone(output, bone, 2)
             ax.plot(xS, yS, zS)
         ax.view_init(elev=-80, azim=-90)
         ax.autoscale()
@@ -120,9 +120,9 @@ def viz(bones, group, comp=False):
             ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
             ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
             for bone in bones:
-                xS = extract_bone(output, bone)
-                yS = extract_bone(output, bone)
-                zS = extract_bone(output, bone)
+                xS = extract_bone(output, bone, 0)
+                yS = extract_bone(output, bone, 1)
+                zS = extract_bone(output, bone, 2)
                 ax.plot(xS, yS, zS)
             ax.view_init(elev=-80, azim=-90)
             ax.autoscale()
@@ -148,5 +148,6 @@ if __name__ == "__main__":
     (11,12), (12,13), (14,15), (15,16), # legs
     )
     import sys
-    group = int(sys.argv[1])
-    viz(bones, group)
+    comp = True if int(sys.argv[1])==1 else False
+    group = int(sys.argv[2])
+    viz(bones, group, comp)
