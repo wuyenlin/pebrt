@@ -16,7 +16,7 @@ transforms = transforms.Compose([
 
 def att():
     model = PETR(device="cuda:0",lift=True)
-    model.load_state_dict(torch.load('./anth_checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
     model = model.cuda()
     model.eval()
 
@@ -28,11 +28,11 @@ def att():
     _, output = model(img)
 
 
-def viz(bones):
+def viz(bones, group):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device, lift=True)
     # model.load_state_dict(torch.load('./anth_checkpoint/ft_5.bin')['model'])
-    model.load_state_dict(torch.load('./checkpoint/ft_4.bin')['model'])
+    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
     model = model.cuda()
     model.eval()
 
@@ -68,7 +68,7 @@ def viz(bones):
             "dataset/S6/Seq1/imageSequence/video_8/frame005868.jpg"]
 
             ]
-    img_list = imgs[3]
+    img_list = imgs[group]
     k = 1
     fig = plt.figure()
     for i in range(len(img_list)):
@@ -113,4 +113,6 @@ if __name__ == "__main__":
     (2,14), (2,11),
     (11,12), (12,13), (14,15), (15,16), # legs
     )
-    viz(bones)
+    import sys
+    group = int(sys.argv[1])
+    viz(bones, group)
