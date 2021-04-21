@@ -28,13 +28,22 @@ def att():
     _, output = model(img)
 
 
-def viz(bones, group):
+def extract_bone(pred, bone):
+    out = (pred[:,bone[0],0].tolist()[0], pred[:,bone[1],0].tolist()[0])
+    return out
+
+
+def viz(bones, group, comp=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device, lift=True)
-    # model.load_state_dict(torch.load('./anth_checkpoint/ft_5.bin')['model'])
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('../linear_last/checkpoint/ft_5.bin')['model'])
     model = model.cuda()
     model.eval()
+    if comp:
+        model_2 = PETR(device, lift=True)
+        model_2.load_state_dict(torch.load('../linear_last/anth_checkpoint/ft_5.bin')['model'])
+        model_2 = model_2.cuda()
+        model_2.eval()
 
     imgs = [
         #0
@@ -71,26 +80,29 @@ def viz(bones, group):
     img_list = imgs[group]
     k = 1
     fig = plt.figure()
+    num_row = 3 if comp else 2
+
     for i in range(len(img_list)):
         img_read = Image.open(img_list[i])
         img = transforms(img_read)
         img = img.unsqueeze(0)
         img = img.cuda()
 
-        ax = fig.add_subplot(2, len(img_list), k)
+# 1st row
+        ax = fig.add_subplot(num_row, len(img_list), k)
         ax.imshow(img_read)
         ax.set_xticklabels([])
         ax.set_yticklabels([])
 
+# 2nd row
         _, output = model(img)
         output = output.cpu().detach().numpy()
-        ax = fig.add_subplot(2, len(img_list), k+len(img_list), projection='3d')
+        ax = fig.add_subplot(num_row, len(img_list), k+len(img_list), projection='3d')
         ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
         for bone in bones:
-            xS = (output[:,bone[0],0].tolist()[0], output[:,bone[1],0].tolist()[0])
-            yS = (output[:,bone[0],1].tolist()[0], output[:,bone[1],1].tolist()[0])
-            zS = (output[:,bone[0],2].tolist()[0], output[:,bone[1],2].tolist()[0])
-            
+            xS = extract_bone(output, bone)
+            yS = extract_bone(output, bone)
+            zS = extract_bone(output, bone)
             ax.plot(xS, yS, zS)
         ax.view_init(elev=-80, azim=-90)
         ax.autoscale()
@@ -100,9 +112,31 @@ def viz(bones, group):
         ax.set_yticklabels([])
         ax.set_zticklabels([])
 
+
+# 3rd row
+        if comp:
+            _, output = model_2(img)
+            output = output.cpu().detach().numpy()
+            ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
+            ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
+            for bone in bones:
+                xS = extract_bone(output, bone)
+                yS = extract_bone(output, bone)
+                zS = extract_bone(output, bone)
+                ax.plot(xS, yS, zS)
+            ax.view_init(elev=-80, azim=-90)
+            ax.autoscale()
+            plt.xlim(-1,1)
+            plt.ylim(-1,1)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_zticklabels([])
+
         k += 1
     plt.show()
     plt.savefig('./checkpoint/this.svg', format='svg', dpi=1200)
+
+
 
 
 if __name__ == "__main__":
