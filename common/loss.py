@@ -113,6 +113,11 @@ def anth_mpjpe(predicted, target):
     assert predicted.shape == target.shape, "{}, {}".format(predicted.shape, target.shape)
     bs = predicted.shape[0]
     w = torch.ones(bs, predicted.shape[1]) # (bs,17)
+
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+        w = w.cuda()
     
     bones = (((5,6),(8,9)),
              ((6,7),(9,10)),
@@ -128,11 +133,6 @@ def anth_mpjpe(predicted, target):
 
     # 3. joint collision
     w = joint_collision(predicted, target, w)
-
-    if torch.cuda.is_available():
-        predicted = predicted.cuda()
-        target = target.cuda()
-        w = w.cuda()
 
     return torch.mean(w * torch.norm(predicted - target, dim=len(target.shape)-1))
 
