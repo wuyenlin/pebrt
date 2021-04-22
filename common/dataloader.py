@@ -132,11 +132,11 @@ class Data:
         pass
 
 
-def exp():
+def try_load():
     train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=16, drop_last=True)
+                        shuffle=True, num_workers=2, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, kpts, labels = dataiter.next()
@@ -179,4 +179,4 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
-    exp()
+    try_load()
