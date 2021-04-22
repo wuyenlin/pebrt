@@ -41,7 +41,8 @@ class TransformerEncoder(nn.Module):
         x = self.pe(x)
         x = self.transformer(x)
         x = self.lin_out(x).squeeze(1) #(bs,30)
-        x = self.tanh(x)*1.57
+        x = self.tanh(x)
+        x = torch.acos(x)
 
         return x
 
