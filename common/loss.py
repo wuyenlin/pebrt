@@ -65,12 +65,14 @@ def p_mpjpe(predicted, target):
 
 def punish(predicted, bone1, bone2, weights, thres=0.1):
     """
-    This function verifies that symmetric bones have the same length.
+    Verifies that symmetric bones have the same length.
     If the predicted skeleton shows different bone lengths on a pair of bones,
     one of their respective joints will be weighted 2 (instead of 1) in loss function.
-    # TODO: add bone collision (see if 2 lines/volumes have intersection)
+    # TODO: add BONE collision (see if 2 lines/volumes have intersection)
 
-    ::return:: a weight matrix of shape (bs, 17)
+    :param bone1:
+    :param bone2:
+    :return: a weight matrix of shape (bs, 17)
     """
 
 # the commented part is an easier explanation of this function, 
@@ -94,8 +96,12 @@ def punish(predicted, bone1, bone2, weights, thres=0.1):
 
 
 def joint_collision(predicted, target, weight, thres=0.1):
-    bs = predicted.shape[0]
+    """
+    verify whether predicted and target joints overlap within a given threshold
 
+    :return: a weight matrix of shape (bs, 17)
+    """
+    bs = predicted.shape[0]
     diff = torch.linalg.norm(predicted - target, dim=2) > thres
     diff = diff.double() + 1
     weight *= diff
@@ -137,7 +143,16 @@ def anth_mpjpe(predicted, target):
     return torch.mean(w * torch.norm(predicted - target, dim=len(target.shape)-1))
 
 
+def new_mpjpe(predicted, target):
+    """
+    new loss function meant for pure pose estimation
+    # 1. L2 norm on vecs
+    # 2. bone length
+    """
+
+    return torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1))
+
 if __name__ == "__main__":
     a = torch.rand([4,17,3])
     b = torch.rand([4,17,3])
-    print(anth_mpjpe(a,b))
+    print(mpjpe(a,b))
