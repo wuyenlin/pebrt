@@ -135,36 +135,26 @@ def try_load():
     dataiter = iter(trainloader)
     img_path, images, kpts, labels = dataiter.next()
     print(labels[0])
-    # from common.misc import imshow
-    # imshow(torchvision.utils.make_grid(images))
     
-    # bones = (
-    # (0,1), (0,3), (1,2), (3,4),  # spine + head
-    # (0,5), (0,8),
-    # (5,6), (6,7), (8,9), (9,10), # arms
-    # (2,14), (2,11),
-    # (11,12), (12,13), (14,15), (15,16), # legs
-    # )
-
-    # pts = labels[0]
-    # fig = plt.figure()
-    # ax = fig.add_subplot(121)
-    # plt.imshow(Image.open(img_path[0]))
-    # ax = fig.add_subplot(122, projection='3d')
-    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    # for bone in bones:
-    #     xS = (pts[bone[0],0], pts[bone[1],0])
-    #     yS = (pts[bone[0],1], pts[bone[1],1])
-    #     zS = (pts[bone[0],2], pts[bone[1],2])
+    pts = labels[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(121)
+    plt.imshow(Image.open(img_path[0]))
+    ax = fig.add_subplot(122, projection='3d')
+    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    for i in range(pts.shape[0]):
+        xS = (0, pts[i,0])
+        yS = (0, pts[i,1])
+        zS = (0, pts[i,2])
         
-    #     ax.plot(xS, yS, zS)
-    # ax.view_init(elev=-80, azim=-90)
-    # plt.xlim(-1,1)
-    # plt.ylim(-1,1)
-    # ax.set_xlabel("X")
-    # ax.set_ylabel("Y")
-    # ax.set_zlabel("Z")
-    # plt.show()
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-80, azim=-90)
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    plt.show()
 
 
 if __name__ == "__main__":
