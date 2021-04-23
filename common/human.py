@@ -10,7 +10,9 @@ except ModuleNotFoundError:
 
 
 class Human:
-    """Implementation of Winter human model"""
+    """
+    Implementation of Winter human model
+    """
     def __init__(self, H):
         self.half_face = 0.066*H
         self.neck = 0.052*H
@@ -20,16 +22,8 @@ class Human:
 
         self.pelvis = 0.191*H
         self.thigh, self.calf = 0.245*H, 0.246*H
-
         self.root = np.array([0.0, 0.0, 0.0])
-        self.indices = (
-        (0,1), (0,3), (1,2), (3,4),  # spine + head
-        (0,5), (0,8),
-        (5,6), (6,7), (8,9), (9,10), # arms
-        (2,14), (2,11),
-        (11,12), (12,13), (14,15), (15,16), # legs
-        )
-    
+
 
     def _init_bones(self):
         """get bones as vectors"""
@@ -76,6 +70,10 @@ class Human:
 
 
     def update_bones(self, ang=None):
+        """
+        :param ang:
+        :return model: a numpy array of (17,3)
+        """
         self._init_bones()
         if ang is not None:
             self._sort_angles(ang)
@@ -84,9 +82,6 @@ class Human:
 
 
     def update_pose(self, ang=None):
-        """
-        returns a numpy array of (17,3)
-        """
         self.update_bones(ang)
 
         root = self.root
@@ -116,29 +111,61 @@ class Human:
         return model
 
 
-    def vis_model(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        for p in self.model:
-            ax.scatter(p[0], p[1], p[2], c='r')
+def vis_model(model):
+    indices = (
+        (0,1), (0,3), (1,2), (3,4),  # spine + head
+        (0,5), (0,8), # clavicle
+        (5,6), (6,7), (8,9), (9,10), # arms
+        (2,14), (2,11), # pelvis
+        (11,12), (12,13), (14,15), (15,16), # legs
+    )
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for p in model:
+        ax.scatter(p[0], p[1], p[2], c='r')
 
-        for index in self.indices:
-            xS = (self.model[index[0]][0], self.model[index[1]][0])
-            yS = (self.model[index[0]][1], self.model[index[1]][1])
-            zS = (self.model[index[0]][2], self.model[index[1]][2])
-            ax.plot(xS, yS, zS)
-        ax.view_init(elev=-80, azim=-90)
-        ax.autoscale()
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-        ax.set_zlabel("Z")
-        plt.show()
+    for index in indices:
+        xS = (model[index[0]][0], model[index[1]][0])
+        yS = (model[index[0]][1], model[index[1]][1])
+        zS = (model[index[0]][2], model[index[1]][2])
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-80, azim=-90)
+    ax.autoscale()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    plt.show()
 
 
-if __name__ == "__main__":
+def vectorize(gt_3d):
+    """
+    process gt_3d (17,3) into a (16,4) that contains bone vector and length
+    :return vec: unit bone vector + bone length
+    """
+    indices = (
+        (0,1), (0,3), (1,2), (3,4),  # spine + head
+        (0,5), (0,8), # clavicle
+        (5,6), (6,7), (8,9), (9,10), # arms
+        (2,14), (2,11), # pelvis
+        (11,12), (12,13), (14,15), (15,16), # legs
+    )
+    num_bones = len(indices)
+    bone_info = np.zeros([num_bones, 4]) # (16, 4)
+    for i in range(num_bones):
+        vec = gt_3d[indices[i][1],:] - gt_3d[indices[i][0],:]
+        vec_len = np.linalg.norm(vec)
+        bone_info[i,:3], bone_info[i,3] = vec/vec_len, vec_len
+    return bone_info
+
+
+def rand_pose():
     h = Human(1.8)
-
     a = np.random.rand(30)
     model = h.update_pose(a)
     print(model.shape)
-    h.vis_model()
+    vis_model(model)
+    print(vectorize(model))
+
+
+if __name__ == "__main__":
+    rand_pose()
