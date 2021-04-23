@@ -46,7 +46,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             _, predicted_3d_pos = model(images)
 
-            loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
+            loss_3d_pos = new_mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
             N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -72,7 +72,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
                 _, predicted_3d_pos = model(images)
 
-                loss_3d_pos = mpjpe(predicted_3d_pos, inputs_3d)
+                loss_3d_pos = new_mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
                 N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -118,7 +118,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 def evaluate(test_loader, model, device):
     print("Testing starts...")
     epoch_loss_3d_pos = 0.0
-    epoch_loss_3d_pos_procrustes = 0.0
 
     with torch.no_grad():
         model.eval()
@@ -137,7 +136,6 @@ def evaluate(test_loader, model, device):
             inputs = inputs_3d.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
             predicted_3d_pos = predicted_3d_pos.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
 
-            epoch_loss_3d_pos_procrustes += inputs_3d.shape[0]*inputs_3d.shape[1] * p_mpjpe(predicted_3d_pos, inputs)
 
 
     e1 = (epoch_loss_3d_pos / N)*1000
@@ -146,7 +144,6 @@ def evaluate(test_loader, model, device):
     print('----------')
     print('Protocol #1 Error (MPJPE):', e1, 'mm')
     print('Protocol #2 Error (P-MPJPE):', e2, 'mm')
-    print('Velocity Error (MPJVE):', ev, 'mm')
     print('----------')
     
     return e1, e2, ev
