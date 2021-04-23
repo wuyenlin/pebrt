@@ -10,10 +10,9 @@ from numpy import random
 import matplotlib.pyplot as plt
 from PIL import Image, ImageEnhance, ImageFilter
 try:
-    from common.human import Human
+    from common.human import *
 except ModuleNotFoundError:
-    from human import Human
-
+    from human import *
 
 
 def collate_fn(batch):
@@ -41,7 +40,6 @@ class Data:
         self.img_path = []
         self.gt_pts2d = []
         self.gt_pts3d = []
-        self.gt_angle = []
         self.transforms = transforms
 
         if train:
@@ -58,8 +56,7 @@ class Data:
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
-                self.gt_pts3d.append(torch.from_numpy(gt_3d))
-                # self.gt_angle.append(torch.from numpy(angles)) <- dump angles (1,30) array
+                self.gt_pts3d.append(torch.from_numpy(vectorize(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
@@ -67,7 +64,6 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            # angles = self.gt_angle[index]
             kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
         except:
@@ -79,9 +75,11 @@ class Data:
     
 
     def pop_joints(self, kpts):
-        '''
+        """
         Get 17 joints from the original 28 
-        '''
+        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,3))
+        :return new_skel: an array of (17,3)
+        """
         new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
         ext_list = [0,2,4,5,6,         # spine+head
                     9,10,11,14,15,16,  # arms
@@ -94,6 +92,8 @@ class Data:
     def get_intrinsic(self, camera):
         """
         Parse camera matrix from calibration file
+        :param camera:              camera number (used in MPI dataset)
+        :return intrinsic matrix:
         """
         calib = open("./dataset/S1/Seq1/camera.calibration","r")
         content = calib.readlines()
@@ -120,16 +120,10 @@ class Data:
 
     
     def zero_center(self, cam):
+        """
+        translate root joint to origin (0,0,0)
+        """
         return cam - cam[2,:]
-
-    
-    def ik(self, gt_pts3d):
-        """
-        Perform Inverse Kinematics to obtain Euler angles of each bone
-        """
-        h = Human(1.7)
-        h.update_bones()
-        pass
 
 
 def try_load():
@@ -140,36 +134,37 @@ def try_load():
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, images, kpts, labels = dataiter.next()
+    print(labels[0])
     # from common.misc import imshow
     # imshow(torchvision.utils.make_grid(images))
     
-    bones = (
-    (0,1), (0,3), (1,2), (3,4),  # spine + head
-    (0,5), (0,8),
-    (5,6), (6,7), (8,9), (9,10), # arms
-    (2,14), (2,11),
-    (11,12), (12,13), (14,15), (15,16), # legs
-    )
+    # bones = (
+    # (0,1), (0,3), (1,2), (3,4),  # spine + head
+    # (0,5), (0,8),
+    # (5,6), (6,7), (8,9), (9,10), # arms
+    # (2,14), (2,11),
+    # (11,12), (12,13), (14,15), (15,16), # legs
+    # )
 
-    pts = labels[0]
-    fig = plt.figure()
-    ax = fig.add_subplot(121)
-    plt.imshow(Image.open(img_path[0]))
-    ax = fig.add_subplot(122, projection='3d')
-    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    for bone in bones:
-        xS = (pts[bone[0],0], pts[bone[1],0])
-        yS = (pts[bone[0],1], pts[bone[1],1])
-        zS = (pts[bone[0],2], pts[bone[1],2])
+    # pts = labels[0]
+    # fig = plt.figure()
+    # ax = fig.add_subplot(121)
+    # plt.imshow(Image.open(img_path[0]))
+    # ax = fig.add_subplot(122, projection='3d')
+    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    # for bone in bones:
+    #     xS = (pts[bone[0],0], pts[bone[1],0])
+    #     yS = (pts[bone[0],1], pts[bone[1],1])
+    #     zS = (pts[bone[0],2], pts[bone[1],2])
         
-        ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-    plt.show()
+    #     ax.plot(xS, yS, zS)
+    # ax.view_init(elev=-80, azim=-90)
+    # plt.xlim(-1,1)
+    # plt.ylim(-1,1)
+    # ax.set_xlabel("X")
+    # ax.set_ylabel("Y")
+    # ax.set_zlabel("Z")
+    # plt.show()
 
 
 if __name__ == "__main__":
