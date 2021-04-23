@@ -8,8 +8,6 @@ from math import sin, cos
 def coco_mpi(coco_joints):
     """
     convert predicted COCO joints to MPI-INF-3DHP joints order
-    input is a (17,2) numpy array of COCO joints order
-    returns a (17,2) numpy array of MPI-INF-3DHP order
     """
     mpi_joints = np.zeros_like(coco_joints)
     mpi_joints[4,:] = coco_joints[0,:]
@@ -39,10 +37,11 @@ def coco_mpi(coco_joints):
 def rot(a, b, r):
     """
     General rotation matrix
-    a : yaw
-    b : pitch
-    r : roll
-    returns a rotation matrix R given yaw, pitch, and roll angles
+    :param a: yaw
+    :param b: pitch
+    :param r: roll
+    
+    :return R: a rotation matrix R
     """
     row1 = np.array([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
     row2 = np.array([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
@@ -80,14 +79,4 @@ def imshow(img):
 
 
 if __name__ == "__main__":
-    a = np.array([3,0,0])
-    b = np.array([0,2,0])
-    R, ang = rotation_matrix_from_vectors(a,b)
-    print(R)
-    c = R@a
-    print(np.linalg.norm(c))
-    c_hat = c/np.linalg.norm(c)
-    b_hat = b/np.linalg.norm(b)
-    print(c_hat)
-    print(b_hat)
-    print(ang)
+    pass
