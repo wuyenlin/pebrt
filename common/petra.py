@@ -84,16 +84,16 @@ class PETRA(nn.Module):
         return torch.tensor(joints_2d, device=self.device)
 
 
-    def fk(self, out_x):
+    def fk(self, x):
         """
         Perform Forward Kinematics on human skeleton model
         return (bs, 17, 3)
         """
-        bs = out_x.size(0)
+        bs = x.size(0)
         prediction = np.zeros([bs,16,4])
         for i in range(bs):
             h = Human(1.7)
-            model = h.update_pose(out_x[i, :])
+            model = h.update_pose(x[i, :])
             prediction[i,:,:] = vectorize(model)
         return torch.tensor(prediction, device=self.device, requires_grad=True)
 

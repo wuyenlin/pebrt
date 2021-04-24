@@ -192,8 +192,6 @@ def main(args):
     val_dataset = Data(args.dataset, transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
     
-
-
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
         {
