@@ -37,17 +37,17 @@ def coco_mpi(coco_joints):
 def rot(a, b, r):
     """
     General rotation matrix
-    :param a: yaw
-    :param b: pitch
-    :param r: roll
+    :param a: yaw (rad)
+    :param b: pitch (rad)
+    :param r: roll (rad)
     
     :return R: a rotation matrix R
     """
-    row1 = np.array([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
-    row2 = np.array([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
-    row3 = np.array([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
-    R = np.array([row1, row2, row3])
-    assert cmath.isclose(np.linalg.det(R), 1)
+    row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+    row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+    row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+    R = torch.stack((row1, row2, row3), 0)
+    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), "{}".format(torch.det(R))
     return R
 
 

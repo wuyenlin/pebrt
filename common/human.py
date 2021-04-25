@@ -13,7 +13,7 @@ class Human:
     """
     Implementation of Winter human model
     """
-    def __init__(self, H):
+    def __init__(self, H, device="cuda:0"):
         self.half_face = 0.066*H
         self.neck = 0.052*H
         self.upper_spine, self.lower_spine = 0.144*H, 0.144*H
@@ -22,30 +22,31 @@ class Human:
 
         self.pelvis = 0.191*H
         self.thigh, self.calf = 0.245*H, 0.246*H
-        self.root = np.array([0.0, 0.0, 0.0])
+        self.root = torch.zeros(3)
+        self.device = device
 
 
     def _init_bones(self):
         """get bones as vectors"""
         self.bones = {
-            'lower_spine': np.array([0, -self.lower_spine, 0]),
-            'upper_spine': np.array([0, -self.upper_spine, 0]),
-            'neck': np.array([0, -self.neck, 0]),
-            'head': np.array([0, -self.half_face, 0]),
+            'lower_spine': torch.tensor([0, -self.lower_spine, 0]),
+            'upper_spine': torch.tensor([0, -self.upper_spine, 0]),
+            'neck': torch.tensor([0, -self.neck, 0]),
+            'head': torch.tensor([0, -self.half_face, 0]),
 
-            'l_clavicle': np.array([self.clavicle, 0, 0]),
-            'l_upper_arm': np.array([self.upper_arm, 0, 0]),
-            'l_lower_arm': np.array([self.lower_arm, 0, 0]),
-            'r_clavicle': np.array([-self.clavicle, 0, 0]),
-            'r_upper_arm': np.array([-self.upper_arm, 0, 0]),
-            'r_lower_arm': np.array([-self.lower_arm, 0, 0]),
+            'l_clavicle': torch.tensor([self.clavicle, 0, 0]),
+            'l_upper_arm': torch.tensor([self.upper_arm, 0, 0]),
+            'l_lower_arm': torch.tensor([self.lower_arm, 0, 0]),
+            'r_clavicle': torch.tensor([-self.clavicle, 0, 0]),
+            'r_upper_arm': torch.tensor([-self.upper_arm, 0, 0]),
+            'r_lower_arm': torch.tensor([-self.lower_arm, 0, 0]),
 
-            'l_hip': np.array([self.pelvis/2, 0, 0]),
-            'l_thigh': np.array([0, self.thigh, 0]),
-            'l_calf': np.array([0, self.calf, 0]),
-            'r_hip': np.array([-self.pelvis/2, 0, 0]),
-            'r_thigh': np.array([0, self.thigh, 0]),
-            'r_calf': np.array([0, self.calf, 0])
+            'l_hip': torch.tensor([self.pelvis/2, 0, 0]),
+            'l_thigh': torch.tensor([0, self.thigh, 0]),
+            'l_calf': torch.tensor([0, self.calf, 0]),
+            'r_hip': torch.tensor([-self.pelvis/2, 0, 0]),
+            'r_thigh': torch.tensor([0, self.thigh, 0]),
+            'r_calf': torch.tensor([0, self.calf, 0])
         }
 
 
@@ -103,9 +104,9 @@ class Human:
         r_hip = self.bones['r_hip']
         r_knee = self.bones['r_thigh'] + r_hip
         r_ankle = self.bones['r_calf'] + r_knee
-        model = np.array([neck, lower_spine, root, chin, nose,
+        model = torch.stack((neck, lower_spine, root, chin, nose,
                 l_shoulder, l_elbow, l_wrist, r_shoulder, r_elbow, r_wrist,
-                l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle])
+                l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle), 0)
         
         self.model = model
         return model
@@ -159,9 +160,10 @@ def vectorize(gt_3d):
 
 
 def rand_pose():
-    h = Human(1.8)
-    a = np.random.rand(30)
+    h = Human(1.8, "cpu")
+    a = np.random.rand(21)
     model = h.update_pose(a)
+    print(model)
     print(model.shape)
     vis_model(model)
     print(vectorize(model))
