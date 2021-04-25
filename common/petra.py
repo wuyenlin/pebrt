@@ -28,7 +28,7 @@ class TransformerEncoder(nn.Module):
         self.tanh = nn.Tanh()
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead)
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
-        self.lin_out = nn.Linear(d_model, 30)
+        self.lin_out = nn.Linear(d_model, 21)
 
         self.d_model = d_model
         self.nhead = nhead
@@ -40,7 +40,7 @@ class TransformerEncoder(nn.Module):
         x = x.flatten(1).unsqueeze(1) #(bs,1,34)
         x = self.pe(x)
         x = self.transformer(x)
-        x = self.lin_out(x).squeeze(1) #(bs,30)
+        x = self.lin_out(x).squeeze(1) #(bs,21)
         x = self.tanh(x)
         x = torch.acos(x)
 
