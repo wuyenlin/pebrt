@@ -52,20 +52,20 @@ class Human:
     def _sort_angles(self, ang):
         """process the PETR output (26 angles in rad) and sort them in a dict"""
         self.angles = {
-            'lower_spine': rot(ang[0], ang[1], ang[2]),
-            'upper_spine': rot(ang[3], ang[4], ang[5]),
-            'neck': rot(ang[6], ang[7], ang[8]),
-            'head': rot(ang[9], ang[10], ang[11]),
+            'lower_spine': rot(ang[0], ang[1], 0),
+            'upper_spine': rot(ang[2], ang[3], 0),
+            'neck': rot(ang[4], 0, 0),
+            'head': rot(ang[5], ang[6], 0),
 
-            'l_upper_arm': rot(ang[12], ang[13], ang[14]),
-            'l_lower_arm': rot(ang[15], ang[16], 0),
-            'r_upper_arm': rot(ang[17], ang[18], ang[19]),
-            'r_lower_arm': rot(ang[20], ang[21], 0),
+            'l_upper_arm': rot(ang[7], ang[8], 0),
+            'l_lower_arm': rot(ang[9], ang[10], 0),
+            'r_upper_arm': rot(ang[11], ang[12], 0),
+            'r_lower_arm': rot(ang[13], ang[14], 0),
 
-            'l_thigh': rot(ang[22], ang[23], ang[24]),
-            'l_calf': rot(ang[25], 0, 0),
-            'r_thigh': rot(ang[26], ang[27], ang[28]),
-            'r_calf': rot(ang[29], 0, 0)
+            'l_thigh': rot(ang[15], ang[16], 0),
+            'l_calf': rot(ang[17], 0, 0),
+            'r_thigh': rot(ang[18], ang[19], 0),
+            'r_calf': rot(ang[20], 0, 0)
         }
 
 
