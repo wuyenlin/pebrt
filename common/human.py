@@ -138,10 +138,10 @@ def vis_model(model):
     plt.show()
 
 
-def vectorize(gt_3d):
+def vectorize(gt_3d) -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
-    :return vec: unit bone vector + bone length
+    :return bone_info: unit bone vector + bone length 
     """
     indices = (
         (0,1), (0,3), (1,2), (3,4),  # spine + head
@@ -151,11 +151,16 @@ def vectorize(gt_3d):
         (11,12), (12,13), (14,15), (15,16), # legs
     )
     num_bones = len(indices)
-    bone_info = np.zeros([num_bones, 4]) # (16, 4)
+    try:
+        gt_3d_tensor = torch.from_numpy(gt_3d)
+    except TypeError:
+        gt_3d_tensor = gt_3d
+    bone_info = torch.zeros([num_bones, 4], requires_grad=False) # (16, 4)
     for i in range(num_bones):
-        vec = gt_3d[indices[i][1],:] - gt_3d[indices[i][0],:]
-        vec_len = np.linalg.norm(vec)
-        bone_info[i,:3], bone_info[i,3] = vec/vec_len, vec_len
+        vec = gt_3d_tensor[indices[i][1],:] - gt_3d_tensor[indices[i][0],:]
+        vec_len = torch.linalg.norm(vec)
+        unit_vec = vec/vec_len
+        bone_info[i,:3], bone_info[i,3] = unit_vec, vec_len
     return bone_info
 
 

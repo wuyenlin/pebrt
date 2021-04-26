@@ -1,7 +1,3 @@
-import os
-import cv2 as cv
-import torch
-import torchvision
 from torchvision import transforms
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
@@ -56,7 +52,7 @@ class Data:
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
-                self.gt_pts3d.append(torch.from_numpy(vectorize(gt_3d)))
+                self.gt_pts3d.append((vectorize(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
