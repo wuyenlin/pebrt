@@ -34,7 +34,7 @@ def coco_mpi(coco_joints):
     return mpi_joints
 
 
-def rot(a, b, r):
+def rot(a, b, r) -> torch.tensor:
     """
     General rotation matrix
     :param a: yaw (rad)

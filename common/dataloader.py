@@ -88,7 +88,7 @@ class Data:
     def get_intrinsic(self, camera):
         """
         Parse camera matrix from calibration file
-        :param camera:              camera number (used in MPI dataset)
+        :param camera: camera number (used in MPI dataset)
         :return intrinsic matrix:
         """
         calib = open("./dataset/S1/Seq1/camera.calibration","r")
@@ -144,6 +144,14 @@ def try_load():
         zS = (0, pts[i,2])
         
         ax.plot(xS, yS, zS)
+
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
+    x = np.outer(np.cos(u), np.sin(v))
+    y = np.outer(np.sin(u), np.sin(v))
+    z = np.outer(np.ones(np.size(u)), np.cos(v))
+
+    ax.plot_surface(x, y, z, color='r', alpha=0.1)
     ax.view_init(elev=-80, azim=-90)
     plt.xlim(-1,1)
     plt.ylim(-1,1)
