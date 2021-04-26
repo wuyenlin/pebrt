@@ -3,7 +3,7 @@ import torch
 import cv2 as cv
 import math, cmath
 from math import sin, cos
-
+from scipy.spatial.transform import Rotation as R
 
 def coco_mpi(coco_joints):
     """
@@ -76,6 +76,11 @@ def imshow(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
+
+
+def quat_to_mat(i, j, k):
+    q = R.from_quat([[0,i,j,k]])
+    return q.as_matrix()
 
 
 if __name__ == "__main__":

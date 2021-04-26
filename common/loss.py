@@ -143,16 +143,21 @@ def anth_mpjpe(predicted, target):
     return torch.mean(w * torch.norm(predicted - target, dim=len(target.shape)-1))
 
 
-def new_mpjpe(predicted, target):
+def new_mpjpe(predicted, target, bone_length=False):
     """
     new loss function meant for pure pose estimation
     # 1. L2 norm on vecs
     # 2. bone length
     """
+    n_mpjpe = torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1)) 
+    if bone_length:
+        len_diff = torch.mean(predicted[:,:,3] - target[:,:,3])
+        n_mpjpe += len_diff
 
-    return torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1))
+    return n_mpjpe
 
 if __name__ == "__main__":
-    a = torch.rand([4,17,3])
-    b = torch.rand([4,17,3])
+    a = torch.rand([4,17,4])
+    b = torch.rand([4,17,4])
     print(mpjpe(a,b))
+    print(new_mpjpe(a,b,True))
