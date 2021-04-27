@@ -40,23 +40,6 @@ class Human:
         }
 
 
-    def rot(self, a, b, r) -> torch.tensor:
-        """
-        General rotation matrix
-        :param a: yaw (rad)
-        :param b: pitch (rad)
-        :param r: roll (rad)
-        
-        :return R: a rotation matrix R
-        """
-        row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
-        row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
-        row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
-        R = torch.stack((row1, row2, row3), 0)
-        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-        return R
-
-
     def _init_bones(self):
         """get bones as vectors"""
         self.bones = {
@@ -81,45 +64,59 @@ class Human:
         }
 
 
-    def _angle_constraints(self):
+    def check_constraints(self):
         """
         This function punishes if NN outputs are beyond joint rotation constraints.
         """
-        # self.punish_list = {
-        #     'lower_spine': ((), (), (0,0)),
-        #     'upper_spine': 
-        #     'neck': 
-        #     'head': 
+        punish = {}
 
-        #     'l_upper_arm': 
-        #     'l_lower_arm':
-        #     'r_upper_arm':
-        #     'r_lower_arm':
+        for bone in self.constraints.keys():
+            count = 0
+            for i in range(3):
+                low = self.constraints[bone][i][0]
+                high = self.constraints[bone][i][1]
+                if self.angles[bone][i] < low or self.angles[bone][i] > high:
+                    count += 1
+            punish[bone] = count
+        
+        self.punish_list = [punish[list(punish.keys())[k]] for k in range(len(punish.keys()))]
 
-        #     'l_thigh': 
-        #     'l_calf': 
-        #     'r_thigh':
-        #     'r_calf':
-        # }
 
-    def _sort_angles(self, ang):
-        """process the PETR output (21 angles in rad) and sort them in a dict"""
+    def rot(self, a, b, r) -> torch.tensor:
+        """
+        General rotation matrix
+        :param a: yaw (rad)
+        :param b: pitch (rad)
+        :param r: roll (rad)
+        
+        :return R: a rotation matrix R
+        """
+        row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+        row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+        row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+        R = torch.stack((row1, row2, row3), 0)
+        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+        return R
+
+
+    def sort_angles(self, ang):
+        """process the PETR output (19 angles in rad) and sort them in a dict"""
         self.angles = {
-            'lower_spine': self.rot(ang[0], 0, ang[1]),
-            'upper_spine': self.rot(ang[0]+ang[2], 0, ang[1]+ang[3]),
+            'lower_spine': (ang[0], 0, ang[1]),
+            'upper_spine': (ang[0]+ang[2], 0, ang[1]+ang[3]),
             
-            'neck': self.rot(ang[4], 0, 0),
-            'head': self.rot(ang[4]+ang[5], 0, ang[6]),
+            'neck': (ang[4], 0, 0),
+            'head': (ang[4]+ang[5], 0, ang[6]),
 
-            'l_upper_arm': self.rot(ang[7], ang[8], 0),
-            'l_lower_arm': self.rot(ang[7]+ang[9], 0, 0),
-            'r_upper_arm': self.rot(ang[10], ang[11], 0),
-            'r_lower_arm': self.rot(ang[10]+ang[12], 0, 0),
+            'l_upper_arm': (ang[7], ang[8], 0),
+            'l_lower_arm': (ang[7]+ang[9], 0, 0),
+            'r_upper_arm': (ang[10], ang[11], 0),
+            'r_lower_arm': (ang[10]+ang[12], 0, 0),
 
-            'l_thigh': self.rot(ang[13], 0, ang[14]),
-            'l_calf': self.rot(ang[13], 0, ang[14]+ang[15]),
-            'r_thigh': self.rot(ang[16], 0, ang[17]),
-            'r_calf': self.rot(ang[16], 0, ang[17]+ang[18])
+            'l_thigh': (ang[13], 0, ang[14]),
+            'l_calf': (ang[13], 0, ang[14]+ang[15]),
+            'r_thigh': (ang[16], 0, ang[17]),
+            'r_calf': (ang[16], 0, ang[17]+ang[18])
         }
 
 
@@ -130,12 +127,17 @@ class Human:
         """
         self._init_bones()
         if ang is not None:
-            self._sort_angles(ang)
+            self.sort_angles(ang)
+            self.rotated_bones = {k: self.rot(v[0],v[1],v[2]) for k,v in self.angles.items()}
+            self.check_constraints()
             for bone in self.angles.keys():
-                self.bones[bone] = self.angles[bone] @ self.bones[bone]
+                self.bones[bone] = self.rotated_bones[bone] @ self.bones[bone]
 
 
     def update_pose(self, ang=None):
+        """
+        Assemble bones to make a human body
+        """
         self.update_bones(ang)
 
         root = self.root
@@ -219,9 +221,10 @@ def vectorize(gt_3d) -> torch.tensor:
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    a = np.zeros(21)
-    model = h.update_pose(a)
+    a = np.random.rand(21)
+    model = h.update_pose(a*2)
     print(model)
+    print(h.punish_list)
     vis_model(model)
     # print(vectorize(model))
 
