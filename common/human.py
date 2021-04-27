@@ -2,11 +2,7 @@ import math, cmath
 from math import sin, cos
 import numpy as np
 import matplotlib.pyplot as plt
-
-try:
-    from common.misc import *
-except ModuleNotFoundError:
-    from misc import *
+import torch
 
 
 class Human:
@@ -24,6 +20,41 @@ class Human:
         self.thigh, self.calf = 0.245*H, 0.246*H
         self.root = torch.zeros(3)
         self.device = device
+
+        self.constraints = {
+            'lower_spine': ((-1.0,1.0), (0,0), (-1.0,1.0)),
+            'upper_spine': ((-2.0,2.0), (0,0), (-2.0,2.0)),
+
+            'neck': ((-1.0,1.0), (0,0), (0,0)),
+            'head': ((-1.0,1.0), (0,0), (-1.0,1.57)),
+
+            'l_upper_arm': ((-3.14,3.14), (-0.1,1.7), (0,0)),
+            'l_lower_arm': ((-6.14,3.14), (0,0), (0,0)),
+            'r_upper_arm': ((-3.14,3.14), (-1.7,0.1), (0,0)),
+            'r_lower_arm': ((-3.14,6.14), (0,0), (0,0)),
+
+            'l_thigh': ((-1.57,1.0), (0,0), (-1.57,1.57)),
+            'l_calf': ((-1.57,1.0), (0,0), (-4.71,1.57)),
+            'r_thigh': ((-1.0,1.57), (0,0), (-1.57,1.57)),
+            'r_calf': ((-1.0,1.57), (0,0), (-4.71,1.57)),
+        }
+
+
+    def rot(self, a, b, r) -> torch.tensor:
+        """
+        General rotation matrix
+        :param a: yaw (rad)
+        :param b: pitch (rad)
+        :param r: roll (rad)
+        
+        :return R: a rotation matrix R
+        """
+        row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+        row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+        row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+        R = torch.stack((row1, row2, row3), 0)
+        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+        return R
 
 
     def _init_bones(self):
@@ -50,23 +81,45 @@ class Human:
         }
 
 
+    def _angle_constraints(self):
+        """
+        This function punishes if NN outputs are beyond joint rotation constraints.
+        """
+        # self.punish_list = {
+        #     'lower_spine': ((), (), (0,0)),
+        #     'upper_spine': 
+        #     'neck': 
+        #     'head': 
+
+        #     'l_upper_arm': 
+        #     'l_lower_arm':
+        #     'r_upper_arm':
+        #     'r_lower_arm':
+
+        #     'l_thigh': 
+        #     'l_calf': 
+        #     'r_thigh':
+        #     'r_calf':
+        # }
+
     def _sort_angles(self, ang):
-        """process the PETR output (26 angles in rad) and sort them in a dict"""
+        """process the PETR output (21 angles in rad) and sort them in a dict"""
         self.angles = {
-            'lower_spine': rot(ang[0], ang[1], 0),
-            'upper_spine': rot(ang[2], ang[3], 0),
-            'neck': rot(ang[4], 0, 0),
-            'head': rot(ang[5], ang[6], 0),
+            'lower_spine': self.rot(ang[0], 0, ang[1]),
+            'upper_spine': self.rot(ang[0]+ang[2], 0, ang[1]+ang[3]),
+            
+            'neck': self.rot(ang[4], 0, 0),
+            'head': self.rot(ang[4]+ang[5], 0, ang[6]),
 
-            'l_upper_arm': rot(ang[7], ang[8], 0),
-            'l_lower_arm': rot(ang[9], ang[10], 0),
-            'r_upper_arm': rot(ang[11], ang[12], 0),
-            'r_lower_arm': rot(ang[13], ang[14], 0),
+            'l_upper_arm': self.rot(ang[7], ang[8], 0),
+            'l_lower_arm': self.rot(ang[7]+ang[9], 0, 0),
+            'r_upper_arm': self.rot(ang[10], ang[11], 0),
+            'r_lower_arm': self.rot(ang[10]+ang[12], 0, 0),
 
-            'l_thigh': rot(ang[15], ang[16], 0),
-            'l_calf': rot(ang[17], 0, 0),
-            'r_thigh': rot(ang[18], ang[19], 0),
-            'r_calf': rot(ang[20], 0, 0)
+            'l_thigh': self.rot(ang[13], 0, ang[14]),
+            'l_calf': self.rot(ang[13], 0, ang[14]+ang[15]),
+            'r_thigh': self.rot(ang[16], 0, ang[17]),
+            'r_calf': self.rot(ang[16], 0, ang[17]+ang[18])
         }
 
 
@@ -166,12 +219,11 @@ def vectorize(gt_3d) -> torch.tensor:
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    a = np.random.rand(21)
+    a = np.zeros(21)
     model = h.update_pose(a)
     print(model)
-    print(model.shape)
     vis_model(model)
-    print(vectorize(model))
+    # print(vectorize(model))
 
 
 if __name__ == "__main__":
