@@ -71,15 +71,20 @@ class Human:
         punish = {}
 
         for bone in self.constraints.keys():
-            count = 0
+            count = 1
             for i in range(3):
                 low = self.constraints[bone][i][0]
                 high = self.constraints[bone][i][1]
                 if self.angles[bone][i] < low or self.angles[bone][i] > high:
-                    count += 1
+                    count += 0.5
             punish[bone] = count
         
         self.punish_list = [punish[list(punish.keys())[k]] for k in range(len(punish.keys()))]
+
+        self.punish_list.insert(4, 1)
+        self.punish_list.insert(4, 1)
+        self.punish_list.insert(10, 1)
+        self.punish_list.insert(10, 1)
 
 
     def rot(self, a, b, r) -> torch.tensor:
@@ -226,7 +231,7 @@ def rand_pose():
     print(model)
     print(h.punish_list)
     vis_model(model)
-    # print(vectorize(model))
+    print(vectorize(model))
 
 
 if __name__ == "__main__":
