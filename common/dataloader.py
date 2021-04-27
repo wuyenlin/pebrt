@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
+import cv2 as cv
 from PIL import Image, ImageEnhance, ImageFilter
 try:
     from common.human import *
