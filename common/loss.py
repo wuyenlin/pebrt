@@ -151,13 +151,13 @@ def new_mpjpe(predicted, target, bone_length=False):
     """
     n_mpjpe = torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1)) 
     if bone_length:
-        len_diff = torch.mean(predicted[:,:,3] - target[:,:,3])
+        len_diff = abs(torch.mean(predicted[:,:,3] - target[:,:,3]))
         n_mpjpe += len_diff
 
     return n_mpjpe
 
 if __name__ == "__main__":
-    a = torch.rand([4,17,4])
-    b = torch.rand([4,17,4])
-    print(mpjpe(a,b))
+    a = torch.zeros(1,1,4)
+    b = torch.ones(1,1,4)
+
     print(new_mpjpe(a,b,True))
