@@ -90,21 +90,27 @@ class PETRA(nn.Module):
         return (bs, 17, 3)
         """
         bs = x.size(0)
-        prediction = np.zeros([bs,16,4])
+        predictions = np.zeros([bs,16,4])
+        weights = np.zeros([bs,16])
         for i in range(bs):
             h = Human(1.7)
             model = h.update_pose(x[i, :])
-            prediction[i,:,:] = vectorize(model)
-        return torch.tensor(prediction, device=self.device, requires_grad=True)
+            predictions[i,:,:] = vectorize(model)
+            weights[i,:] = h.punish_list
+
+        predictions = torch.tensor(predictions, device=self.device, requires_grad=True),
+        weights = torch.tensor(weights, device=self.device, requires_grad=False)
+
+        return predictions, weights
 
 
     def forward(self, x):
         x = self.backbone(x)
         x = self._decode_joints(x)
         x = self.transformer(x.float())
-        out_x = self.fk(x)
+        out_x, w = self.fk(x)
 
-        return x, out_x
+        return w, out_x
 
 
 if __name__ == "__main__":
