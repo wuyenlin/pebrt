@@ -34,8 +34,9 @@ class Data:
         data = data["arr_0"].reshape(1,-1)[0]
 
         self.img_path = []
-        self.gt_pts2d = []
+        # self.gt_pts2d = []
         self.gt_pts3d = []
+        self.gt_vecs3d = []
         self.transforms = transforms
 
         if train:
@@ -47,12 +48,13 @@ class Data:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
                 pro_pts_2d = self.zero_center(self.pop_joints(pts_2d)*96/2048)
-                self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
+                # self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
-                self.gt_pts3d.append((vectorize(gt_3d)))
+                self.gt_pts3d.append(gt_3d)
+                self.gt_vecs3d.append((vectorize(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
@@ -60,11 +62,13 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            kpts_2d = self.gt_pts2d[index]
+            # kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
+            vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        return img_path, img, kpts_2d, kpts_3d
+        # return img_path, img, kpts_2d, kpts_3d
+        return img_path, img, kpts_3d, vecs_3d
 
     def __len__(self):
         return len(self.img_path)
@@ -88,7 +92,7 @@ class Data:
     def get_intrinsic(self, camera):
         """
         Parse camera matrix from calibration file
-        :param camera: camera number (used in MPI dataset)
+        :param camera:              camera number (used in MPI dataset)
         :return intrinsic matrix:
         """
         calib = open("./dataset/S1/Seq1/camera.calibration","r")
@@ -132,11 +136,38 @@ def try_load():
     img_path, images, kpts, labels = dataiter.next()
     print(labels[0])
     
-    pts = labels[0]
+    bones = (
+    (0,1), (0,3), (1,2), (3,4),  # spine + head
+    (0,5), (0,8),
+    (5,6), (6,7), (8,9), (9,10), # arms
+    (2,14), (2,11),
+    (11,12), (12,13), (14,15), (15,16), # legs
+    )
+
     fig = plt.figure()
-    ax = fig.add_subplot(121)
+    ax = fig.add_subplot(131)
     plt.imshow(Image.open(img_path[0]))
-    ax = fig.add_subplot(122, projection='3d')
+
+    # 2nd - 3D Pose
+    pts = kpts[0]
+    ax = fig.add_subplot(132, projection='3d')
+    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    for bone in bones:
+        xS = (pts[bone[0],0], pts[bone[1],0])
+        yS = (pts[bone[0],1], pts[bone[1],1])
+        zS = (pts[bone[0],2], pts[bone[1],2])
+        
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-80, azim=-90)
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+
+    # 3rd - vectorized 
+    pts = labels[0]
+    ax = fig.add_subplot(133, projection='3d')
     ax.scatter(pts[:,0], pts[:,1], pts[:,2])
     for i in range(pts.shape[0]):
         xS = (0, pts[i,0])
@@ -144,7 +175,8 @@ def try_load():
         zS = (0, pts[i,2])
         
         ax.plot(xS, yS, zS)
-
+    
+    # unit sphere
     u = np.linspace(0, 2 * np.pi, 100)
     v = np.linspace(0, np.pi, 100)
     x = np.outer(np.cos(u), np.sin(v))
@@ -152,12 +184,14 @@ def try_load():
     z = np.outer(np.ones(np.size(u)), np.cos(v))
 
     ax.plot_surface(x, y, z, color='r', alpha=0.1)
+
     ax.view_init(elev=-80, azim=-90)
     plt.xlim(-1,1)
     plt.ylim(-1,1)
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
+
     plt.show()
 
 
