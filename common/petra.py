@@ -28,7 +28,7 @@ class TransformerEncoder(nn.Module):
         self.tanh = nn.Tanh()
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead)
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
-        self.lin_out = nn.Linear(d_model, 21)
+        self.lin_out = nn.Linear(d_model, 19)
 
         self.d_model = d_model
         self.nhead = nhead

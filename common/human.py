@@ -221,7 +221,7 @@ def vectorize(gt_3d) -> torch.tensor:
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    a = np.random.rand(21)
+    a = np.random.rand(19)
     model = h.update_pose(a*2)
     print(model)
     print(h.punish_list)
