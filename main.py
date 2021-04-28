@@ -19,7 +19,7 @@ from time import time
 
 transforms = transforms.Compose([
     transforms.Resize([256,256]),
-    transforms.ToTensor(),  
+    transforms.ToTensor(),
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ])
 
@@ -132,7 +132,7 @@ def evaluate(test_loader, model, device):
 
             epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
             N += inputs_3d.shape[0] * inputs_3d.shape[1]
-            
+
             inputs = inputs_3d.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
             predicted_3d_pos = predicted_3d_pos.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
 
@@ -146,7 +146,7 @@ def evaluate(test_loader, model, device):
     print('Protocol #1 Error (MPJPE):', e1, 'mm')
     print('Protocol #2 Error (P-MPJPE):', e2, 'mm')
     print('----------')
-    
+
     return e1, e2, ev
 
 
@@ -167,9 +167,9 @@ def main(args):
         backbone_params = 0
         if args.lr_backbone == 0:
             print("INFO: Freezing HRNet")
-            #for param in model.backbone.parameters():
-            #    param.requires_grad = False
-            #    backbone_params += param.numel()
+            for param in model.backbone.parameters():
+                param.requires_grad = False
+                backbone_params += param.numel()
     else:
         print("INFO: Model loaded. Using End-to-end model.")
 
@@ -178,7 +178,7 @@ def main(args):
         model_params += parameter.numel()
     if args.lift and args.lr_backbone == 0:
         model_params -= backbone_params
-    
+
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
     if args.eval:
@@ -191,7 +191,7 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
-    
+
 
 
     param_dicts = [
@@ -219,7 +219,7 @@ def main(args):
 
     print("INFO: Using optimizer {}".format(optimizer))
 
-    train_list, val_list = train(args.start_epoch, args.epoch, 
+    train_list, val_list = train(args.start_epoch, args.epoch,
                                 train_loader, val_loader, model, device,
                                 optimizer, lr_scheduler)
 
