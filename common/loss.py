@@ -29,13 +29,13 @@ def p_mpjpe(predicted, target):
     assert predicted.shape == target.shape
     muX = np.mean(target, axis=1, keepdims=True)
     muY = np.mean(predicted, axis=1, keepdims=True)
-    
+
     X0 = target - muX
     Y0 = predicted - muY
 
     normX = np.sqrt(np.sum(X0**2, axis=(1, 2), keepdims=True))
     normY = np.sqrt(np.sum(Y0**2, axis=(1, 2), keepdims=True))
-    
+
     X0 /= normX
     Y0 /= normY
 
@@ -54,26 +54,27 @@ def p_mpjpe(predicted, target):
 
     a = tr * normX / normY # Scale
     t = muX - a*np.matmul(muY, R) # Translation
-    
+
     # Perform rigid transformation on the input
     predicted_aligned = a*np.matmul(predicted, R) + t
-    
+
     # Return MPJPE
     return np.mean(np.linalg.norm(predicted_aligned - target, axis=len(target.shape)-1))
-    
 
 
 def punish(predicted, bone1, bone2, weights, thres=0.1):
     """
-    This function verifies that symmetric bones have the same length.
+    Verifies that symmetric bones have the same length.
     If the predicted skeleton shows different bone lengths on a pair of bones,
     one of their respective joints will be weighted 2 (instead of 1) in loss function.
-    # TODO: add bone collision (see if 2 lines/volumes have intersection)
+    # TODO: add BONE collision (see if 2 lines/volumes have intersection)
 
-    ::return:: a weight matrix of shape (bs, 17)
+    :param bone1:
+    :param bone2:
+    :return: a weight matrix of shape (bs, 17)
     """
 
-# the commented part is an easier explanation of this function, 
+# the commented part is an easier explanation of this function,
 # but training becomes slower as bs increases
 
     # for bs in range(predicted.shape[0]):
@@ -94,8 +95,12 @@ def punish(predicted, bone1, bone2, weights, thres=0.1):
 
 
 def joint_collision(predicted, target, weight, thres=0.1):
-    bs = predicted.shape[0]
+    """
+    verify whether predicted and target joints overlap within a given threshold
 
+    :return: a weight matrix of shape (bs, 17)
+    """
+    bs = predicted.shape[0]
     diff = torch.linalg.norm(predicted - target, dim=2) > thres
     diff = diff.double() + 1
     weight *= diff
@@ -118,7 +123,7 @@ def anth_mpjpe(predicted, target):
         predicted = predicted.cuda()
         target = target.cuda()
         w = w.cuda()
-    
+
     bones = (((5,6),(8,9)),
              ((6,7),(9,10)),
              ((11,12),(14,15)),
@@ -138,6 +143,8 @@ def anth_mpjpe(predicted, target):
 
 
 if __name__ == "__main__":
-    a = torch.rand([4,17,3])
-    b = torch.rand([4,17,3])
-    print(anth_mpjpe(a,b))
+    a = torch.zeros(2,16,4)
+    b = torch.ones(2,16,4)
+    w = torch.ones(2,16)
+
+    print(new_mpjpe(a,b,w,True))
