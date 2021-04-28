@@ -102,7 +102,7 @@ def joint_collision(predicted, target, weight, thres=0.1):
     :return: a weight matrix of shape (bs, 17)
     """
     bs = predicted.shape[0]
-    diff = torch.linalg.norm(predicted - target, dim=2) > thres
+    diff = torch.linalg.norm(predicted - target, dim=2) < thres
     diff = diff.double() + 1
     weight *= diff
 
