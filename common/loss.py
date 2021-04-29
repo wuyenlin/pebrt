@@ -95,7 +95,7 @@ def punish(predicted, bone1, bone2, weights, thres=0.1):
     return weights
 
 
-def joint_collision(predicted, target, weight, thres=0.05):
+def joint_collision(predicted, target, weight, thres=0.1):
     """
     verify whether predicted and target joints lie within a given threshold
     if True -> collision -> punish
@@ -146,6 +146,7 @@ def anth_mpjpe(predicted, target):
 
 def new_mpjpe(predicted, target, w, bone_length=False):
     """
+    :param w: a list of weights that punish those exceeding joint angle limits
     new loss function meant for pure pose estimation
     # 1. L2 norm on vecs
     # 2. bone length
