@@ -67,8 +67,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 inputs_3d = inputs_3d.to(device)
                 images = images.to(device)
 
-                optimizer.zero_grad()
-
                 _, predicted_3d_pos = model(images)
 
                 loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
