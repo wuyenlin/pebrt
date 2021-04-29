@@ -1,3 +1,4 @@
+import torch
 from torchvision import transforms
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
@@ -6,10 +7,6 @@ from numpy import random
 import matplotlib.pyplot as plt
 import cv2 as cv
 from PIL import Image, ImageEnhance, ImageFilter
-try:
-    from common.human import *
-except ModuleNotFoundError:
-    from human import *
 
 
 def collate_fn(batch):
