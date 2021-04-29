@@ -39,7 +39,9 @@ def rotation_matrix_from_vectors(vec1, vec2):
     """ Find the rotation matrix that aligns vec1 to vec2
     :param vec1: A 3d "source" vector
     :param vec2: A 3d "destination" vector
-    :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+
+    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    :return angles: Euler angles
     
     Such that b = R @ a
 
@@ -68,4 +70,12 @@ def quat_to_mat(i, j, k):
 
 
 if __name__ == "__main__":
-    pass
+    a = np.array([0,1,0])
+    b = np.array([0,0,1])
+    print("a = ", a)
+    print("b = ", b)
+
+    print("\n")
+    print("R = \n", rotation_matrix_from_vectors(a,b)[0])
+    print("\n")
+    print("Euler angles: \n", rotation_matrix_from_vectors(a,b)[1])
