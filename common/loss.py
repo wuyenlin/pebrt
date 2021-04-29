@@ -146,6 +146,7 @@ def anth_mpjpe(predicted, target):
 
 def new_mpjpe(predicted, target, w, bone_length=False):
     """
+    :param w: a list of weights that punish those exceeding joint angle limits
     new loss function meant for pure pose estimation
     # 1. L2 norm on vecs
     # 2. bone length
