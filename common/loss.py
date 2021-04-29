@@ -95,14 +95,15 @@ def punish(predicted, bone1, bone2, weights, thres=0.1):
     return weights
 
 
-def joint_collision(predicted, target, weight, thres=0.1):
+def joint_collision(predicted, target, weight, thres=0.05):
     """
-    verify whether predicted and target joints overlap within a given threshold
+    verify whether predicted and target joints lie within a given threshold
+    if True -> collision -> punish
 
     :return: a weight matrix of shape (bs, 17)
     """
     bs = predicted.shape[0]
-    diff = torch.linalg.norm(predicted - target, dim=2) > thres
+    diff = torch.linalg.norm(predicted - target, dim=2) < thres
     diff = diff.double() + 1
     weight *= diff
 
@@ -156,6 +157,7 @@ def new_mpjpe(predicted, target, w, bone_length=False):
         n_mpjpe += len_diff
 
     return n_mpjpe
+
 
 if __name__ == "__main__":
     a = torch.zeros(2,16,4)
