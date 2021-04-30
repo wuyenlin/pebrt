@@ -4,7 +4,6 @@ from torchvision import transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 from common.petr import PETR
-from common.petra import PETRA
 
 
 transforms = transforms.Compose([
@@ -36,7 +35,7 @@ def extract_bone(pred, bone, k):
 def viz(bones, group, comp=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device, lift=True)
-    model.load_state_dict(torch.load('../linear_last/checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
     model = model.cuda()
     model.eval()
     if comp:
@@ -104,7 +103,7 @@ def viz(bones, group, comp=False):
             yS = extract_bone(output, bone, 1)
             zS = extract_bone(output, bone, 2)
             ax.plot(xS, yS, zS)
-        ax.view_init(elev=-80, azim=-90)
+        ax.view_init(elev=-70, azim=-90)
         ax.autoscale()
         plt.xlim(-1,1)
         plt.ylim(-1,1)
@@ -150,6 +149,6 @@ if __name__ == "__main__":
     (11,12), (12,13), (14,15), (15,16), # legs
     )
     import sys
-    comp = True if int(sys.argv[1])==1 else False
-    group = int(sys.argv[2])
+    comp = False
+    group = int(sys.argv[1])
     viz(bones, group, comp)
