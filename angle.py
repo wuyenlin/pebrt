@@ -153,7 +153,7 @@ def main(args):
 
     device = torch.device(args.device)
     model = PETRA(device)
-    print("INFO: Using PETRA")
+    print("INFO: Using PETRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 
@@ -199,7 +199,7 @@ def main(args):
         },
     ]
 
-    optimizer = optim.Adam(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
