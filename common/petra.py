@@ -96,7 +96,7 @@ class PETRA(nn.Module):
             h = Human(1.7)
             model = h.update_pose(x[i, :])
             weights[i,:] = h.punish_list
-            predictions[i,:,:] = vectorize(model)
+            predictions[i,:,:] = vectorize(model.cpu().detach().numpy())
 
         weights = torch.tensor(weights, device=self.device, requires_grad=False)
         predictions = torch.tensor(predictions, device=self.device, requires_grad=True)
