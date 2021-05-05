@@ -5,6 +5,7 @@ import math, cmath
 from math import sin, cos
 from scipy.spatial.transform import Rotation as R
 
+
 def coco_mpi(coco_joints):
     """
     convert predicted COCO joints to MPI-INF-3DHP joints order
@@ -64,30 +65,6 @@ def imshow(img):
     plt.show()
 
 
-def quat_to_mat(i, j, k):
-    q = R.from_quat([[0,i,j,k]])
-    return q.as_matrix()
-
-
-def normalize(x):
-    return x/torch.linalg.norm(x)
-
-
-def gschmidt(a_1: torch.tensor, a_2: torch.tensor) -> torch.tensor:
-    """
-    an implementation of 6D representation for 3D rotation using Gram-Schmidt method
-    :param arr: 2 column arrays of size 3
-    :return R: 3x3 rotation matrix
-    """
-    a_1 = a_1.to(torch.float32)
-    a_2 = a_2.to(torch.float32)
-    row_1 = normalize(a_1)
-    row_2 = normalize(a_2 - (row_1@a_2)*row_1)
-    row_3 = normalize(torch.cross(row_1,row_2))
-    R = torch.stack((row_1, row_2, row_3), 1)
-    return R
-
-
 if __name__ == "__main__":
     a = torch.tensor([1,0,0])
     b = torch.tensor([0,1,0])
@@ -96,4 +73,5 @@ if __name__ == "__main__":
     print("b = ", b)
 
     print("\n")
-    print("R = \n", gschmidt(a,b))
+    arr = torch.tensor([1,0,0,0,1,0])
+    print("R = \n", gschmidt(arr))
