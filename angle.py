@@ -199,7 +199,7 @@ def main(args):
         },
     ]
 
-    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.Adam(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
