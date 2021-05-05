@@ -66,6 +66,8 @@ class Human:
             'r_thigh': torch.tensor([0, self.thigh, 0]),
             'r_calf': torch.tensor([0, self.calf, 0])
         }
+        for bone in self.bones.keys():
+            self.bones[bone] = self.bones[bone].to(self.device)
 
 
     def check_constraints(self):
@@ -91,23 +93,6 @@ class Human:
         self.punish_list.insert(10, 1)
 
 
-    def rot(self, a, b, r) -> torch.tensor:
-        """
-        General rotation matrix
-        :param a: yaw (rad)
-        :param b: pitch (rad)
-        :param r: roll (rad)
-        
-        :return R: a rotation matrix R
-        """
-        row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
-        row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
-        row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
-        R = torch.stack((row1, row2, row3), 0)
-        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-        return R
-
-
     def gschmidt(self, arr: torch.tensor) -> torch.tensor:
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
@@ -121,7 +106,7 @@ class Human:
         row_3 = normalize(torch.cross(row_1,row_2))
         R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
         assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-        return R
+        return R.to(self.device)
 
 
     def sort_angles(self, ang):
@@ -138,7 +123,6 @@ class Human:
 
     def update_bones(self, ang=None):
         """
-        :param ang:
         :return model: a numpy array of (17,3)
         """
         self._init_bones()
@@ -156,7 +140,7 @@ class Human:
         """
         self.update_bones(ang)
 
-        root = self.root
+        root = self.root.to(self.device)
         lower_spine = self.bones['lower_spine']
         neck = self.bones['upper_spine'] + lower_spine
         chin = self.bones['neck'] + neck
@@ -175,12 +159,11 @@ class Human:
         r_hip = self.bones['r_hip']
         r_knee = self.bones['r_thigh'] + r_hip
         r_ankle = self.bones['r_calf'] + r_knee
-        model = torch.stack((neck, lower_spine, root, chin, nose,
+        self.model = torch.stack((neck, lower_spine, root, chin, nose,
                 l_shoulder, l_elbow, l_wrist, r_shoulder, r_elbow, r_wrist,
                 l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle), 0)
         
-        self.model = model
-        return model
+        return self.model
 
 
 def vis_model(model):
