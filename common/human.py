@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 import torch
 
 
+def normalize(x: torch.tensor) -> torch.tensor:
+    return x/torch.linalg.norm(x)
+
+
 class Human:
     """
     Implementation of Winter human model
@@ -104,25 +108,32 @@ class Human:
         return R
 
 
+    def gschmidt(self, arr: torch.tensor) -> torch.tensor:
+        """
+        an implementation of 6D representation for 3D rotation using Gram-Schmidt process
+
+        :return R: 3x3 rotation matrix
+        """
+        arr = arr.to(torch.float32)
+        a_1, a_2 = arr[:3], arr[3:]
+        row_1 = normalize(a_1)
+        row_2 = normalize(a_2 - (row_1@a_2)*row_1)
+        row_3 = normalize(torch.cross(row_1,row_2))
+        R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+        return R
+
+
     def sort_angles(self, ang):
-        """process the PETR output (19 angles in rad) and sort them in a dict"""
-        self.angles = {
-            'lower_spine': (ang[0], 0, ang[1]),
-            'upper_spine': (ang[0]+ang[2], 0, ang[1]+ang[3]),
-            
-            'neck': (ang[4], 0, 0),
-            'head': (ang[4]+ang[5], 0, ang[6]),
-
-            'l_upper_arm': (ang[7], ang[8], 0),
-            'l_lower_arm': (ang[7]+ang[9], 0, 0),
-            'r_upper_arm': (ang[10], ang[11], 0),
-            'r_lower_arm': (ang[10]+ang[12], 0, 0),
-
-            'l_thigh': (ang[13], 0, ang[14]),
-            'l_calf': (ang[13], 0, ang[14]+ang[15]),
-            'r_thigh': (ang[16], 0, ang[17]),
-            'r_calf': (ang[16], 0, ang[17]+ang[18])
-        }
+        """
+        :param ang: a list of 48 elements
+        process PETRA output (quaternion ele) to rotation matrix of 12 bones
+        """
+        self.angles = {}
+        k = 0
+        for bone in self.constraints.keys():
+            self.angles[bone] = ang[6*k:6*(k+1)]
+            k += 1
 
 
     def update_bones(self, ang=None):
@@ -133,10 +144,10 @@ class Human:
         self._init_bones()
         if ang is not None:
             self.sort_angles(ang)
-            self.rotated_bones = {k: self.rot(v[0],v[1],v[2]) for k,v in self.angles.items()}
+            self.rot_mat = {k: self.gschmidt(v)[0] for k,v in self.angles.items()}
             self.check_constraints()
             for bone in self.angles.keys():
-                self.bones[bone] = self.rotated_bones[bone] @ self.bones[bone]
+                self.bones[bone] = self.rot_mat[bone] @ self.bones[bone]
 
 
     def update_pose(self, ang=None):
