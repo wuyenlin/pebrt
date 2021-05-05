@@ -144,7 +144,7 @@ class Human:
         self._init_bones()
         if ang is not None:
             self.sort_angles(ang)
-            self.rot_mat = {k: self.gschmidt(v)[0] for k,v in self.angles.items()}
+            self.rot_mat = {k: self.gschmidt(v) for k,v in self.angles.items()}
             self.check_constraints()
             for bone in self.angles.keys():
                 self.bones[bone] = self.rot_mat[bone] @ self.bones[bone]
@@ -230,15 +230,15 @@ def vectorize(gt_3d) -> torch.tensor:
     for i in range(num_bones):
         vec = gt_3d_tensor[indices[i][1],:] - gt_3d_tensor[indices[i][0],:]
         vec_len = torch.linalg.norm(vec)
-        unit_vec = vec/vec_len
+        unit_vec = normalize(vec)
         bone_info[i,:3], bone_info[i,3] = unit_vec, vec_len
     return bone_info
 
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    a = np.random.rand(19)
-    model = h.update_pose(a*2)
+    a = torch.rand(72)
+    model = h.update_pose(a)
     print(model)
     print(h.punish_list)
     vis_model(model)
