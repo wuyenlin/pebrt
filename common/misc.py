@@ -34,23 +34,26 @@ def coco_mpi(coco_joints):
     return mpi_joints
 
 
+def normalize(x):
+    return x/np.linalg.norm(x)
 
-def rotation_matrix_from_vectors(vec1, vec2):
+
+def rotation_matrix_from_vectors(v1, v2):
     """ Find the rotation matrix that aligns vec1 to vec2
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-    :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    :param v1: A 3d "source" vector
+    :param v2: A 3d "target" vector
+    :return R: A transform matrix (3x3) s.t. v2 = R @ v1
+    :return angles: Euler angles derived from R
 
-    Such that b = R @ a
-
-    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
+    (Implementation of https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d/476311#476311)
     """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    a, b = normalize(v1).reshape(3), normalize(v2).reshape(3)
     v = np.cross(a, b)
     c = np.dot(a, b)
     s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    # skew-symmetric cross-product matrix of v
+    ssmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    R = np.eye(3) + ssmat + ssmat.dot(ssmat)*((1-c)/(s**2))
     angles = cv.RQDecomp3x3(R)[0]
     return R, angles
 
