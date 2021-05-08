@@ -98,7 +98,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./world_checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
