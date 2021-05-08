@@ -48,8 +48,9 @@ class Data:
                 self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
-                cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
-                gt_3d = self.zero_center(cam_3d)/1000
+                # cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
+                # gt_3d = self.zero_center(cam_3d)/1000
+                gt_3d = self.zero_center(self.pop_joints(pts_3d))/1000
                 self.gt_pts3d.append(gt_3d)
                 self.img_path.append(data[vid][frame]['directory'])
 
