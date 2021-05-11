@@ -163,10 +163,17 @@ def new_mpjpe(predicted, target, w, bone_length=False):
 def maev(predicted, target):
     """
     MAEV: Mean Absolute Error of Vectors
-    :param predicted:
-    :param target: 
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,16,9) tensor
     """
-    pass
+    bs = predicted.shape[0]
+    predicted = predicted.reshape(bs,16,3,3)
+    target = target.reshape(bs,16,3,3)
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+    l2 = torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1)) 
+    return l2
 
 
 if __name__ == "__main__":
