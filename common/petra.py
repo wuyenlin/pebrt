@@ -3,6 +3,7 @@ import numpy as np
 import torch, torchvision
 import torch.nn as nn
 import matplotlib.pyplot as plt
+import cmath
 
 try:
     from common.hrnet import *
@@ -37,10 +38,10 @@ class TransformerEncoder(nn.Module):
 
 
     def forward(self, x):
-        x = x.flatten(1).unsqueeze(1) #(bs,1,34)
+        x = x.flatten(1).unsqueeze(1)
         x = self.pe(x)
         x = self.transformer(x)
-        x = self.lin_out(x).squeeze(1) #(bs,21)
+        x = self.lin_out(x).squeeze(1)
         x = self.tanh(x)
 
         return x
@@ -82,34 +83,35 @@ class PETRA(nn.Module):
         joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
         return torch.tensor(joints_2d, device=self.device)
 
+ 
+    def normalize(self, x: torch.tensor) -> torch.tensor:
+        return x/torch.linalg.norm(x)
 
-    def fk(self, x):
+
+    def gschmidt(self, arr_all: torch.tensor) -> torch.tensor:
         """
-        Perform Forward Kinematics on human skeleton model
-        return (bs, 17, 3)
+        an implementation of 6D representation for 3D rotation using Gram-Schmidt process
+
+        :param arr: a (72,) tensor
+        :return R: 3x3 rotation matrix
         """
-        bs = x.size(0)
-        weights = np.zeros([bs,16])
-        predictions = np.zeros([bs,16,4])
-        for i in range(bs):
-            h = Human(1.7)
-            model = h.update_pose(x[i, :])
-            weights[i,:] = h.punish_list
-            predictions[i,:,:] = vectorize(model.cpu().detach().numpy())
-
-        weights = torch.tensor(weights, device=self.device, requires_grad=False)
-        predictions = torch.tensor(predictions, device=self.device, requires_grad=True)
-
-        return weights, predictions
+        arr_all = arr_all.to(torch.float32).reshape(16,-1)
+        a_1, a_2 = arr[:3], arr[3:]
+        row_1 = self.normalize(a_1)
+        row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
+        row_3 = self.normalize(torch.cross(row_1,row_2))
+        R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+        return R.to(self.device)
 
 
     def forward(self, x):
         x = self.backbone(x)
         x = self._decode_joints(x)
         x = self.transformer(x.float())
-        w, out_x = self.fk(x)
+        x = self.gschmidt(x) #TODO: do for every bone
 
-        return w, out_x
+        return x
 
 
 if __name__ == "__main__":
