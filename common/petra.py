@@ -68,8 +68,8 @@ class PETRA(nn.Module):
         return tensor of (17,2) joints on x,y coordinates for a batch
         """
         assert heatmap.shape[1:] == (17,64,64), "{}".format(heatmap.shape)
-        bs = heatmap.size(0)
-        joints_2d = np.zeros([bs,17,2])
+        self.bs = heatmap.size(0)
+        joints_2d = np.zeros([self.bs,17,2])
         heatmap = heatmap.cpu().detach().numpy()
 
         for i, human in enumerate(heatmap):
@@ -88,24 +88,25 @@ class PETRA(nn.Module):
         return x/torch.linalg.norm(x)
 
 
-    def gschmidt(self, arr_all: torch.tensor) -> torch.tensor:
+    def gs(self, arr_all: torch.tensor) -> torch.tensor:
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
 
         :param arr: a (96,) tensor
         :return R_stack: 
         """
-        R_stack = torch.zeros(16,9)
-        arr_all = arr_all.to(torch.float32).reshape(16,-1)
-        for k in range(16):
-            arr = arr_all[k,:]
-            a_1, a_2 = arr[:3], arr[3:]
-            row_1 = self.normalize(a_1)
-            row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
-            row_3 = self.normalize(torch.cross(row_1,row_2))
-            R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
-            assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-            R_stack[k,:] = R.to(self.device).flatten()
+        R_stack = torch.zeros(self.bs,16,9)
+        arr_all = arr_all.to(torch.float32).reshape(self.bs,16,-1)
+        for b in range(self.bs):
+            for k in range(16):
+                arr = arr_all[b,k,:]
+                a_1, a_2 = arr[:3], arr[3:]
+                row_1 = self.normalize(a_1)
+                row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
+                row_3 = self.normalize(torch.cross(row_1,row_2))
+                R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+                assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+                R_stack[b,k,:] = R.to(self.device).flatten()
         return R_stack
 
 
@@ -113,7 +114,7 @@ class PETRA(nn.Module):
         x = self.backbone(x)
         x = self._decode_joints(x)
         x = self.transformer(x.float())
-        x = self.gschmidt(x)
+        x = self.gs(x)
 
         return x
 
@@ -134,5 +135,5 @@ if __name__ == "__main__":
     img = img.unsqueeze(0)
     print(img.shape)
     img = img.cuda()
-    _, output = model(img)
+    output = model(img)
     print(output.shape)
