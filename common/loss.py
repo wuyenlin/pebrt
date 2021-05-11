@@ -160,9 +160,11 @@ def new_mpjpe(predicted, target, w, bone_length=False):
     return n_mpjpe
 
 
-def maev():
+def maev(predicted, target):
     """
     MAEV: Mean Absolute Error of Vectors
+    :param predicted:
+    :param target: 
     """
     pass
 
