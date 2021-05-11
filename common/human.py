@@ -42,6 +42,11 @@ class Human:
             'l_calf': ((-1.57,1.0), (0,0), (-4.71,1.57)),
             'r_thigh': ((-1.0,1.57), (0,0), (-1.57,1.57)),
             'r_calf': ((-1.0,1.57), (0,0), (-4.71,1.57)),
+
+            'l_clavicle': ((0,0), (0,0), (0,0)),
+            'r_clavicle': ((0,0), (0,0), (0,0)),
+            'l_hip': ((0,0), (0,0), (0,0)),
+            'r_hip': ((0,0), (0,0), (0,0)),
         }
 
 
@@ -112,8 +117,8 @@ class Human:
 
     def sort_angles(self, ang):
         """
-        :param ang: a list of 48 elements
-        process PETRA output (quaternion ele) to rotation matrix of 12 bones
+        :param ang: a list of 96 elements (6 * 16)
+        process PETRA output to rotation matrix of 16 bones
         """
         self.angles = {}
         k = 0
