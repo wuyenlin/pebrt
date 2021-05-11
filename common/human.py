@@ -10,30 +10,6 @@ def normalize(x: torch.tensor) -> torch.tensor:
     return x/torch.linalg.norm(x)
 
 
-def rotation_matrix_from_vectors(vec1: np.array, vec2: np.array) -> np.array:
-    """ Find the rotation matrix that aligns vec1 to vec2
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-
-    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-    
-    Such that b = R @ a
-
-    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
-    """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-    return R
-
-
-def get_euler(R: np.array) -> tuple:
-    return cv.RQDecomp3x3(R)[0]
-
-
 class Human:
     """
     Implementation of Winter human model
@@ -94,16 +70,6 @@ class Human:
         for bone in self.bones.keys():
             self.bones[bone] = self.bones[bone].to(self.device)
         
-
-    def convert_gt_6d(self, gt_3d: np.array) -> torch.tensor:
-        """
-        Compare GT3D kpts with T pose and obtain the 6D array for SO(3)
-        """
-        self._init_bones()
-        self.rot_mat = {k: rotation_matrix_from_vectors(v) for k,v in self.bones.items()}
-        #     self.check_constraints()
-        
-
 
     def check_constraints(self):
         """
@@ -255,7 +221,8 @@ def vectorize(gt_3d) -> torch.tensor:
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    a = torch.rand(72)
+    # a = torch.rand(72)
+    a = torch.tensor([1,0,0,0,1,0]).repeat(12)
     model = h.update_pose(a)
     print(model)
     print(h.punish_list)
