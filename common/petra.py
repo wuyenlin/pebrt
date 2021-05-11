@@ -29,7 +29,7 @@ class TransformerEncoder(nn.Module):
         self.tanh = nn.Tanh()
         encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, activation="gelu")
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
-        self.lin_out = nn.Linear(d_model, 72)
+        self.lin_out = nn.Linear(d_model, 96)
 
         self.d_model = d_model
         self.nhead = nhead
@@ -92,24 +92,28 @@ class PETRA(nn.Module):
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
 
-        :param arr: a (72,) tensor
-        :return R: 3x3 rotation matrix
+        :param arr: a (96,) tensor
+        :return R_stack: 
         """
+        R_stack = torch.zeros(16,9)
         arr_all = arr_all.to(torch.float32).reshape(16,-1)
-        a_1, a_2 = arr[:3], arr[3:]
-        row_1 = self.normalize(a_1)
-        row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
-        row_3 = self.normalize(torch.cross(row_1,row_2))
-        R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
-        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-        return R.to(self.device)
+        for k in range(16):
+            arr = arr_all[k,:]
+            a_1, a_2 = arr[:3], arr[3:]
+            row_1 = self.normalize(a_1)
+            row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
+            row_3 = self.normalize(torch.cross(row_1,row_2))
+            R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+            assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+            R_stack[k,:] = R.to(self.device).flatten()
+        return R_stack
 
 
     def forward(self, x):
         x = self.backbone(x)
         x = self._decode_joints(x)
         x = self.transformer(x.float())
-        x = self.gschmidt(x) #TODO: do for every bone
+        x = self.gschmidt(x)
 
         return x
 
