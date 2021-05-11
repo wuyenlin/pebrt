@@ -35,7 +35,6 @@ class Data:
         data = data["arr_0"].reshape(1,-1)[0]
 
         self.img_path = []
-        # self.gt_pts2d = []
         self.gt_pts3d = []
         self.gt_vecs3d = []
         self.transforms = transforms
@@ -48,8 +47,6 @@ class Data:
         for vid in vid_list:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
-                pro_pts_2d = self.zero_center(self.pop_joints(pts_2d)*96/2048)
-                # self.gt_pts2d.append(torch.from_numpy(pro_pts_2d))
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
@@ -63,12 +60,10 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            # kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        # return img_path, img, kpts_2d, kpts_3d
         return img_path, img, kpts_3d, vecs_3d
 
     def __len__(self):
@@ -105,7 +100,7 @@ class Data:
         self.intrinsic = intrinsic[:3, :3]
 
 
-    def to_camera_coordinate(self, pts_2d, pts_3d, camera):
+    def to_camera_coordinate(self, pts_2d, pts_3d, camera) -> np.array:
         self.get_intrinsic(camera)
         ret, R, t= cv.solvePnP(pts_3d, pts_2d, self.intrinsic, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
 
@@ -120,7 +115,7 @@ class Data:
         return cam_3d
 
     
-    def zero_center(self, cam):
+    def zero_center(self, cam) -> np.array:
         """
         translate root joint to origin (0,0,0)
         """
