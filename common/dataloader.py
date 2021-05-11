@@ -29,6 +29,53 @@ class AddGaussianNoise(object):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 
+def rotation_matrix_from_vectors(vec1: np.array, vec2: np.array) -> np.array:
+    """ Find the rotation matrix that aligns vec1 to vec2
+    :param vec1: A 3d "source" vector
+    :param vec2: A 3d "destination" vector
+
+    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    
+    Such that b = R @ a
+
+    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
+    """
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    c = np.dot(a, b)
+    s = np.linalg.norm(v)
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    return R
+
+
+def get_euler(R: np.array) -> tuple:
+    return cv.RQDecomp3x3(R)[0]
+
+
+def convert_gt_6d(self, gt_3d: np.array) -> np.array:
+    """
+    Compare GT3D kpts with T pose and obtain the 6D array for SO(3)
+    """
+    # process GT
+    bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
+
+    # T pose
+    h = Human(1.8, "cpu")
+    a = torch.tensor([1,0,0,0,1,0]).repeat(12)
+    model = h.update_pose(a)
+    t_info = vectorize(model)[:,:3]
+
+    # get rotation matrix
+    num_row = bone_info.shape[0]
+    R_stack = np.zeros(num_row, 9)
+    for k in range(num_row):
+        R = rotation_matrix_from_vectors(t_info[k,:], bone_info[k,:]).flatten()
+        R_stack[k,:] = R
+        
+    return R_stack
+
+
 class Data:
     def __init__(self, npz_path, transforms = None, train=True):
         data = np.load(npz_path, allow_pickle=True)
@@ -52,7 +99,7 @@ class Data:
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
                 self.gt_pts3d.append(gt_3d)
-                self.gt_vecs3d.append((vectorize(gt_3d)))
+                self.gt_vecs3d.append((convert_gt_6d(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
@@ -122,77 +169,6 @@ class Data:
         return cam - cam[2,:]
 
 
-def try_load():
-    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
-    train_dataset = Data(train_npz, transforms, True)
-    trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=2, drop_last=True)
-    print("data loaded!")
-    dataiter = iter(trainloader)
-    img_path, images, kpts, labels = dataiter.next()
-    print(labels[0])
-    
-    bones = (
-    (0,1), (0,3), (1,2), (3,4),  # spine + head
-    (0,5), (0,8),
-    (5,6), (6,7), (8,9), (9,10), # arms
-    (2,14), (2,11),
-    (11,12), (12,13), (14,15), (15,16), # legs
-    )
-
-    fig = plt.figure()
-    ax = fig.add_subplot(131)
-    plt.imshow(Image.open(img_path[0]))
-
-    # 2nd - 3D Pose
-    pts = kpts[0]
-    ax = fig.add_subplot(132, projection='3d')
-    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    for bone in bones:
-        xS = (pts[bone[0],0], pts[bone[1],0])
-        yS = (pts[bone[0],1], pts[bone[1],1])
-        zS = (pts[bone[0],2], pts[bone[1],2])
-        
-        ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_zlim(-1,1)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-
-    # 3rd - vectorized 
-    pts = labels[0]
-    ax = fig.add_subplot(133, projection='3d')
-    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    for i in range(pts.shape[0]):
-        xS = (0, pts[i,0])
-        yS = (0, pts[i,1])
-        zS = (0, pts[i,2])
-        
-        ax.plot(xS, yS, zS)
-    
-    # unit sphere
-    u = np.linspace(0, 2 * np.pi, 100)
-    v = np.linspace(0, np.pi, 100)
-    x = np.outer(np.cos(u), np.sin(v))
-    y = np.outer(np.sin(u), np.sin(v))
-    z = np.outer(np.ones(np.size(u)), np.cos(v))
-
-    ax.plot_surface(x, y, z, color='r', alpha=0.1)
-
-    ax.view_init(elev=-80, azim=-90)
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_zlim(-1,1)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-
-    plt.show()
-
-
 if __name__ == "__main__":
 
     transforms = transforms.Compose([
@@ -200,4 +176,3 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
-    try_load()
