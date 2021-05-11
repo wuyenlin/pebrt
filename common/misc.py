@@ -2,8 +2,6 @@ import numpy as np
 import torch
 import cv2 as cv
 import math, cmath
-from math import sin, cos
-from scipy.spatial.transform import Rotation as R
 
 
 def coco_mpi(coco_joints):
@@ -35,29 +33,6 @@ def coco_mpi(coco_joints):
     return mpi_joints
 
 
-
-def rotation_matrix_from_vectors(vec1, vec2):
-    """ Find the rotation matrix that aligns vec1 to vec2
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-
-    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-    :return angles: Euler angles
-    
-    Such that b = R @ a
-
-    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
-    """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-    angles = cv.RQDecomp3x3(R)[0]
-    return R, angles 
-
-
 def imshow(img):
     img = img / 2 + 0.5   
     npimg = img.numpy()
@@ -66,12 +41,4 @@ def imshow(img):
 
 
 if __name__ == "__main__":
-    a = torch.tensor([1,0,0])
-    b = torch.tensor([0,1,0])
-
-    print("a = ", a)
-    print("b = ", b)
-
-    print("\n")
-    arr = torch.tensor([1,0,0,0,1,0])
-    print("R = \n", gschmidt(arr))
+    pass
