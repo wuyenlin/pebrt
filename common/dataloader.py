@@ -53,7 +53,7 @@ def get_euler(R: np.array) -> tuple:
     return cv.RQDecomp3x3(R)[0]
 
 
-def convert_gt_6d(self, gt_3d: np.array) -> np.array:
+def convert_gt_6d(gt_3d: np.array) -> np.array:
     """
     Compare GT3D kpts with T pose and obtain the 6D array for SO(3)
     """
@@ -62,13 +62,13 @@ def convert_gt_6d(self, gt_3d: np.array) -> np.array:
 
     # T pose
     h = Human(1.8, "cpu")
-    a = torch.tensor([1,0,0,0,1,0]).repeat(12)
+    a = torch.tensor([1,0,0,0,1,0]).repeat(16)
     model = h.update_pose(a)
     t_info = vectorize(model)[:,:3]
 
     # get rotation matrix
     num_row = bone_info.shape[0]
-    R_stack = np.zeros(num_row, 9)
+    R_stack = np.zeros([num_row, 9])
     for k in range(num_row):
         R = rotation_matrix_from_vectors(t_info[k,:], bone_info[k,:]).flatten()
         R_stack[k,:] = R
@@ -135,7 +135,7 @@ class Data:
     def get_intrinsic(self, camera):
         """
         Parse camera matrix from calibration file
-        :param camera:              camera number (used in MPI dataset)
+        :param camera: camera number (used in MPI dataset)
         :return intrinsic matrix:
         """
         calib = open("./dataset/S1/Seq1/camera.calibration","r")
