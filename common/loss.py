@@ -160,6 +160,13 @@ def new_mpjpe(predicted, target, w, bone_length=False):
     return n_mpjpe
 
 
+def maev():
+    """
+    MAEV: Mean Absolute Error of Vectors
+    """
+    pass
+
+
 if __name__ == "__main__":
     a = torch.zeros(2,16,4)
     b = torch.ones(2,16,4)
