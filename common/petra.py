@@ -91,9 +91,10 @@ class PETRA(nn.Module):
     def gs(self, arr_all: torch.tensor) -> torch.tensor:
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
+        project 6D to SO(3) via Gram-Schmidt process
 
         :param arr: a (96,) tensor
-        :return R_stack: 
+        :return R_stack: (bs,16,9)
         """
         R_stack = torch.zeros(self.bs,16,9)
         arr_all = arr_all.to(torch.float32).reshape(self.bs,16,-1)
