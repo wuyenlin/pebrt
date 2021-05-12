@@ -62,7 +62,7 @@ def convert_gt_6d(gt_3d: np.array) -> np.array:
 
     # T pose
     h = Human(1.8, "cpu")
-    a = torch.tensor([1,0,0,0,1,0]).repeat(16)
+    a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
     model = h.update_pose(a)
     t_info = vectorize(model)[:,:3]
 
