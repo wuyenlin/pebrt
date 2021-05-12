@@ -5,6 +5,8 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from common.petr import PETR
+from common.petra import PETRA
+from common.human import *
 
 
 transforms = transforms.Compose([
@@ -52,13 +54,13 @@ def plot3d(ax, bones, output):
 
 def viz(bones, group, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETR(device, lift=True)
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model = PETRA(device)
+    model.load_state_dict(torch.load('./angle_checkpoint/epoch_30.bin')['model'])
     model = model.cuda()
     model.eval()
     if compare:
         model_2 = PETR(device, lift=True)
-        model_2.load_state_dict(torch.load('../linear_last/anth_checkpoint/ft_5.bin')['model'])
+        model_2.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
         model_2 = model_2.cuda()
         model_2.eval()
 
@@ -77,7 +79,6 @@ def viz(bones, group, compare=False, savefig=False):
 
         #2
             ["dataset/S4/Seq1/imageSequence/video_5/frame000283.jpg",
-            # "dataset/S4/Seq1/imageSequence/video_7/frame002168.jpg",
             "dataset/S4/Seq1/imageSequence/video_7/frame004447.jpg",
             "dataset/S7/Seq1/imageSequence/video_8/frame001549.jpg",
             "dataset/S8/Seq1/imageSequence/video_0/frame005071.jpg"],
@@ -118,10 +119,25 @@ def viz(bones, group, compare=False, savefig=False):
         ax.set_yticklabels([])
 
 # 2nd row
-        _, output = model(img)
-        output = output.cpu().detach().numpy()
+        output = model(img)
         ax = fig.add_subplot(num_row, len(img_list), k+len(img_list), projection='3d')
-        plot3d(ax, bones, output)
+
+        h = Human(1.8, "cpu")
+        output = h.update_pose(output)
+        output = output.cpu().detach().numpy()
+        for p in output:
+            ax.scatter(p[0], p[1], p[2], c='r')
+
+        for index in bones:
+            xS = (output[index[0]][0],output[index[1]][0])
+            yS = (output[index[0]][1],output[index[1]][1])
+            zS = (output[index[0]][2],output[index[1]][2])
+            ax.plot(xS, yS, zS)
+        ax.view_init(elev=-80, azim=-90)
+        ax.autoscale()
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Z")
 
 # 3rd row
         if compare:
