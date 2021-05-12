@@ -184,12 +184,12 @@ def get_rotate(arr: torch.tensor) -> torch.tensor:
     """
     an implementation of 6D representation for 3D rotation using Gram-Schmidt process
 
-    :param arr: a (96,) tensor
+    :param arr: a (9,) tensor
     :return R_stack: 
     """
     R = arr.to(torch.float32).reshape(3,-1)
     R = f.normalize(R)
-    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), R
     return R
 
 
