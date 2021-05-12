@@ -2,12 +2,10 @@ import math, cmath
 from math import sin, cos
 import numpy as np
 import matplotlib.pyplot as plt
+import torch.nn.functional as f
 import torch
 import cv2 as cv
 
-
-def normalize(x: torch.tensor) -> torch.tensor:
-    return x/torch.linalg.norm(x)
 
 
 class Human:
@@ -99,31 +97,16 @@ class Human:
         self.punish_list.insert(10, 1)
 
 
-    def gschmidt(self, arr: torch.tensor) -> torch.tensor:
-        """
-        an implementation of 6D representation for 3D rotation using Gram-Schmidt process
-
-        :return R: 3x3 rotation matrix
-        """
-        arr = arr.to(torch.float32)
-        a_1, a_2 = arr[:3], arr[3:]
-        row_1 = normalize(a_1)
-        row_2 = normalize(a_2 - (row_1@a_2)*row_1)
-        row_3 = normalize(torch.cross(row_1,row_2))
-        R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
-        assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-        return R.to(self.device)
-
-
     def sort_angles(self, ang):
         """
-        :param ang: a list of 96 elements (6 * 16)
+        :param ang: a list of 144 elements (9 * 16)
         process PETRA output to rotation matrix of 16 bones
         """
+        ang = ang.flatten()
         self.angles = {}
         k = 0
         for bone in self.constraints.keys():
-            self.angles[bone] = ang[6*k:6*(k+1)]
+            self.angles[bone] = ang[9*k:9*(k+1)]
             k += 1
 
 
@@ -134,7 +117,7 @@ class Human:
         self._init_bones()
         if ang is not None:
             self.sort_angles(ang)
-            self.rot_mat = {k: self.gschmidt(v) for k,v in self.angles.items()}
+            self.rot_mat = {k: get_rotate(v) for k,v in self.angles.items()}
             self.check_constraints()
             for bone in self.angles.keys():
                 self.bones[bone] = self.rot_mat[bone] @ self.bones[bone]
@@ -198,6 +181,19 @@ def vis_model(model):
     plt.show()
 
 
+def get_rotate(arr: torch.tensor) -> torch.tensor:
+    """
+    an implementation of 6D representation for 3D rotation using Gram-Schmidt process
+
+    :param arr: a (96,) tensor
+    :return R_stack: 
+    """
+    R = arr.to(torch.float32).reshape(3,-1)
+    R = f.normalize(R)
+    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+    return R
+
+
 def vectorize(gt_3d) -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
@@ -232,7 +228,6 @@ def rand_pose():
     print(model)
     print(h.punish_list)
     vis_model(model)
-    print(vectorize(model))
 
 
 if __name__ == "__main__":
