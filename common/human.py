@@ -7,7 +7,6 @@ import torch
 import cv2 as cv
 
 
-
 class Human:
     """
     Implementation of Winter human model
@@ -215,7 +214,7 @@ def vectorize(gt_3d) -> torch.tensor:
     for i in range(num_bones):
         vec = gt_3d_tensor[indices[i][1],:] - gt_3d_tensor[indices[i][0],:]
         vec_len = torch.linalg.norm(vec)
-        unit_vec = normalize(vec)
+        unit_vec = vec/vec_len
         bone_info[i,:3], bone_info[i,3] = unit_vec, vec_len
     return bone_info
 
