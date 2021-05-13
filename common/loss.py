@@ -29,13 +29,13 @@ def p_mpjpe(predicted, target):
     assert predicted.shape == target.shape
     muX = np.mean(target, axis=1, keepdims=True)
     muY = np.mean(predicted, axis=1, keepdims=True)
-    
+
     X0 = target - muX
     Y0 = predicted - muY
 
     normX = np.sqrt(np.sum(X0**2, axis=(1, 2), keepdims=True))
     normY = np.sqrt(np.sum(Y0**2, axis=(1, 2), keepdims=True))
-    
+
     X0 /= normX
     Y0 /= normY
 
@@ -54,13 +54,13 @@ def p_mpjpe(predicted, target):
 
     a = tr * normX / normY # Scale
     t = muX - a*np.matmul(muY, R) # Translation
-    
+
     # Perform rigid transformation on the input
     predicted_aligned = a*np.matmul(predicted, R) + t
-    
+
     # Return MPJPE
     return np.mean(np.linalg.norm(predicted_aligned - target, axis=len(target.shape)-1))
-    
+
 
 
 def punish(predicted, bone1, bone2, weights, thres=0.1):
@@ -75,7 +75,7 @@ def punish(predicted, bone1, bone2, weights, thres=0.1):
     :return: a weight matrix of shape (bs, 17)
     """
 
-# the commented part is an easier explanation of this function, 
+# the commented part is an easier explanation of this function,
 # but training becomes slower as bs increases
 
     # for bs in range(predicted.shape[0]):
@@ -125,7 +125,7 @@ def anth_mpjpe(predicted, target):
         predicted = predicted.cuda()
         target = target.cuda()
         w = w.cuda()
-    
+
     bones = (((5,6),(8,9)),
              ((6,7),(9,10)),
              ((11,12),(14,15)),
@@ -151,13 +151,19 @@ def new_mpjpe(predicted, target, w, bone_length=False):
     # 1. L2 norm on vecs
     # 2. bone length
     """
-    n_mpjpe = torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1)) 
+    n_mpjpe = torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1))
     if bone_length:
-        n_mpjpe = torch.mean(w * torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1)) 
+        n_mpjpe = torch.mean(w * torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1))
         len_diff = abs(torch.mean(predicted[:,:,3] - target[:,:,3]))
         n_mpjpe += len_diff
 
     return n_mpjpe
+
+
+def is_so(M):
+    if torch.linalg.det(M@M.T)==1 and torch.linalg.det(M)==1:
+        return 2
+    return 1
 
 
 def maev(predicted, target):
@@ -166,19 +172,24 @@ def maev(predicted, target):
     :param predicted: (bs,16,9) tensor
     :param target:  (bs,16,9) tensor
     """
-    bs = predicted.shape[0]
-    predicted = predicted.reshape(bs,16,3,3)
-    target = target.reshape(bs,16,3,3)
+    bs, num_bones = predicted.shape[0], predicted.shape[1]
+    predicted = predicted.reshape(bs,num_bones,3,3)
+    target = target.reshape(bs,num_bones,3,3)
+    w_arr = torch.ones(bs,num_bones)
+    for b in range(bs):
+        for bone in range(num_bones):
+            M = predicted[b,bone,:,:]
+            w_arr[b,bone] = is_so(M)
     if torch.cuda.is_available():
         predicted = predicted.cuda()
         target = target.cuda()
-    l2 = torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1)) 
-    return l2
+    aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
+    maev = torch.sum(aev*w_arr)
+    return maev
 
 
 if __name__ == "__main__":
-    a = torch.zeros(2,16,4)
-    b = torch.ones(2,16,4)
-    w = torch.ones(2,16)
-
-    print(new_mpjpe(a,b,w,True))
+    a = torch.tensor([1,0,0,0,1,0,0,0,1])
+    a = a.repeat(32).reshape(2,16,9).to(torch.float32)
+    b = torch.zeros(2,16,9)
+    print(maev(a,b))
