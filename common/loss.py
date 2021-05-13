@@ -161,9 +161,11 @@ def new_mpjpe(predicted, target, w, bone_length=False):
 
 
 def is_so(M):
-    if torch.linalg.det(M@M.T)==1 and torch.linalg.det(M)==1:
-        return 2
-    return 1
+    det = cmath.isclose(torch.linalg.det(M), 1, rel_tol=1e-04)
+    orth = cmath.isclose(torch.linalg.det(M@M.T), 1, rel_tol=1e-04)
+    if orth and det:
+        return 1
+    return 2
 
 
 def maev(predicted, target):
