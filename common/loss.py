@@ -183,6 +183,7 @@ def maev(predicted, target):
     if torch.cuda.is_available():
         predicted = predicted.cuda()
         target = target.cuda()
+        w_arr = w_arr.cuda()
     aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
     maev = torch.sum(aev*w_arr)
     return maev
