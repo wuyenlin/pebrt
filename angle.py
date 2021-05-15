@@ -38,7 +38,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, images, _, inputs_3d = data
+            _, images, inputs_3d, _ = data
             inputs_3d = inputs_3d.to(device)
             images = images.to(device)
 
@@ -64,7 +64,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, images, _, inputs_3d = data
+                _, images, inputs_3d, _ = data
                 inputs_3d = inputs_3d.to(device)
                 images = images.to(device)
 
