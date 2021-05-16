@@ -54,6 +54,7 @@ class PETRA(nn.Module):
     def __init__(self, device):
         super().__init__()
         
+        self.bs = 2
         self.device = device
         self.backbone = HRNet(32, 17, 0.1)
         pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
@@ -101,6 +102,7 @@ class PETRA(nn.Module):
         for b in range(self.bs):
             for k in range(16):
                 arr = arr_all[b,k,:]
+                assert len(arr) == 6, len(arr)
                 a_1, a_2 = arr[:3], arr[3:]
                 row_1 = self.normalize(a_1)
                 row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
@@ -112,8 +114,8 @@ class PETRA(nn.Module):
 
 
     def forward(self, x):
-        x = self.backbone(x)
-        x = self._decode_joints(x)
+#        x = self.backbone(x)
+#        x = self._decode_joints(x)
         x = self.transformer(x.float())
         x = self.gs(x)
 
