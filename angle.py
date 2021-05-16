@@ -38,13 +38,15 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, images, _, inputs_3d = data
+            _, images, inputs_2d, inputs_3d = data
+            inputs_2d = inputs_2d.to(device)
             inputs_3d = inputs_3d.to(device)
-            images = images.to(device)
+#            images = images.to(device)
 
             optimizer.zero_grad()
 
-            predicted_3d_pos = model(images)
+            #predicted_3d_pos = model(images)
+            predicted_3d_pos = model(inputs_2d)
 
             loss_3d_pos = maev(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -65,12 +67,14 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             for data in val_loader:
                 _, images, _, inputs_3d = data
+                inputs_2d = inputs_2d.to(device)
                 inputs_3d = inputs_3d.to(device)
-                images = images.to(device)
+#                images = images.to(device)
 
                 optimizer.zero_grad()
 
-                predicted_3d_pos = model(images)
+                #predicted_3d_pos = model(images)
+                predicted_3d_pos = model(inputs_2d)
 
                 loss_3d_pos = maev(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -185,9 +189,9 @@ def main(args):
         return e1, e2, ev
 
     train_dataset = Data(args.dataset, transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
     
 
 
@@ -199,7 +203,7 @@ def main(args):
         },
     ]
 
-    optimizer = optim.Adam(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
