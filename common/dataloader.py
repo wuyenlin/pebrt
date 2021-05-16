@@ -82,6 +82,7 @@ class Data:
         data = data["arr_0"].reshape(1,-1)[0]
 
         self.img_path = []
+        self.gt_pts2d = []
         self.gt_pts3d = []
         self.gt_vecs3d = []
         self.transforms = transforms
@@ -94,6 +95,8 @@ class Data:
         for vid in vid_list:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
+                gt_2d = self.zero_center(self.pop_joints(pts_2d))
+                self.gt_pts2d.append(gt_2d)
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
@@ -108,11 +111,13 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
+            kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        return img_path, img, kpts_3d, vecs_3d
+        #return img_path, img, kpts_3d, vecs_3d
+        return img_path, img, kpts_2d, vecs_3d
 
     def __len__(self):
         return len(self.img_path)
@@ -122,7 +127,7 @@ class Data:
         """
         Get 17 joints from the original 28 
         :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,3))
-        :return new_skel: an array of (17,3)
+        :return new_skel: 
         """
         new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
         ext_list = [0,2,4,5,6,         # spine+head
