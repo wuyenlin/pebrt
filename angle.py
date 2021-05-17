@@ -167,11 +167,11 @@ def main(args):
 
     print("INFO: Model loaded on {}. Using Lifting model to predict angles.".format(device))
     backbone_params = 0
-    if args.lr_backbone == 0:
-        print("INFO: Freezing HRNet")
-        for param in model.backbone.parameters():
-           param.requires_grad = False
-           backbone_params += param.numel()
+    # if args.lr_backbone == 0:
+    #     print("INFO: Freezing HRNet")
+    #     for param in model.backbone.parameters():
+    #        param.requires_grad = False
+    #        backbone_params += param.numel()
 
     model_params = 0
     for parameter in model.parameters():
