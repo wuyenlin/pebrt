@@ -29,8 +29,9 @@ class AddGaussianNoise(object):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 
-def rotation_matrix_from_vectors(vec1: np.array, vec2: np.array) -> np.array:
-    """ Find the rotation matrix that aligns vec1 to vec2
+def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
+    """ 
+    Find the rotation matrix that aligns vec1 to vec2
     :param vec1: A 3d "source" vector
     :param vec2: A 3d "destination" vector
 
@@ -49,13 +50,9 @@ def rotation_matrix_from_vectors(vec1: np.array, vec2: np.array) -> np.array:
     return R
 
 
-def get_euler(R: np.array) -> tuple:
-    return cv.RQDecomp3x3(R)[0]
-
-
-def convert_gt_6d(gt_3d: np.array) -> np.array:
+def convert_gt(gt_3d: np.array) -> np.array:
     """
-    Compare GT3D kpts with T pose and obtain the 6D array for SO(3)
+    Compare GT3D kpts with T pose and obtain 16 rotation matrices
     """
     # process GT
     bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
@@ -66,11 +63,11 @@ def convert_gt_6d(gt_3d: np.array) -> np.array:
     model = h.update_pose(a)
     t_info = vectorize(model)[:,:3]
 
-    # get rotation matrix
     num_row = bone_info.shape[0]
     R_stack = np.zeros([num_row, 9])
+    # get rotation matrix for each bone
     for k in range(num_row):
-        R = rotation_matrix_from_vectors(t_info[k,:], bone_info[k,:]).flatten()
+        R = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
         R_stack[k,:] = R
         
     return R_stack
@@ -104,7 +101,7 @@ class Data:
 
                 self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
-                self.gt_vecs3d.append((convert_gt_6d(gt_3d)))
+                self.gt_vecs3d.append((convert_gt(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
