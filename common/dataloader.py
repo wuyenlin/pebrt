@@ -96,12 +96,13 @@ class Data:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
                 gt_2d = self.zero_center(self.pop_joints(pts_2d))
-                self.gt_pts2d.append(gt_2d)
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
                 #gt_3d = self.zero_center(pts_3d)/1000
+
+                self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
                 self.gt_vecs3d.append((convert_gt_6d(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
