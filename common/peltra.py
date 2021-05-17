@@ -24,7 +24,7 @@ class TransformerEncoder(nn.Module):
         print("INFO: Using default positional encoder")
         self.pe = PositionalEncoder(d_model)
         self.tanh = nn.Tanh()
-        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, activation="gelu")
+        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, activation="relu")
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
         self.lin_out = nn.Linear(d_model, 96)
 
