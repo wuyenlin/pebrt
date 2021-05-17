@@ -2,6 +2,7 @@
 
 from common.options import args_parser
 from common.petra import *
+from common.peltra import *
 from common.dataloader import *
 from common.loss import *
 from common.human import Human
@@ -154,8 +155,8 @@ def evaluate(test_loader, model, device):
 def main(args):
 
     device = torch.device(args.device)
-    model = PETRA(device)
-    print("INFO: Using PETRA and Gram-Schmidt process to recover SO(3) rotation matrix")
+    model = PELTRA(device)
+    print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 
