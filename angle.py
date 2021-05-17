@@ -71,8 +71,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 inputs_3d = inputs_3d.to(device)
 #                images = images.to(device)
 
-                optimizer.zero_grad()
-
                 #predicted_3d_pos = model(images)
                 predicted_3d_pos = model(inputs_2d)
 
