@@ -69,8 +69,8 @@ class Human:
             'r_thigh': torch.tensor([0, self.thigh, 0]),
             'r_calf': torch.tensor([0, self.calf, 0])
         }
-        for bone in self.bones.keys():
-            self.bones[bone] = self.bones[bone].to(self.device)
+        # for bone in self.bones.keys():
+        #     self.bones[bone] = self.bones[bone].to(self.device)
         
 
     def check_constraints(self):
@@ -89,11 +89,6 @@ class Human:
             punish[bone] = count
         
         self.punish_list = [punish[list(punish.keys())[k]] for k in range(len(punish.keys()))]
-
-        self.punish_list.insert(4, 1)
-        self.punish_list.insert(4, 1)
-        self.punish_list.insert(10, 1)
-        self.punish_list.insert(10, 1)
 
 
     def sort_angles(self, ang):
