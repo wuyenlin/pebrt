@@ -69,8 +69,6 @@ class Human:
             'r_thigh': torch.tensor([0, self.thigh, 0]),
             'r_calf': torch.tensor([0, self.calf, 0])
         }
-        # for bone in self.bones.keys():
-        #     self.bones[bone] = self.bones[bone].to(self.device)
         
 
     def check_constraints(self):
@@ -217,7 +215,7 @@ def vectorize(gt_3d) -> torch.tensor:
 def rand_pose():
     h = Human(1.8, "cpu")
     # a = torch.rand(72)
-    a = torch.tensor([1,0,0,0,1,0]).repeat(16)
+    a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
     model = h.update_pose(a)
     print(model)
     print(h.punish_list)
