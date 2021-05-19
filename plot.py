@@ -58,7 +58,7 @@ def viz(bones, group, compare=False, savefig=False):
     model.eval()
     if compare:
         model_2 = PETR(device, lift=True)
-        model_2.load_state_dict(torch.load('../linear_last/anth_checkpoint/ft_5.bin')['model'])
+        model_2.load_state_dict(torch.load('../archive/anth_checkpoint/ft_5.bin')['model'])
         model_2 = model_2.cuda()
         model_2.eval()
 
@@ -145,6 +145,6 @@ if __name__ == "__main__":
     (11,12), (12,13), (14,15), (15,16), # legs
     )
     import sys
-    comp = False
+    comp = True
     group = int(sys.argv[1])
     viz(bones, group, comp)
