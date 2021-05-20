@@ -101,7 +101,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "./checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./world_checkpoint/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -185,12 +185,6 @@ def main(args):
     
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
-    if args.eval:
-        test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
-        e1, e2, ev = evaluate(test_loader, model, device)
-        return e1, e2, ev
-
     print("INFO: Trained on ", args.dataset.split("/")[-1])
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
@@ -217,10 +211,6 @@ def main(args):
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
 
-    #    if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-    #        optimizer.load_state_dict(checkpoint['optimizer'])
-    #        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-    #        args.start_epoch = checkpoint['epoch'] + 1
 
     print("INFO: Using optimizer {}".format(optimizer))
 
