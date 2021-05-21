@@ -97,9 +97,8 @@ class Data:
                 gt_2d = self.zero_center(self.pop_joints(pts_2d))/2048
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
-                # cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
-                # gt_3d = self.zero_center(cam_3d)/1000
-                gt_3d = self.zero_center(pts_3d)/1000
+                cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
+                gt_3d = self.zero_center(cam_3d)/1000
 
                 self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
@@ -117,7 +116,7 @@ class Data:
         except:
             return None
         #return img_path, img, kpts_3d, vecs_3d
-        return img_path, img, kpts_2d, vecs_3d
+        return img_path, img, kpts_3d, vecs_3d
 
     def __len__(self):
         return len(self.img_path)
