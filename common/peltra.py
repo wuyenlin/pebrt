@@ -17,7 +17,7 @@ class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
     """
-    def __init__(self, d_model=34, nhead=2, num_layers=6, 
+    def __init__(self, d_model=51, nhead=3, num_layers=6, 
                     num_joints_in=17, num_joints_out=17):
         super().__init__()
 
@@ -92,4 +92,7 @@ class PELTRA(nn.Module):
 
 
 if __name__ == "__main__":
-    pass
+    a = torch.rand(2,17,3)
+    model = PELTRA(device="cpu")
+    output = model(a)
+    print(output.shape)
