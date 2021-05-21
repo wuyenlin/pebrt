@@ -8,8 +8,10 @@ import cv2 as cv
 from PIL import Image, ImageEnhance, ImageFilter
 try:
     from common.human import *
+    from common.peltra import *
 except ModuleNotFoundError:
     from human import *
+    from peltra import *
 
 
 def collate_fn(batch):
@@ -100,7 +102,7 @@ class Data:
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
 
-                self.gt_pts2d.append(gt_2d)
+                # self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
                 self.gt_vecs3d.append((convert_gt(gt_3d)))
                 self.img_path.append(data[vid][frame]['directory'])
@@ -110,7 +112,7 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            kpts_2d = self.gt_pts2d[index]
+            # kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
@@ -174,6 +176,77 @@ class Data:
         return cam - cam[2,:]
 
 
+def try_load(model=False):
+    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
+    train_dataset = Data(train_npz, transforms, True)
+    trainloader = DataLoader(train_dataset, batch_size=4, 
+                        shuffle=False, num_workers=8, drop_last=True)
+    print("data loaded!")
+    print(trainloader.batch_size)
+    dataiter = iter(trainloader)
+    img_path, images, kpts, labels = dataiter.next()
+    print(labels[0])
+    
+    row = 3 if model else 2
+    bones = (
+    (0,1), (0,3), (1,2), (3,4),  # spine + head
+    (0,5), (0,8),
+    (5,6), (6,7), (8,9), (9,10), # arms
+    (2,14), (2,11),
+    (11,12), (12,13), (14,15), (15,16), # legs
+    )
+
+    # 1st - Image
+    fig = plt.figure()
+    ax = fig.add_subplot(1, row, 1)
+    plt.imshow(Image.open(img_path[0]))
+
+    # 2nd- 3D Pose
+    pts = kpts[0]
+    ax = fig.add_subplot(1, row, 2, projection='3d')
+    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    for bone in bones:
+        xS = (pts[bone[0],0], pts[bone[1],0])
+        yS = (pts[bone[0],1], pts[bone[1],1])
+        zS = (pts[bone[0],2], pts[bone[1],2])
+        
+        ax.plot(xS, yS, zS)
+    
+    ax.view_init(elev=-80, azim=-90)
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    ax.set_zlim(-1,1)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+
+    if model:
+        h = Human(1.8, "cpu")
+        net = PELTRA("cuda:0")
+        net.load_state_dict(torch.load('./angle_checkpoint/epoch_5.bin')['model'])
+        net = net.cuda()
+        net.eval()
+        output = net(pts)
+        model = h.update_pose(output)
+
+        ax = fig.add_subplot(1, row, 3, projection='3d')
+        for p in model:
+            ax.scatter(p[0], p[1], p[2], c='r')
+
+        for index in bones:
+            xS = (model[index[0]][0], model[index[1]][0])
+            yS = (model[index[0]][1], model[index[1]][1])
+            zS = (model[index[0]][2], model[index[1]][2])
+            ax.plot(xS, yS, zS)
+        ax.view_init(elev=-80, azim=-90)
+        ax.autoscale()
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Z")
+
+    plt.show()
+
+
 if __name__ == "__main__":
 
     transforms = transforms.Compose([
@@ -181,3 +254,4 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
+    try_load(model=True)
