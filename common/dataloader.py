@@ -226,8 +226,11 @@ def try_load(model=False):
         net.load_state_dict(torch.load('./angle_checkpoint/epoch_5.bin')['model'])
         net = net.cuda()
         net.eval()
+
+        pts = torch.tensor(pts.unsqueeze(0)).cuda()
         output = net(pts)
         model = h.update_pose(output)
+        model = model.detach().numpy()
 
         ax = fig.add_subplot(1, row, 3, projection='3d')
         for p in model:
