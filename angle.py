@@ -151,7 +151,7 @@ def evaluate(test_loader, model, device):
 def main(args):
 
     device = torch.device(args.device)
-    model = PELTRA(device)
+    model = PELTRA(device, bs=args.bs)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))

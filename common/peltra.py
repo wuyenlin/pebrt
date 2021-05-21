@@ -48,10 +48,10 @@ class PELTRA(nn.Module):
     """
     PELTRA - Pose Estimation Lifting using TRansformer outputing Angles
     """
-    def __init__(self, device):
+    def __init__(self, device, bs=1):
         super().__init__()
         
-        self.bs = 2
+        self.bs = bs
         self.device = device
         self.transformer = TransformerEncoder(num_layers=8)
 
