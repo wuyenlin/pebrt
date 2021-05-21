@@ -39,17 +39,15 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, images, inputs_2d, inputs_3d = data
-            inputs_2d = inputs_2d.to(device)
+            _, images, inputs_3d, vec_3d = data
             inputs_3d = inputs_3d.to(device)
-#            images = images.to(device)
+            vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
 
-            #predicted_3d_pos = model(images)
-            predicted_3d_pos = model(inputs_2d)
+            predicted_3d_pos = model(inputs_3d)
 
-            loss_3d_pos = maev(predicted_3d_pos, inputs_3d)
+            loss_3d_pos = maev(predicted_3d_pos, vec_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
             N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
@@ -67,15 +65,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, images, _, inputs_3d = data
-                inputs_2d = inputs_2d.to(device)
+                _, images, inputs_3d, vec_3d = data
                 inputs_3d = inputs_3d.to(device)
-#                images = images.to(device)
+                vec_3d = vec_3d.to(device)
 
-                #predicted_3d_pos = model(images)
-                predicted_3d_pos = model(inputs_2d)
+                predicted_3d_pos = model(inputs_3d)
 
-                loss_3d_pos = maev(predicted_3d_pos, inputs_3d)
+                loss_3d_pos = maev(predicted_3d_pos, vec_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
                 N += inputs_3d.shape[0]*inputs_3d.shape[1]
 
