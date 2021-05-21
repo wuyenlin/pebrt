@@ -177,15 +177,13 @@ class Data:
 
 
 def try_load(model=False):
-    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
+    train_npz = "dataset/S1/Seq1/imageSequence/S1Seq1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=False, num_workers=8, drop_last=True)
+                        shuffle=True, num_workers=8, drop_last=True)
     print("data loaded!")
-    print(trainloader.batch_size)
     dataiter = iter(trainloader)
     img_path, images, kpts, labels = dataiter.next()
-    print(labels[0])
     
     row = 3 if model else 2
     bones = (
@@ -223,13 +221,16 @@ def try_load(model=False):
     if model:
         h = Human(1.8, "cpu")
         net = PELTRA("cuda:0")
-        net.load_state_dict(torch.load('./angle_checkpoint/epoch_5.bin')['model'])
+        net.load_state_dict(torch.load('./angle_checkpoint/epoch_15.bin')['model'])
         net = net.cuda()
         net.eval()
 
-        pts = torch.tensor(pts.unsqueeze(0)).cuda()
-        output = net(pts)
-        model = h.update_pose(output)
+        pts = labels[0]
+        pts = torch.tensor(pts)
+#        pts = torch.tensor(pts.unsqueeze(0)).cuda()
+#        output = net(pts)
+
+        model = h.update_pose(pts)
         model = model.detach().numpy()
 
         ax = fig.add_subplot(1, row, 3, projection='3d')
