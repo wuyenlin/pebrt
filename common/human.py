@@ -26,24 +26,23 @@ class Human:
         self.constraints = {
             'lower_spine': ((-1.0,1.0), (0,0), (-1.0,1.0)),
             'upper_spine': ((-2.0,2.0), (0,0), (-2.0,2.0)),
-
             'neck': ((-1.0,1.0), (0,0), (0,0)),
             'head': ((-1.0,1.0), (0,0), (-1.0,1.57)),
 
+            'l_clavicle': ((0,0), (0,0), (0,0)),
             'l_upper_arm': ((-3.14,3.14), (-0.1,1.7), (0,0)),
             'l_lower_arm': ((-6.14,3.14), (0,0), (0,0)),
+            'r_clavicle': ((0,0), (0,0), (0,0)),
             'r_upper_arm': ((-3.14,3.14), (-1.7,0.1), (0,0)),
             'r_lower_arm': ((-3.14,6.14), (0,0), (0,0)),
 
+            'l_hip': ((0,0), (0,0), (0,0)),
             'l_thigh': ((-1.57,1.0), (0,0), (-1.57,1.57)),
             'l_calf': ((-1.57,1.0), (0,0), (-4.71,1.57)),
+            'r_hip': ((0,0), (0,0), (0,0)),
             'r_thigh': ((-1.0,1.57), (0,0), (-1.57,1.57)),
             'r_calf': ((-1.0,1.57), (0,0), (-4.71,1.57)),
 
-            'l_clavicle': ((0,0), (0,0), (0,0)),
-            'r_clavicle': ((0,0), (0,0), (0,0)),
-            'l_hip': ((0,0), (0,0), (0,0)),
-            'r_hip': ((0,0), (0,0), (0,0)),
         }
 
 
@@ -117,11 +116,14 @@ class Human:
                 self.bones[bone] = self.rot_mat[bone] @ self.bones[bone]
 
 
-    def update_pose(self, ang=None):
+    def update_pose(self, ang=None, debug=False):
         """
         Assemble bones to make a human body
         """
         self.update_bones(ang)
+        if debug:
+            for bone in self.angles.keys():
+                print(bone, ":\n", self.rot_mat[bone])
 
         root = self.root.to(self.device)
         lower_spine = self.bones['lower_spine']
@@ -182,7 +184,7 @@ def get_rotate(arr: torch.tensor) -> torch.tensor:
     :param arr: a (9,) tensor
     :return R_stack: 
     """
-    R = arr.to(torch.float32).reshape(3,-1)
+    R = arr.to(torch.float32).view(3,-1)
     R = f.normalize(R)
     assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), R
     return R
@@ -194,11 +196,11 @@ def vectorize(gt_3d) -> torch.tensor:
     :return bone_info: unit bone vector + bone length 
     """
     indices = (
-        (0,1), (0,3), (1,2), (3,4),  # spine + head
-        (0,5), (0,8), # clavicle
-        (5,6), (6,7), (8,9), (9,10), # arms
-        (2,14), (2,11), # pelvis
-        (11,12), (12,13), (14,15), (15,16), # legs
+        (2,1), (1,0), (0,3), (3,4),  # spine + head
+        (0,5), (5,6), (6,7), 
+        (0,8), (8,9), (9,10), # arms
+        (2,14), (11,12), (12,13),
+        (2,11), (14,15), (15,16), # legs
     )
     num_bones = len(indices)
     try:
