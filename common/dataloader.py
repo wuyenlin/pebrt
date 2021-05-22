@@ -39,7 +39,7 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
 
     :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
     
-    Such that b = R @ a
+    Such that vec2 = R @ vec1
 
     (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
     """
@@ -52,7 +52,7 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
     return R
 
 
-def convert_gt(gt_3d: np.array) -> np.array:
+def convert_gt(gt_3d: np.array, t_info) -> np.array:
     """
     Compare GT3D kpts with T pose and obtain 16 rotation matrices
 
@@ -60,12 +60,6 @@ def convert_gt(gt_3d: np.array) -> np.array:
     """
     # process GT
     bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
-
-    # T pose
-    h = Human(1.8, "cpu")
-    a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
-    model = h.update_pose(a)
-    t_info = vectorize(model)[:,:3]
 
     num_row = bone_info.shape[0]
     R_stack = np.zeros([num_row, 9])
@@ -93,6 +87,11 @@ class Data:
         else:
             vid_list = np.arange(6,8)
 
+        # T pose
+        h = Human(1.8, "cpu")
+        model = h.update_pose()
+        t_info = vectorize(model)[:,:3]
+
         for vid in vid_list:
             for frame in data[vid].keys():
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
@@ -102,9 +101,8 @@ class Data:
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
 
-                # self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
-                self.gt_vecs3d.append((convert_gt(gt_3d)))
+                self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                 self.img_path.append(data[vid][frame]['directory'])
 
     def __getitem__(self, index):
@@ -112,12 +110,10 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
-            # kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        #return img_path, img, kpts_3d, vecs_3d
         return img_path, img, kpts_3d, vecs_3d
 
     def __len__(self):
@@ -227,11 +223,11 @@ def try_load(model=False):
 
         pts = labels[0]
         pts = torch.tensor(pts)
-#        pts = torch.tensor(pts.unsqueeze(0)).cuda()
-#        output = net(pts)
+        pts = torch.tensor(pts.unsqueeze(0)).cuda()
+        output = net(pts)
 
-        model = h.update_pose(pts)
-        model = model.detach().numpy()
+        output = h.update_pose(pts)
+        output = output.detach().numpy()
 
         ax = fig.add_subplot(1, row, 3, projection='3d')
         for p in model:
@@ -244,6 +240,9 @@ def try_load(model=False):
             ax.plot(xS, yS, zS)
         ax.view_init(elev=-80, azim=-90)
         ax.autoscale()
+        plt.xlim(-1,1)
+        plt.ylim(-1,1)
+        ax.set_zlim(-1,1)
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
