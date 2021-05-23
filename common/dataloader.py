@@ -217,26 +217,26 @@ def try_load(model=False):
     if model:
         h = Human(1.8, "cpu")
         net = PELTRA("cuda:0")
-        net.load_state_dict(torch.load('./angle_checkpoint/epoch_15.bin')['model'])
+        net.load_state_dict(torch.load('./angle_checkpoint/epoch_50.bin')['model'])
         net = net.cuda()
         net.eval()
 
-        pts = labels[0]
+        pts = kpts[0]
         pts = torch.tensor(pts)
         pts = torch.tensor(pts.unsqueeze(0)).cuda()
         output = net(pts)
 
-        output = h.update_pose(pts)
+        output = h.update_pose(output)
         output = output.detach().numpy()
 
         ax = fig.add_subplot(1, row, 3, projection='3d')
-        for p in model:
+        for p in output:
             ax.scatter(p[0], p[1], p[2], c='r')
 
         for index in bones:
-            xS = (model[index[0]][0], model[index[1]][0])
-            yS = (model[index[0]][1], model[index[1]][1])
-            zS = (model[index[0]][2], model[index[1]][2])
+            xS = (output[index[0]][0],output[index[1]][0])
+            yS = (output[index[0]][1],output[index[1]][1])
+            zS = (output[index[0]][2],output[index[1]][2])
             ax.plot(xS, yS, zS)
         ax.view_init(elev=-80, azim=-90)
         ax.autoscale()
@@ -248,6 +248,7 @@ def try_load(model=False):
         ax.set_zlabel("Z")
 
     plt.show()
+    plt.savefig('./angle_checkpoint/this.svg', format='svg', dpi=1200)
 
 
 if __name__ == "__main__":
