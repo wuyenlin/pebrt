@@ -62,7 +62,7 @@ class PELTRA(nn.Module):
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
         project 6D to SO(3) via Gram-Schmidt process
 
-        :param arr: a (96,) tensor
+        :param arr: a (96,) tensor, 6D representation of 16 bones
         :return R_stack: (bs,16,9)
         """
         R_stack = torch.zeros(self.bs,16,9)

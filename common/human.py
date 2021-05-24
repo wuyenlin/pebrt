@@ -182,7 +182,7 @@ def vis_model(model):
 def vectorize(gt_3d) -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
-    :return bone_info: unit bone vector + bone length 
+    :return bone_info: [unit bone vector (,3) + bone length (,1)]
     """
     indices = (
         (2,1), (1,0), (0,3), (3,4),  # spine + head
