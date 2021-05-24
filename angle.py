@@ -40,13 +40,16 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     # train
         for data in train_loader:
             _, inputs_2d, inputs_3d, vec_3d = data
+            _, image, inputs_3d, vec_3d = data
+            image = image.to(device)
             inputs_2d = inputs_2d.to(device)
             inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
 
-            predicted_3d_pos = model(inputs_2d)
+            # predicted_3d_pos = model(inputs_2d)
+            predicted_3d_pos = model(image)
 
             loss_3d_pos = maev(predicted_3d_pos, vec_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -66,12 +69,15 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, inputs_2d, inputs_3d, vec_3d = data
+                # _, inputs_2d, inputs_3d, vec_3d = data
+                _, image, inputs_3d, vec_3d = data
+                image = image.to(device)
                 inputs_2d = inputs_2d.to(device)
                 inputs_3d = inputs_3d.to(device)
                 vec_3d = vec_3d.to(device)
 
-                predicted_3d_pos = model(inputs_2d)
+                # predicted_3d_pos = model(inputs_2d)
+                predicted_3d_pos = model(image)
 
                 loss_3d_pos = maev(predicted_3d_pos, vec_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -153,7 +159,7 @@ def evaluate(test_loader, model, device):
 def main(args):
 
     device = torch.device(args.device)
-    model = PELTRA(device, bs=args.bs)
+    model = PETRA(device, bs=args.bs)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
