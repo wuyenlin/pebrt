@@ -1,11 +1,9 @@
 from torchvision import transforms
-import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
-from numpy import random
 import matplotlib.pyplot as plt
 import cv2 as cv
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image
 try:
     from common.human import *
     from common.peltra import *
@@ -17,18 +15,6 @@ except ModuleNotFoundError:
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
     return torch.utils.data.dataloader.default_collate(batch)
-
-
-class AddGaussianNoise(object):
-    def __init__(self, mean=0., std=1.):
-        self.std = std
-        self.mean = mean
-        
-    def __call__(self, tensor):
-        return tensor + torch.randn(tensor.size()) * self.std + self.mean
-    
-    def __repr__(self):
-        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 
 def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
