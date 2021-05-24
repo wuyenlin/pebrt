@@ -1,8 +1,6 @@
-import os, math
 import numpy as np
-import torch, torchvision
+import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
 import cmath
 
 try:
@@ -50,9 +48,10 @@ class PETRA(nn.Module):
     """
     PETRA - Pose Estimation using TRansformer outputing Angles
     """
-    def __init__(self, device):
+    def __init__(self, device, bs=1):
         super().__init__()
         
+        self.bs = bs
         self.device = device
         self.backbone = HRNet(32, 17, 0.1)
         pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
@@ -82,6 +81,34 @@ class PETRA(nn.Module):
         joints_2d[:,:,[0,1]] = joints_2d[:,:,[1,0]]
         return torch.tensor(joints_2d, device=self.device)
  
+
+    def normalize(self, x: torch.tensor) -> torch.tensor:
+        return x/torch.linalg.norm(x)
+
+
+    def gs(self, arr_all: torch.tensor) -> torch.tensor:
+        """
+        an implementation of 6D representation for 3D rotation using Gram-Schmidt process
+        project 6D to SO(3) via Gram-Schmidt process
+
+        :param arr: a (96,) tensor
+        :return R_stack: (bs,16,9)
+        """
+        R_stack = torch.zeros(self.bs,16,9)
+        arr_all = arr_all.to(torch.float32).view(self.bs,16,-1)
+        for b in range(self.bs):
+            for k in range(16):
+                arr = arr_all[b,k,:]
+                assert len(arr) == 6, len(arr)
+                a_1, a_2 = arr[:3], arr[3:]
+                row_1 = self.normalize(a_1)
+                row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
+                row_3 = self.normalize(torch.cross(row_1,row_2))
+                R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+                assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+                R_stack[b,k,:] = R.to(self.device).flatten()
+        return R_stack
+
 
     def forward(self, x):
        x = self.backbone(x)
