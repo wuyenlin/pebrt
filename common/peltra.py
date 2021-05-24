@@ -1,8 +1,5 @@
-import os, math
-import numpy as np
-import torch, torchvision
+import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
 import cmath
 
 try:
@@ -69,7 +66,7 @@ class PELTRA(nn.Module):
         :return R_stack: (bs,16,9)
         """
         R_stack = torch.zeros(self.bs,16,9)
-        arr_all = arr_all.to(torch.float32).reshape(self.bs,16,-1)
+        arr_all = arr_all.to(torch.float32).view(self.bs,16,-1)
         for b in range(self.bs):
             for k in range(16):
                 arr = arr_all[b,k,:]
