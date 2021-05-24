@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader
 from time import time
 
 
@@ -122,45 +122,11 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     return losses_3d_train , losses_3d_valid
 
 
-def evaluate(test_loader, model, device):
-    print("Testing starts...")
-    epoch_loss_3d_pos = 0.0
-
-    with torch.no_grad():
-        model.eval()
-        N = 0
-        for data in test_loader:
-            _, images, _, inputs_3d = data
-            inputs_3d = inputs_3d.to(device)
-            images = images.to(device)
-
-            _, predicted_3d_pos = model(images)
-            error = mpjpe(predicted_3d_pos, inputs_3d)
-
-            epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
-            N += inputs_3d.shape[0] * inputs_3d.shape[1]
-            
-            inputs = inputs_3d.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
-            predicted_3d_pos = predicted_3d_pos.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
-
-
-
-    e1 = (epoch_loss_3d_pos / N)*1000
-    e2 = (epoch_loss_3d_pos_procrustes / N)*1000
-
-    print('----------')
-    print('Protocol #1 Error (MPJPE):', e1, 'mm')
-    print('Protocol #2 Error (P-MPJPE):', e2, 'mm')
-    print('----------')
-    
-    return e1, e2, ev
-
-
 def main(args):
 
     device = torch.device(args.device)
     model = PETRA(device, bs=args.bs)
-    print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
+    print("INFO: Using PETRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 
@@ -171,11 +137,11 @@ def main(args):
 
     print("INFO: Model loaded on {}. Using Lifting model to predict angles.".format(device))
     backbone_params = 0
-    # if args.lr_backbone == 0:
-    #     print("INFO: Freezing HRNet")
-    #     for param in model.backbone.parameters():
-    #        param.requires_grad = False
-    #        backbone_params += param.numel()
+    if args.lr_backbone == 0:
+        print("INFO: Freezing HRNet")
+        for param in model.backbone.parameters():
+           param.requires_grad = False
+           backbone_params += param.numel()
 
     model_params = 0
     for parameter in model.parameters():
@@ -185,18 +151,10 @@ def main(args):
     
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
-    if args.eval:
-        test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
-        e1, e2, ev = evaluate(test_loader, model, device)
-        return e1, e2, ev
-
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-    
-
 
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
