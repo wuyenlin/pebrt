@@ -1,10 +1,7 @@
-import math, cmath
-from math import sin, cos
-import numpy as np
+import cmath
 import matplotlib.pyplot as plt
 import torch.nn.functional as f
 import torch
-import cv2 as cv
 
 
 class Human:
@@ -96,10 +93,16 @@ class Human:
         process PETRA output to rotation matrix of 16 bones
         """
         ang = ang.flatten()
-        self.angles = {}
+        self.angles, self.rot_mat = {}, {}
         k = 0
         for bone in self.constraints.keys():
-            self.angles[bone] = ang[9*k:9*(k+1)]
+            R = ang[9*k:9*(k+1)]
+            self.angles[bone] = R
+
+            R = R.to(torch.float32).view(3,-1)
+            R = f.normalize(R)
+            assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), R
+            self.rot_mat[bone] = R
             k += 1
 
 
@@ -110,7 +113,6 @@ class Human:
         self._init_bones()
         if ang is not None:
             self.sort_angles(ang)
-            self.rot_mat = {k: get_rotate(v) for k,v in self.angles.items()}
             self.check_constraints()
             for bone in self.angles.keys():
                 self.bones[bone] = self.rot_mat[bone] @ self.bones[bone]
@@ -177,19 +179,6 @@ def vis_model(model):
     plt.show()
 
 
-def get_rotate(arr: torch.tensor) -> torch.tensor:
-    """
-    an implementation of 6D representation for 3D rotation using Gram-Schmidt process
-
-    :param arr: a (9,) tensor
-    :return R_stack: 
-    """
-    R = arr.to(torch.float32).view(3,-1)
-    R = f.normalize(R)
-    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), R
-    return R
-
-
 def vectorize(gt_3d) -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
@@ -218,7 +207,6 @@ def vectorize(gt_3d) -> torch.tensor:
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    # a = torch.rand(72)
     a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
     model = h.update_pose(a)
     print(model)
@@ -227,4 +215,8 @@ def rand_pose():
 
 
 if __name__ == "__main__":
+    import timeit
+    start = timeit.default_timer()
     rand_pose()
+    stop = timeit.default_timer()
+    print(stop-start)
