@@ -102,8 +102,8 @@ class Data:
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        #return img_path, img, kpts_3d, vecs_3d
-        return img_path, kpts_2d, kpts_3d, vecs_3d
+        # return img_path, kpts_2d, kpts_3d, vecs_3d
+        return img_path, img, kpts_3d, vecs_3d
 
     def __len__(self):
         return len(self.img_path)
