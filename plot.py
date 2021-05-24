@@ -2,10 +2,9 @@
 import torch
 from torchvision import transforms
 from PIL import Image
-import numpy as np
 import matplotlib.pyplot as plt
-from common.petr import PETR
-from common.petra import PETRA
+from common.dataloader import *
+from common.peltra import PELTRA
 from common.human import *
 
 
@@ -16,115 +15,47 @@ transforms = transforms.Compose([
 ]) 
 
 
-def att():
-    model = PETR(device="cuda:0",lift=True)
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
-    model = model.cuda()
-    model.eval()
-
-    img = "dataset/S5/Seq2/imageSequence/video_7/frame004884.jpg"
-    img_read = Image.open(img)
-    img = transforms(img_read)
-    img = img.unsqueeze(0)
-    img = img.cuda()
-    _, output = model(img)
+bones = (
+(0,1), (0,3), (1,2), (3,4),  # spine + head
+(0,5), (0,8),
+(5,6), (6,7), (8,9), (9,10), # arms
+(2,14), (2,11),
+(11,12), (12,13), (14,15), (15,16), # legs
+)
 
 
-def extract_bone(pred, bone, k):
-    out = (pred[:,bone[0],k].tolist()[0], pred[:,bone[1],k].tolist()[0])
-    return out
+def viz(savefig=False):
+    train_npz = "dataset/S1/Seq1/imageSequence/S1Seq1.npz"
+    train_dataset = Data(train_npz, transforms, True)
+    trainloader = DataLoader(train_dataset, batch_size=4, 
+                        shuffle=True, num_workers=8, drop_last=True)
+    print("data loaded!")
+    dataiter = iter(trainloader)
+    img_path, kpt_2d, kpts, labels = dataiter.next()
 
-
-def plot3d(ax, bones, output):
-    ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
-    for bone in bones:
-        xS = extract_bone(output, bone, 0)
-        yS = extract_bone(output, bone, 1)
-        zS = extract_bone(output, bone, 2)
-        ax.plot(xS, yS, zS)
-    ax.view_init(elev=-70, azim=-90)
-    ax.autoscale()
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_zlim(-1,1)
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_zticklabels([])
-
-
-def viz(bones, group, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETRA(device)
-    model.load_state_dict(torch.load('./angle_checkpoint/epoch_30.bin')['model'])
-    model = model.cuda()
-    model.eval()
-    if compare:
-        model_2 = PETR(device, lift=True)
-        model_2.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
-        model_2 = model_2.cuda()
-        model_2.eval()
+    net = PELTRA(device)
+    net.load_state_dict(torch.load('./angle_checkpoint/epoch_45.bin')['model'])
+    net = net.cuda()
+    net.eval()
 
-    imgs = [
-        #0
-            ["dataset/S1/Seq1/imageSequence/video_4/frame001049.jpg",
-            "dataset/S1/Seq1/imageSequence/video_5/frame001182.jpg",
-            "dataset/S1/Seq1/imageSequence/video_8/frame000049.jpg",
-            "dataset/S1/Seq1/imageSequence/video_2/frame002453.jpg"],
 
-        #1
-            ["dataset/S1/Seq1/imageSequence/video_1/frame000684.jpg",
-            "dataset/S1/Seq1/imageSequence/video_1/frame000232.jpg",
-            "dataset/S1/Seq2/imageSequence/video_8/frame010424.jpg",
-            "dataset/S1/Seq2/imageSequence/video_5/frame008665.jpg"],
-
-        #2
-            ["dataset/S4/Seq1/imageSequence/video_5/frame000283.jpg",
-            "dataset/S4/Seq1/imageSequence/video_7/frame004447.jpg",
-            "dataset/S7/Seq1/imageSequence/video_8/frame001549.jpg",
-            "dataset/S8/Seq1/imageSequence/video_0/frame005071.jpg"],
-
-        #3
-            ["dataset/S5/Seq2/imageSequence/video_7/frame004884.jpg",
-            "dataset/S6/Seq2/imageSequence/video_6/frame002665.jpg",
-            "dataset/S7/Seq2/imageSequence/video_4/frame001103.jpg",
-            "dataset/S8/Seq2/imageSequence/video_1/frame001069.jpg"],
-
-        #4
-            ["dataset/S5/Seq1/imageSequence/video_1/frame002604.jpg",
-            "dataset/S5/Seq2/imageSequence/video_8/frame012060.jpg",
-            "dataset/S6/Seq1/imageSequence/video_7/frame003115.jpg",
-            "dataset/S6/Seq1/imageSequence/video_8/frame005868.jpg"],
-
-        #5 bad
-            ["dataset/S1/Seq2/imageSequence/video_5/frame012054.jpg",
-            "dataset/S2/Seq1/imageSequence/video_5/frame004584.jpg",
-            "dataset/S3/Seq2/imageSequence/video_4/frame001103.jpg",
-            "dataset/S4/Seq2/imageSequence/video_4/frame002144.jpg"],
-            ]
-    img_list = imgs[group]
-    k = 1
+    # 1st row
     fig = plt.figure()
-    num_row = 3 if comp else 2
-
-    for i in range(len(img_list)):
-        img_read = Image.open(img_list[i])
-        img = transforms(img_read)
-        img = img.unsqueeze(0)
-        img = img.cuda()
-
-# 1st row
-        ax = fig.add_subplot(num_row, len(img_list), k)
-        ax.imshow(img_read)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-
-# 2nd row
-        output = model(img)
-        ax = fig.add_subplot(num_row, len(img_list), k+len(img_list), projection='3d')
+    for k in range(1,5):
+        ax = fig.add_subplot(2, 4, k)
+        plt.imshow(Image.open(img_path[k-1]))
 
         h = Human(1.8, "cpu")
+        pts = kpt_2d[k-1]
+        # pts = torch.tensor(pts)
+        pts = torch.tensor(pts.unsqueeze(0)).cuda()
+        output = net(pts)
+
         output = h.update_pose(output)
-        output = output.cpu().detach().numpy()
+        output = output.detach().numpy()
+
+        ax = fig.add_subplot(2, 4, k+4, projection='3d')
         for p in output:
             ax.scatter(p[0], p[1], p[2], c='r')
 
@@ -135,32 +66,17 @@ def viz(bones, group, compare=False, savefig=False):
             ax.plot(xS, yS, zS)
         ax.view_init(elev=-80, azim=-90)
         ax.autoscale()
+        plt.xlim(-1,1)
+        plt.ylim(-1,1)
+        ax.set_zlim(-1,1)
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
 
-# 3rd row
-        if compare:
-            _, output = model_2(img)
-            output = output.cpu().detach().numpy()
-            ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
-            plot3d(ax, bones, output)
-
-        k += 1
     plt.show()
     if savefig:
         plt.savefig('./checkpoint/this.svg', format='svg', dpi=1200)
 
 
 if __name__ == "__main__":
-    bones = (
-    (0,1), (0,3), (1,2), (3,4),  # spine + head
-    (0,5), (0,8),
-    (5,6), (6,7), (8,9), (9,10), # arms
-    (2,14), (2,11),
-    (11,12), (12,13), (14,15), (15,16), # legs
-    )
-    import sys
-    comp = False
-    group = int(sys.argv[1])
-    viz(bones, group, comp)
+    viz()
