@@ -5,6 +5,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from common.dataloader import *
 from common.peltra import PELTRA
+from common.petra import PETRA
 from common.human import *
 
 
@@ -47,11 +48,14 @@ def viz(savefig=False):
                         shuffle=True, num_workers=8, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
-    img_path, kpt_2d, kpts, labels = dataiter.next()
+#    img_path, kpt_2d, kpts, labels = dataiter.next()
+    img_path, image, kpts, labels = dataiter.next()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PELTRA(device)
-    net.load_state_dict(torch.load('./angle_checkpoint/epoch_45.bin')['model'])
+    net.load_state_dict(torch.load('./peltra/epoch_50.bin')['model'])
+    net = PETRA(device)
+    net.load_state_dict(torch.load('./angle_checkpoint/epoch_10.bin')['model'])
     net = net.cuda()
     net.eval()
 
@@ -62,7 +66,8 @@ def viz(savefig=False):
         plt.imshow(Image.open(img_path[k-1]))
 
         h = Human(1.8, "cpu")
-        pts = kpt_2d[k-1]
+        #pts = kpt_2d[k-1]
+        pts = image[k-1]
         pts = torch.tensor(pts.unsqueeze(0)).cuda()
         output = net(pts)
 
