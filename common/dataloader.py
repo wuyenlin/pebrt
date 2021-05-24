@@ -101,6 +101,7 @@ class Data:
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
 
+                self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
                 self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                 self.img_path.append(data[vid][frame]['directory'])
@@ -110,11 +111,13 @@ class Data:
             img_path = self.img_path[index]
             img = Image.open(img_path)
             img = self.transforms(img)
+            kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        return img_path, img, kpts_3d, vecs_3d
+        #return img_path, img, kpts_3d, vecs_3d
+        return img_path, kpts_2d, kpts_3d, vecs_3d
 
     def __len__(self):
         return len(self.img_path)
@@ -179,7 +182,9 @@ def try_load(model=False):
                         shuffle=True, num_workers=8, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
-    img_path, images, kpts, labels = dataiter.next()
+#    img_path, images, kpts, labels = dataiter.next()
+    img_path, kpt_2d, kpts, labels = dataiter.next()
+
     
     row = 3 if model else 2
     bones = (
@@ -217,11 +222,11 @@ def try_load(model=False):
     if model:
         h = Human(1.8, "cpu")
         net = PELTRA("cuda:0")
-        net.load_state_dict(torch.load('./angle_checkpoint/epoch_50.bin')['model'])
+        net.load_state_dict(torch.load('./angle_checkpoint/epoch_40.bin')['model'])
         net = net.cuda()
         net.eval()
 
-        pts = kpts[0]
+        pts = kpt_2d[0]
         pts = torch.tensor(pts)
         pts = torch.tensor(pts.unsqueeze(0)).cuda()
         output = net(pts)
