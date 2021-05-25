@@ -28,5 +28,5 @@ def merge_npz(human):
 
 
 if __name__ == "__main__":
-    human = sys.argv[1]
-    merge_npz(human)
+    for human in range(1,9):
+        merge_npz(human)
