@@ -164,8 +164,7 @@ def try_load(model=False):
                         shuffle=True, num_workers=8, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
-#    img_path, images, kpts, labels = dataiter.next()
-    img_path, kpt_2d, kpts, labels = dataiter.next()
+    img_path, images, kpts, labels = dataiter.next()
 
     
     row = 3 if model else 2
