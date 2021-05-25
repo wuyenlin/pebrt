@@ -29,8 +29,6 @@ def superimpose(bones):
 
     ax = fig.add_subplot(111)
     ax.imshow(img_read)
-    # ax.set_xticklabels([])
-    # ax.set_yticklabels([])
     pts = kpts[0]
     ax.scatter(pts[:,0], pts[:,1])
     for bone in bones:
