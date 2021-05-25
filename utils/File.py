@@ -112,18 +112,27 @@ class All(Video):
         cap.release()
 
 
-def save_frame(char):
+def save_frame(human):
     for seq in (1,2):
         for vid in [0,1,2,4,5,6,7,8]:
-            v = All(char, seq, vid)
+            v = All(human, seq, vid)
             v.save_cropped(False, True, False)
 
 
+def merge_npz(human):
+    merge_data = []
+    for s in [1,2]:
+        for k in [0,1,2,4,5,6,7,8]:
+            npz = "./dataset/S{}/Seq{}/imageSequence/video_{}.npz".format(human,s,k)
+            t = np.load(npz, allow_pickle=True)
+            t = t['arr_0'].reshape(1,-1)
+            merge_data.append(*t)
+        np.savez_compressed("./dataset/S{}/Seq1/imageSequence/S{}".format(human,human), merge_data)
+    print("saved")
+
+
 if __name__ == "__main__": 
-    # char_list = sys.argv[1]
-    # save_frame(char_list)
-    # for vid in [0,1,2,4,5,6,7,8]:
-        # v = All(1, 1, vid)
-        # v.save_cropped(False, True, False)
-    v = All(1, 1, 0)
-    v.save_cropped(False, True, False)
+    char_list = sys.argv[1]
+    for human in range(1,9):
+        save_frame(char_list)
+        merge_npz(human)
