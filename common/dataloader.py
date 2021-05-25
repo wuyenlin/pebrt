@@ -79,8 +79,10 @@ class Data:
 
         for vid in vid_list:
             for frame in data[vid].keys():
-                pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
-                gt_2d = self.zero_center(self.pop_joints(pts_2d))/2048
+                bbox_start = data[vid][frame]['bbox_start']
+                pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2) - bbox_start
+                gt_2d = self.pop_joints(pts_2d)
+                # gt_2d = self.zero_center(self.pop_joints(pts_2d))/2048
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
