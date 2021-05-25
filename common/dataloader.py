@@ -42,7 +42,7 @@ def convert_gt(gt_3d: np.array, t_info) -> np.array:
     """
     Compare GT3D kpts with T pose and obtain 16 rotation matrices
 
-    :return R_stack: a (16,9) arrays with flattened rotation matrix for 16 bones
+    :return R_stack: a (16,9) array with flattened rotation matrices for 16 bones
     """
     # process GT
     bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
@@ -72,7 +72,7 @@ class Data:
         else:
             vid_list = np.arange(6,8)
 
-        # T pose
+        # initialize T pose as reference
         h = Human(1.8, "cpu")
         model = h.update_pose()
         t_info = vectorize(model)[:,:3]
@@ -82,13 +82,13 @@ class Data:
                 bbox_start = data[vid][frame]['bbox_start']
                 pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2) - bbox_start
                 gt_2d = self.pop_joints(pts_2d)
-                # gt_2d = self.zero_center(self.pop_joints(pts_2d))/2048
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
 
                 self.gt_pts2d.append(gt_2d)
+                # self.gt_vecs3d.append(gt_3d)
                 self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                 self.img_path.append(data[vid][frame]['directory'])
 
@@ -114,11 +114,13 @@ class Data:
         :return new_skel: 
         """
         new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
-        ext_list = [0,2,4,5,6,         # spine+head
+        ext_list = [2,4,5,6,         # spine+head
                     9,10,11,14,15,16,  # arms
                     18,19,20,23,24,25] # legs
-        for row in range(17):
-            new_skel[row, :] = kpts[ext_list[row], :]
+        for row in range(1,17):
+            new_skel[row, :] = kpts[ext_list[row-1], :]
+        # interpolate clavicles to obtain vertebra
+        new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
         return new_skel
 
 
@@ -159,8 +161,7 @@ class Data:
         return cam - cam[2,:]
 
 
-def try_load(model=False):
-    # TODO: 2nd subplot plots gt3d now, will need to fix
+def try_load():
     train_npz = "dataset/S1/Seq1/imageSequence/S1Seq1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
@@ -170,7 +171,6 @@ def try_load(model=False):
     img_path, images, kpts, vec = dataiter.next()
 
     
-    row = 3 if model else 2
     bones = (
     (0,1), (0,3), (1,2), (3,4),  # spine + head
     (0,5), (0,8),
@@ -181,12 +181,12 @@ def try_load(model=False):
 
     # 1st - Image
     fig = plt.figure()
-    ax = fig.add_subplot(1, row, 1)
+    ax = fig.add_subplot(1, 2, 1)
     plt.imshow(Image.open(img_path[0]))
 
     # 2nd- 3D Pose
-    pts = kpts[0]
-    ax = fig.add_subplot(1, row, 2, projection='3d')
+    pts = vec[0]
+    ax = fig.add_subplot(1, 2, 2, projection='3d')
     ax.scatter(pts[:,0], pts[:,1], pts[:,2])
     for bone in bones:
         xS = (pts[bone[0],0], pts[bone[1],0])
@@ -203,41 +203,9 @@ def try_load(model=False):
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
 
-    if model:
-        h = Human(1.8, "cpu")
-        net = PELTRA("cuda:0")
-        net.load_state_dict(torch.load('./peltra/epoch_40.bin')['model'])
-        net = net.cuda()
-        net.eval()
-
-        pts = kpt_2d[0]
-        pts = torch.tensor(pts)
-        pts = torch.tensor(pts.unsqueeze(0)).cuda()
-        output = net(pts)
-
-        output = h.update_pose(output)
-        output = output.detach().numpy()
-
-        ax = fig.add_subplot(1, row, 3, projection='3d')
-        for p in output:
-            ax.scatter(p[0], p[1], p[2], c='r')
-
-        for index in bones:
-            xS = (output[index[0]][0],output[index[1]][0])
-            yS = (output[index[0]][1],output[index[1]][1])
-            zS = (output[index[0]][2],output[index[1]][2])
-            ax.plot(xS, yS, zS)
-        ax.view_init(elev=-80, azim=-90)
-        ax.autoscale()
-        plt.xlim(-1,1)
-        plt.ylim(-1,1)
-        ax.set_zlim(-1,1)
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-        ax.set_zlabel("Z")
 
     plt.show()
-    plt.savefig('./angle_checkpoint/this.svg', format='svg', dpi=1200)
+    # plt.savefig('./angle_checkpoint/this.svg', format='svg', dpi=1200)
 
 
 if __name__ == "__main__":
@@ -247,4 +215,4 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
-    try_load(model=True)
+    try_load()
