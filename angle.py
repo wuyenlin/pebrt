@@ -2,10 +2,8 @@
 
 from common.options import args_parser
 from common.petra import *
-from common.peltra import *
 from common.dataloader import *
 from common.loss import *
-from common.human import Human
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -39,16 +37,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, inputs_2d, inputs_3d, vec_3d = data
-            _, image, inputs_3d, vec_3d = data
+            _, image, inputs_2d, vec_3d = data
             image = image.to(device)
             inputs_2d = inputs_2d.to(device)
-            inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
 
-            # predicted_3d_pos = model(inputs_2d)
             predicted_3d_pos = model(image)
 
             loss_3d_pos = maev(predicted_3d_pos, vec_3d)
@@ -69,14 +64,11 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                # _, inputs_2d, inputs_3d, vec_3d = data
-                _, image, inputs_3d, vec_3d = data
+                _, image, inputs_2d, vec_3d = data
                 image = image.to(device)
                 inputs_2d = inputs_2d.to(device)
-                inputs_3d = inputs_3d.to(device)
                 vec_3d = vec_3d.to(device)
 
-                # predicted_3d_pos = model(inputs_2d)
                 predicted_3d_pos = model(image)
 
                 loss_3d_pos = maev(predicted_3d_pos, vec_3d)
@@ -130,12 +122,7 @@ def main(args):
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 
-    if args.distributed:
-        gpus = list(range(torch.cuda.device_count()))
-        model = nn.DataParallel(model, device_ids=gpus)
-        print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
-
-    print("INFO: Model loaded on {}. Using Lifting model to predict angles.".format(device))
+    print("INFO: Model loaded on {}.".format(device))
     backbone_params = 0
     if args.lr_backbone == 0:
         print("INFO: Freezing HRNet")
