@@ -1,20 +1,22 @@
 #!/usr/bin/python3
 
-import os, json, csv, sys
-from numpy.linalg import norm
+import os, sys
 import numpy as np 
 from tqdm import tqdm
 from Video import *
+
 
 class All(Video):
     def __init__(self, S, Se, vid):
         super().__init__(S, Se, vid)
 
+
     def __del__(self):
         print("Killed")
 
-    # make sure coordinates do not go beyond the frame
+
     def bound_number(self, x, y, frame_size):
+    # make sure coordinates do not go beyond the frame
         if x < 0 :
             x = 0
             if y < 0:
@@ -29,8 +31,10 @@ class All(Video):
             y = frame_size.shape[1]
         return x, y
 
+
     def in_box(self, pt, start, end):
         return True if (start[0]<=pt[0]<=end[0] and start[1]<=pt[1]<=end[1]) else False
+
 
     def check_valid(self, nframe, start, end):
         """
@@ -45,7 +49,11 @@ class All(Video):
             return True
         return False
 
+
     def save_cropped(self, save_img=False, save_txt=True, full=False):
+        """
+        :param full: save original frame (in dimension of 2048x2048) if True
+        """
         data = {}
         cap = cv.VideoCapture(self.avi_path)
         if (cap.isOpened()==False):
@@ -93,8 +101,8 @@ class All(Video):
                         if save_txt:
                             data[k]["directory"] = filename
                             data[k]["2d_keypoints"] = self.imgPoint.reshape(1,-1)
+                            data[k]["bbox_start"] = start
                             data[k]["3d_keypoints"] = self.objPoint.reshape(1,-1)
-
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
@@ -103,12 +111,19 @@ class All(Video):
 
         cap.release()
 
+
 def save_frame(char):
     for seq in (1,2):
         for vid in [0,1,2,4,5,6,7,8]:
             v = All(char, seq, vid)
-            v.save_cropped(True, True, False)
+            v.save_cropped(False, True, False)
+
 
 if __name__ == "__main__": 
-    char_list = sys.argv[1]
-    save_frame(char_list)
+    # char_list = sys.argv[1]
+    # save_frame(char_list)
+    # for vid in [0,1,2,4,5,6,7,8]:
+        # v = All(1, 1, vid)
+        # v.save_cropped(False, True, False)
+    v = All(1, 1, 0)
+    v.save_cropped(False, True, False)

@@ -1,7 +1,6 @@
-import os, json, csv, sys
-from numpy.linalg import norm
+import os, sys
 import numpy as np 
-from tqdm import tqdm
+
 
 def del_folder():
     for S in range(1,9):
@@ -15,6 +14,7 @@ def del_folder():
                 except FileNotFoundError:
                     pass
 
+
 def merge_npz(human):
     merge_data = []
     for s in [1,2]:
@@ -25,6 +25,7 @@ def merge_npz(human):
             merge_data.append(*t)
         np.savez_compressed("./dataset/S{}/Seq1/imageSequence/S{}".format(human,human), merge_data)
     print("saved")
+
 
 if __name__ == "__main__":
     human = sys.argv[1]
