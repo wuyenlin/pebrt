@@ -122,25 +122,11 @@ def main(args):
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
-
-    if args.distributed:
-        gpus = list(range(torch.cuda.device_count()))
-        model = nn.DataParallel(model, device_ids=gpus)
-        print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
-
     print("INFO: Model loaded on {}.".format(device))
-    backbone_params = 0
-    # if args.lr_backbone == 0:
-    #     print("INFO: Freezing HRNet")
-    #     for param in model.backbone.parameters():
-    #        param.requires_grad = False
-    #        backbone_params += param.numel()
 
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    if args.lr_backbone == 0:
-        model_params -= backbone_params
     
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
     train_dataset = Data(args.dataset, transforms)
@@ -148,8 +134,6 @@ def main(args):
     val_dataset = Data(args.dataset, transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
     
-
-
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
         {
