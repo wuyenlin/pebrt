@@ -1,10 +1,8 @@
 #!/usr/bin/python3
 
 import scipy.io as sio
-from numpy.linalg import norm, matrix_rank
 import numpy as np
-import time, sys, math
-import matplotlib.pyplot as plt
+import cv2 as cv
 
 class Video:
     def __init__(self, S, Se, vid):
@@ -32,6 +30,7 @@ class Video:
     def __del__(self):
         print("Killed")
     
+
     def draw_bbox(self, nframe):
         coordinates = self.annot2D[self.camera][0][nframe]
         xS = []
@@ -54,20 +53,6 @@ class Video:
         
         return x1,y1,x2,y2
 
-    def get_cross(self, nframe):
-        """
-        Calculate the cross product given a frame
-
-        Output: a 1x3 numpy array
-        """
-        objPoint = self.annot3D[self.camera][0][nframe]
-        objPoint = np.array(objPoint.reshape(-1,3), dtype=np.float32)
-        pt_list = [4, 9, 14]
-        p0 = np.array(objPoint[pt_list[0]])
-        p1 = np.array(objPoint[pt_list[1]])
-        p2 = np.array(objPoint[pt_list[2]])
-        n_vec = np.cross(p1-p0, p2-p0)
-        self.n_vec = n_vec
 
     def cam_matrix(self):
         """
@@ -82,6 +67,7 @@ class Video:
         camMatrix = camMatrix[0:3,0:3]
         self.camMatrix = camMatrix 
     
+
     def parse_frame(self, nframe):
         self.get_cross(nframe)
         self.objPoint = self.annot3D[self.camera][0][nframe]
@@ -89,6 +75,7 @@ class Video:
         self.imgPoint = self.annot2D[self.camera][0][nframe]
         self.imgPoint = np.array(self.imgPoint.reshape(-1,2), dtype=np.float32)
         self.root = self.objPoint[4]
+
 
     def calib(self, nframe):
         self.cam_matrix()
@@ -100,24 +87,6 @@ class Video:
         self.tvec = tvec
         self.dist = np.zeros(4)
 
-    def get_arrow(self, nframe):
-        self.parse_frame(nframe)
-        arrow = []
-        arrow.append(self.root)
-        arrow.append(400*(self.n_vec/norm(self.n_vec))+self.root) # adjust normal vector length
-        projected, _ = cv.projectPoints(np.float32(arrow), self.rvec, self.tvec, self.camMatrix, self.dist)
-        arrow_root = (int(projected[0][0][0]), int(projected[0][0][1]))
-        arrow_end = (int(projected[1][0][0]), int(projected[1][0][1]))
-        self.arrow_root = arrow_root
-        self.arrow_end = arrow_end
-        self.angle = np.dot(self.n_vec, np.array([1,0,0]))/norm(self.n_vec)
-        self.angle = math.acos(self.angle)*180/(math.pi)
-    
-    def valid_arrow(self, pt):
-        """
-        A boolean function that verifies whether a given point falls within the frame
-        """
-        return True if (0 <= pt[0] <= 2048) and (0 <= pt[1] <= 2048) else False
 
     def get_joints(self, nframe):
         self.parse_frame(nframe)
@@ -130,8 +99,3 @@ class Video:
             proj_yS.append(int(y))
         self.proj_xS = proj_xS
         self.proj_yS = proj_yS
-
-
-
-if __name__ == "__main__":
-    pass
