@@ -69,7 +69,6 @@ class Video:
     
 
     def parse_frame(self, nframe):
-        self.get_cross(nframe)
         self.objPoint = self.annot3D[self.camera][0][nframe]
         self.objPoint = np.array(self.objPoint.reshape(-1,3), dtype=np.float32)
         self.imgPoint = self.annot2D[self.camera][0][nframe]
