@@ -9,7 +9,6 @@ def joint_collision(predicted, target, weight, thres=0.1):
 
     :return: a weight matrix of shape (bs, 17)
     """
-    bs = predicted.shape[0]
     diff = torch.linalg.norm(predicted - target, dim=2) < thres
     diff = diff.double() + 1
     weight *= diff
@@ -18,8 +17,8 @@ def joint_collision(predicted, target, weight, thres=0.1):
 
 
 def is_so(M):
-    det = cmath.isclose(torch.linalg.det(M), 1, rel_tol=1e-04)
-    orth = cmath.isclose(torch.linalg.det(M@M.T), 1, rel_tol=1e-04)
+    det = cmath.isclose(torch.linalg.det(M), 1, rel_tol=1e-03)
+    orth = cmath.isclose(torch.linalg.det(M@M.T), 1, rel_tol=1e-03)
     return 1 if orth and det else 2
 
 
@@ -30,9 +29,9 @@ def maev(predicted, target):
     :param target:  (bs,16,9) tensor
     """
     bs, num_bones = predicted.shape[0], predicted.shape[1]
-    predicted = predicted.reshape(bs,num_bones,3,3)
-    target = target.reshape(bs,num_bones,3,3)
-    w_arr = torch.ones(bs,num_bones)
+    predicted = predicted.view(bs,num_bones,3,3)
+    target = target.view(bs,num_bones,3,3)
+    w_arr = torch.ones(target.shape[:2])
     for b in range(bs):
         for bone in range(num_bones):
             M = predicted[b,bone,:,:]
@@ -42,7 +41,7 @@ def maev(predicted, target):
         target = target.cuda()
         w_arr = w_arr.cuda()
     aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
-    maev = torch.sum(aev*w_arr)
+    maev = torch.mean(aev*w_arr)
     return maev
 
 
