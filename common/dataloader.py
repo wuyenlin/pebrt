@@ -158,13 +158,14 @@ class Data:
 
 
 def try_load(model=False):
+    # TODO: 2nd subplot plots gt3d now, will need to fix
     train_npz = "dataset/S1/Seq1/imageSequence/S1Seq1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=8, drop_last=True)
     print("data loaded!")
     dataiter = iter(trainloader)
-    img_path, images, kpts, labels = dataiter.next()
+    img_path, images, kpts, vec = dataiter.next()
 
     
     row = 3 if model else 2
@@ -203,7 +204,7 @@ def try_load(model=False):
     if model:
         h = Human(1.8, "cpu")
         net = PELTRA("cuda:0")
-        net.load_state_dict(torch.load('./angle_checkpoint/epoch_40.bin')['model'])
+        net.load_state_dict(torch.load('./peltra/epoch_40.bin')['model'])
         net = net.cuda()
         net.eval()
 
