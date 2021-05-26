@@ -36,7 +36,7 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
     return R
-
+    
 
 def convert_gt(gt_3d: np.array, t_info) -> np.array:
     """
@@ -47,18 +47,16 @@ def convert_gt(gt_3d: np.array, t_info) -> np.array:
     # process GT
     bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
 
-    num_row = bone_info.shape[0]
-    R_stack = np.zeros([num_row, 9])
+    num_bones = bone_info.shape[0]
+    R_stack = np.zeros([num_bones, 9])
     # get rotation matrix for each bone
-    for k in range(num_row):
-        R = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
-        R_stack[k,:] = R
-        
+    for k in range(num_bones):
+        R_stack[k,:] = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
     return R_stack
 
 
 class Data:
-    def __init__(self, npz_path, transforms = None, train=True):
+    def __init__(self, npz_path, transforms=None, train=True):
         data = np.load(npz_path, allow_pickle=True)
         data = data["arr_0"].reshape(1,-1)[0]
 
@@ -80,15 +78,14 @@ class Data:
         for vid in vid_list:
             for frame in data[vid].keys():
                 bbox_start = data[vid][frame]['bbox_start']
-                pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2) - bbox_start
-                gt_2d = self.pop_joints(pts_2d)
+                pts_2d = (data[vid][frame]['2d_keypoints']).reshape(-1,2)
+                gt_2d = self.pop_joints(pts_2d) - bbox_start
 
                 pts_3d = (data[vid][frame]['3d_keypoints']).reshape(-1,3)
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
 
                 self.gt_pts2d.append(gt_2d)
-                # self.gt_vecs3d.append(gt_3d)
                 self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                 self.img_path.append(data[vid][frame]['directory'])
 
@@ -205,7 +202,6 @@ def try_load():
 
 
     plt.show()
-    # plt.savefig('./angle_checkpoint/this.svg', format='svg', dpi=1200)
 
 
 if __name__ == "__main__":
