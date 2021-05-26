@@ -1,3 +1,5 @@
+import numpy as np
+import cv2 as cv
 import cmath
 import matplotlib.pyplot as plt
 import torch.nn.functional as f
@@ -9,6 +11,7 @@ class Human:
     Implementation of Winter human model
     """
     def __init__(self, H, device="cuda:0"):
+        self.device = device
         self.half_face = 0.066*H
         self.neck = 0.052*H
         self.upper_spine, self.lower_spine = 0.144*H, 0.144*H
@@ -18,7 +21,6 @@ class Human:
         self.pelvis = 0.191*H
         self.thigh, self.calf = 0.245*H, 0.246*H
         self.root = torch.zeros(3)
-        self.device = device
 
         self.constraints = {
             'lower_spine': ((-1.0,1.0), (0,0), (-1.0,1.0)),
@@ -39,7 +41,6 @@ class Human:
             'r_hip': ((0,0), (0,0), (0,0)),
             'r_thigh': ((-1.0,1.57), (0,0), (-1.57,1.57)),
             'r_calf': ((-1.0,1.57), (0,0), (-4.71,1.57)),
-
         }
 
 
@@ -69,24 +70,6 @@ class Human:
             self.bones[bone] = self.bones[bone].to(self.device)
         
 
-    def check_constraints(self):
-        """
-        This function punishes if NN outputs are beyond joint rotation constraints.
-        """
-        punish = {}
-
-        for bone in self.constraints.keys():
-            count = 1
-            for i in range(3):
-                low = self.constraints[bone][i][0]
-                high = self.constraints[bone][i][1]
-                if self.angles[bone][i] < low or self.angles[bone][i] > high:
-                    count += 0.5
-            punish[bone] = count
-        
-        self.punish_list = [punish[list(punish.keys())[k]] for k in range(len(punish.keys()))]
-
-
     def sort_angles(self, ang):
         """
         :param ang: a list of 144 elements (9 * 16)
@@ -106,16 +89,34 @@ class Human:
             k += 1
 
 
+    def check_constraints(self):
+        """
+        This function punishes if NN outputs are beyond joint rotation constraints.
+        """
+        punish = {}
+
+        for bone in self.constraints.keys():
+            euler_angles = euler_from_rot(self.rot_mat[bone].detach().numpy())
+            punish_w = 1
+            for i in range(3):
+                low = self.constraints[bone][i][0]
+                high = self.constraints[bone][i][1]
+                if euler_angles[i] < low or euler_angles[i] > high:
+                    punish_w += 0.5
+            punish[bone] = punish_w 
+        self.punish_list = [punish[list(punish.keys())[k]] for k in range(len(punish.keys()))]
+
+
     def update_bones(self, ang=None):
         """
+        Initiates a T-Pose human model and rotate each bone using the given rotation matrices
         :return model: a numpy array of (17,3)
         """
         self._init_bones()
         if ang is not None:
             self.sort_angles(ang)
+            self.bones = {bone: self.rot_mat[bone]@self.bones[bone] for bone in self.angles.keys()}
             self.check_constraints()
-            for bone in self.angles.keys():
-                self.bones[bone] = self.rot_mat[bone] @ self.bones[bone]
 
 
     def update_pose(self, ang=None, debug=False):
@@ -146,6 +147,7 @@ class Human:
         r_hip = self.bones['r_hip']
         r_knee = self.bones['r_thigh'] + r_hip
         r_ankle = self.bones['r_calf'] + r_knee
+
         self.model = torch.stack((neck, lower_spine, root, chin, nose,
                 l_shoulder, l_elbow, l_wrist, r_shoulder, r_elbow, r_wrist,
                 l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle), 0)
@@ -153,30 +155,9 @@ class Human:
         return self.model
 
 
-def vis_model(model):
-    indices = (
-        (0,1), (0,3), (1,2), (3,4),  # spine + head
-        (0,5), (0,8), # clavicle
-        (5,6), (6,7), (8,9), (9,10), # arms
-        (2,14), (2,11), # pelvis
-        (11,12), (12,13), (14,15), (15,16), # legs
-    )
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    for p in model:
-        ax.scatter(p[0], p[1], p[2], c='r')
-
-    for index in indices:
-        xS = (model[index[0]][0], model[index[1]][0])
-        yS = (model[index[0]][1], model[index[1]][1])
-        zS = (model[index[0]][2], model[index[1]][2])
-        ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    ax.autoscale()
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-    plt.show()
+def euler_from_rot(R: np.array) -> np.array:
+    angles = cv.RQDecomp3x3(R)[0]
+    return np.radians(angles)
 
 
 def vectorize(gt_3d) -> torch.tensor:
@@ -205,16 +186,43 @@ def vectorize(gt_3d) -> torch.tensor:
     return bone_info
 
 
+def vis_model(model):
+    indices = (
+        (0,1), (0,3), (1,2), (3,4),  # spine + head
+        (0,5), (0,8), # clavicle
+        (5,6), (6,7), (8,9), (9,10), # arms
+        (2,14), (2,11), # pelvis
+        (11,12), (12,13), (14,15), (15,16), # legs
+    )
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for p in model:
+        ax.scatter(p[0], p[1], p[2], c='r')
+
+    for index in indices:
+        xS = (model[index[0]][0], model[index[1]][0])
+        yS = (model[index[0]][1], model[index[1]][1])
+        zS = (model[index[0]][2], model[index[1]][2])
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-80, azim=-90)
+    ax.autoscale()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    plt.show()
+
+
 def rand_pose():
     h = Human(1.8, "cpu")
     a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
     model = h.update_pose(a)
     print(model)
     print(h.punish_list)
-    vis_model(model)
+    # vis_model(model)
 
 
 if __name__ == "__main__":
+
     import timeit
     start = timeit.default_timer()
     rand_pose()
