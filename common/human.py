@@ -6,6 +6,29 @@ import torch.nn.functional as f
 import torch
 
 
+def rot(euler) -> torch.tensor:
+    """
+    General rotation matrix
+    :param a: yaw (rad)
+    :param b: pitch (rad)
+    :param r: roll (rad)
+    
+    :return R: a rotation matrix R
+    """
+    a, b, r = euler[0], euler[1], euler[2]
+    row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+    row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+    row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+    R = torch.stack((row1, row2, row3), 0)
+    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+    return R.flatten()
+
+
+def euler_from_rot(R: np.array) -> np.array:
+    angles = cv.RQDecomp3x3(R)[0]
+    return np.radians(angles)
+
+
 class Human:
     """
     Implementation of Winter human model
@@ -153,11 +176,6 @@ class Human:
         return self.model
 
 
-def euler_from_rot(R: np.array) -> np.array:
-    angles = cv.RQDecomp3x3(R)[0]
-    return np.radians(angles)
-
-
 def vectorize(gt_3d) -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
@@ -209,29 +227,11 @@ def vis_model(model):
     ax.set_zlabel("Z")
     plt.show()
 
-def rot(euler) -> torch.tensor:
-    """
-    General rotation matrix
-    :param a: yaw (rad)
-    :param b: pitch (rad)
-    :param r: roll (rad)
-    
-    :return R: a rotation matrix R
-    """
-    a, b, r = euler[0], euler[1], euler[2]
-    row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
-    row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
-    row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
-    R = torch.stack((row1, row2, row3), 0)
-    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-    return R.flatten()
-
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    euler = (1.5,0.1,5)
+    euler = (0,0,0)
     a = rot(euler).repeat(16)
-    # a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
     model = h.update_pose(a)
     print(model)
     print(h.punish_list)
