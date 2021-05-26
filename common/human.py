@@ -70,62 +70,60 @@ class Human:
             self.bones[bone] = self.bones[bone].to(self.device)
         
 
-    def sort_angles(self, ang):
+    def check_constraints(self, bone, R: np.array):
+        """
+        This function punishes if NN outputs are beyond joint rotation constraints.
+        """
+        punish_w = 1
+        euler_angles = euler_from_rot(np.array(R).reshape(3,-1))
+        for i in range(3):
+            low = self.constraints[bone][i][0]
+            high = self.constraints[bone][i][1]
+            if euler_angles[i] < low:
+                euler_angles[i] = low
+                punish_w += 0.5
+            elif euler_angles[i] > high:
+                euler_angles[i] = high
+                punish_w += 0.5
+        return rot(euler_angles), punish_w
+
+
+    def sort_rot(self, elem):
         """
         :param ang: a list of 144 elements (9 * 16)
         process PETRA output to rotation matrix of 16 bones
         """
-        ang = ang.flatten()
-        self.angles, self.rot_mat = {}, {}
+        elem = elem.flatten()
+        self.rot_mat, self.punish_list = {}, []
         k = 0
         for bone in self.constraints.keys():
-            R = ang[9*k:9*(k+1)]
-            self.angles[bone] = R
+            R = elem[9*k:9*(k+1)]
+            R, punish_w = self.check_constraints(bone, R)
+            self.punish_list.append(punish_w)
 
-            R = R.to(torch.float32).view(3,-1)
-            R = f.normalize(R)
-            assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), R
+            R = f.normalize(R.view(3,-1))
             self.rot_mat[bone] = R
             k += 1
 
 
-    def check_constraints(self):
-        """
-        This function punishes if NN outputs are beyond joint rotation constraints.
-        """
-        punish = {}
-
-        for bone in self.constraints.keys():
-            euler_angles = euler_from_rot(self.rot_mat[bone].detach().numpy())
-            punish_w = 1
-            for i in range(3):
-                low = self.constraints[bone][i][0]
-                high = self.constraints[bone][i][1]
-                if euler_angles[i] < low or euler_angles[i] > high:
-                    punish_w += 0.5
-            punish[bone] = punish_w 
-        self.punish_list = [punish[list(punish.keys())[k]] for k in range(len(punish.keys()))]
-
-
-    def update_bones(self, ang=None):
+    def update_bones(self, elem=None):
         """
         Initiates a T-Pose human model and rotate each bone using the given rotation matrices
         :return model: a numpy array of (17,3)
         """
         self._init_bones()
-        if ang is not None:
-            self.sort_angles(ang)
-            self.bones = {bone: self.rot_mat[bone]@self.bones[bone] for bone in self.angles.keys()}
-            self.check_constraints()
+        if elem is not None:
+            self.sort_rot(elem)
+            self.bones = {bone: self.rot_mat[bone]@self.bones[bone] for bone in self.constraints.keys()}
 
 
-    def update_pose(self, ang=None, debug=False):
+    def update_pose(self, elem=None, debug=False):
         """
         Assemble bones to make a human body
         """
-        self.update_bones(ang)
+        self.update_bones(elem)
         if debug:
-            for bone in self.angles.keys():
+            for bone in self.constraints.keys():
                 print(bone, ":\n", self.rot_mat[bone])
 
         root = self.root.to(self.device)
@@ -211,17 +209,37 @@ def vis_model(model):
     ax.set_zlabel("Z")
     plt.show()
 
+def rot(euler) -> torch.tensor:
+    """
+    General rotation matrix
+    :param a: yaw (rad)
+    :param b: pitch (rad)
+    :param r: roll (rad)
+    
+    :return R: a rotation matrix R
+    """
+    a, b, r = euler[0], euler[1], euler[2]
+    row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+    row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+    row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+    R = torch.stack((row1, row2, row3), 0)
+    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+    return R.flatten()
+
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
+    euler = (1.5,0.1,5)
+    a = rot(euler).repeat(16)
+    # a = torch.tensor([1,0,0,0,1,0,0,0,1]).repeat(16)
     model = h.update_pose(a)
     print(model)
     print(h.punish_list)
-    # vis_model(model)
+    vis_model(model)
 
 
 if __name__ == "__main__":
+    from math import sin, cos
 
     import timeit
     start = timeit.default_timer()
