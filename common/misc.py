@@ -34,36 +34,5 @@ def coco_mpi(coco_joints):
     return mpi_joints
 
 
-def normalize(x):
-    return x/np.linalg.norm(x)
-
-
-def rotation_matrix_from_vectors(v1, v2):
-    """ Find the rotation matrix that aligns vec1 to vec2
-    :param v1: A 3d "source" vector
-    :param v2: A 3d "target" vector
-    :return R: A transform matrix (3x3) s.t. v2 = R @ v1
-    :return angles: Euler angles derived from R
-
-    (Implementation of https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d/476311#476311)
-    """
-    a, b = normalize(v1).reshape(3), normalize(v2).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    # skew-symmetric cross-product matrix of v
-    ssmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + ssmat + ssmat.dot(ssmat)*((1-c)/(s**2))
-    angles = cv.RQDecomp3x3(R)[0]
-    return R, angles
-
-
-def imshow(img):
-    img = img / 2 + 0.5
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
-
-
 if __name__ == "__main__":
     pass
