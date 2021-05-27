@@ -19,50 +19,6 @@ def mpjpe(predicted, target):
     return torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1))
 
 
-def p_mpjpe(predicted, target):
-    """
-    Pose error: MPJPE after rigid alignment (scale, rotation, and translation),
-    often referred to as "Protocol #2" in many papers.
-    Borrowed from 'facebookresearch/VideoPose3D'.
-    (https://github.com/facebookresearch/VideoPose3D/blob/master/common/loss.py)
-    """
-    assert predicted.shape == target.shape
-    muX = np.mean(target, axis=1, keepdims=True)
-    muY = np.mean(predicted, axis=1, keepdims=True)
-    
-    X0 = target - muX
-    Y0 = predicted - muY
-
-    normX = np.sqrt(np.sum(X0**2, axis=(1, 2), keepdims=True))
-    normY = np.sqrt(np.sum(Y0**2, axis=(1, 2), keepdims=True))
-    
-    X0 /= normX
-    Y0 /= normY
-
-    H = np.matmul(X0.transpose(0, 2, 1), Y0)
-    U, s, Vt = np.linalg.svd(H)
-    V = Vt.transpose(0, 2, 1)
-    R = np.matmul(V, U.transpose(0, 2, 1))
-
-    # Avoid improper rotations (reflections), i.e. rotations with det(R) = -1
-    sign_detR = np.sign(np.expand_dims(np.linalg.det(R), axis=1))
-    V[:, :, -1] *= sign_detR
-    s[:, -1] *= sign_detR.flatten()
-    R = np.matmul(V, U.transpose(0, 2, 1)) # Rotation
-
-    tr = np.expand_dims(np.sum(s, axis=1, keepdims=True), axis=2)
-
-    a = tr * normX / normY # Scale
-    t = muX - a*np.matmul(muY, R) # Translation
-    
-    # Perform rigid transformation on the input
-    predicted_aligned = a*np.matmul(predicted, R) + t
-    
-    # Return MPJPE
-    return np.mean(np.linalg.norm(predicted_aligned - target, axis=len(target.shape)-1))
-    
-
-
 def punish(predicted, bone1, bone2, weights, thres=0.1):
     """
     Verifies that symmetric bones have the same length.
@@ -144,20 +100,33 @@ def anth_mpjpe(predicted, target):
     return torch.mean(w * torch.norm(predicted - target, dim=len(target.shape)-1))
 
 
-def new_mpjpe(predicted, target, w, bone_length=False):
-    """
-    :param w: a list of weights that punish those exceeding joint angle limits
-    new loss function meant for pure pose estimation
-    # 1. L2 norm on vecs
-    # 2. bone length
-    """
-    n_mpjpe = torch.mean(torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1)) 
-    if bone_length:
-        n_mpjpe = torch.mean(w * torch.norm(predicted[:,:,:3] - target[:,:,:3], dim=len(target.shape)-1)) 
-        len_diff = abs(torch.mean(predicted[:,:,3] - target[:,:,3]))
-        n_mpjpe += len_diff
+def is_so(M):
+    det = cmath.isclose(torch.linalg.det(M), 1, rel_tol=1e-03)
+    orth = cmath.isclose(torch.linalg.det(M@M.T), 1, rel_tol=1e-03)
+    return 1 if orth and det else 2
 
-    return n_mpjpe
+
+def maev(predicted, target):
+    """
+    MAEV: Mean Absolute Error of Vectors
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,16,9) tensor
+    """
+    bs, num_bones = predicted.shape[0], predicted.shape[1]
+    predicted = predicted.view(bs,num_bones,3,3)
+    target = target.view(bs,num_bones,3,3)
+    w_arr = torch.ones(target.shape[:2])
+    for b in range(bs):
+        for bone in range(num_bones):
+            M = predicted[b,bone,:,:]
+            w_arr[b,bone] = is_so(M)
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+        w_arr = w_arr.cuda()
+    aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
+    maev = torch.mean(aev*w_arr)
+    return maev
 
 
 if __name__ == "__main__":
