@@ -10,7 +10,6 @@ import matplotlib
 matplotlib.use('Agg')
 from tqdm import tqdm
 import torch
-import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
 from torch.utils.data import DataLoader
