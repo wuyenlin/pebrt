@@ -127,6 +127,7 @@ class Human:
             self.punish_list.append(punish_w)
 
             R = f.normalize(R.to(torch.float32).view(3,-1))
+            assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.det(R)
             self.rot_mat[bone] = R
             k += 1
 
