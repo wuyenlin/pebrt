@@ -130,8 +130,8 @@ def maev(predicted, target):
 
 
 if __name__ == "__main__":
-    a = torch.zeros(2,16,4)
-    b = torch.ones(2,16,4)
-    w = torch.ones(2,16)
-
-    print(new_mpjpe(a,b,w,True))
+    a = torch.tensor([0.707,-0.707,0,0.707,0.707,0,0,0,1])
+    a = a.repeat(16).reshape(1,16,9).to(torch.float32)
+    b = torch.eye(3).flatten()
+    b = b.repeat(16).reshape(1,16,9).to(torch.float32)
+    print(maev(a,b))
