@@ -10,9 +10,9 @@ import torch
 def rot(euler) -> torch.tensor:
     """
     General rotation matrix
-    :param a: yaw (rad)
-    :param b: pitch (rad)
-    :param r: roll (rad)
+    :param a: yaw (rad) - rotation along z axis
+    :param b: pitch (rad) - rotation along y axis
+    :param r: roll (rad) - rotation along x axis
     
     :return R: a rotation matrix R
     """
@@ -46,26 +46,25 @@ class Human:
         self.thigh, self.calf = 0.245*H, 0.246*H
         self.root = torch.zeros(3)
 
-# TODO: yeah something is wrong
         self.constraints = {
-            'lower_spine': ((-1.0,1.0), (0,0), (-1.0,1.0)),
-            'upper_spine': ((-2.0,2.0), (0,0), (-2.0,2.0)),
-            'neck': ((-1.0,1.0), (0,0), (0,0)),
-            'head': ((-1.0,1.0), (0,0), (-1.0,1.57)),
+            'lower_spine': ((-0.52,1.31), (-0.52,0.52), (-0.61,0.61)),
+            'upper_spine': ((-0.52,1.57), (-0.52,0.52), (-0.61,0.61)),
+            'neck': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
+            'head': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
 
             'l_clavicle': ((0,0), (0,0), (0,0)),
-            'l_upper_arm': ((-3.14,3.14), (-0.1,1.7), (0,0)),
-            'l_lower_arm': ((-6.14,3.14), (0,0), (0,0)),
+            'l_upper_arm': ((0,0), (-0.707,2.27), (-1.57,2.28)),
+            'l_lower_arm': ((0,0), (-0.707,2.27), (-4.19,2.28)),
             'r_clavicle': ((0,0), (0,0), (0,0)),
-            'r_upper_arm': ((-3.14,3.14), (-1.7,0.1), (0,0)),
-            'r_lower_arm': ((-3.14,6.14), (0,0), (0,0)),
+            'r_upper_arm': ((0,0), (-2.27,0.707), (-2.28,1.57)),
+            'r_lower_arm': ((0,0), (-2.27,0.707), (-2.28,4.19)),
 
             'l_hip': ((0,0), (0,0), (0,0)),
-            'l_thigh': ((-1.57,1.0), (0,0), (-1.57,1.57)),
-            'l_calf': ((-1.57,1.0), (0,0), (-4.71,1.57)),
+            'l_thigh': ((-2.09,0.52), (0,0), (-0.87,0.35)),
+            'l_calf': ((-2.09,2.79), (0,0), (-0.87,0.35)),
             'r_hip': ((0,0), (0,0), (0,0)),
-            'r_thigh': ((-1.0,1.57), (0,0), (-1.57,1.57)),
-            'r_calf': ((-1.0,1.57), (0,0), (-4.71,1.57)),
+            'r_thigh': ((-0.52,2.09), (0,0), (-0.35,0.87)),
+            'r_calf': ((-2.09,2.79), (0,0), (-0.35,0.87)),
         }
 
 
@@ -110,6 +109,7 @@ class Human:
             elif euler_angles[i] > high:
                 euler_angles[i] = high
                 punish_w += 0.5
+        euler_angles[0], euler_angles[2] = euler_angles[2], euler_angles[0]
         return rot(euler_angles), punish_w
 
 
@@ -123,8 +123,8 @@ class Human:
         k = 0
         for bone in self.constraints.keys():
             R = elem[9*k:9*(k+1)]
-            # R, punish_w = self.check_constraints(bone, R)
-            # self.punish_list.append(punish_w)
+            R, punish_w = self.check_constraints(bone, R)
+            self.punish_list.append(punish_w)
 
             R = f.normalize(R.to(torch.float32).view(3,-1))
             self.rot_mat[bone] = R
@@ -139,7 +139,7 @@ class Human:
         self._init_bones()
         if elem is not None:
             self.sort_rot(elem)
-            self.bones = {bone: self.rot_mat[bone]@self.bones[bone] for bone in self.constraints.keys()}
+            self.bones = {bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys()}
 
 
     def update_pose(self, elem=None, debug=False):
@@ -224,6 +224,7 @@ def vis_model(model):
         ax.plot(xS, yS, zS)
     ax.view_init(elev=-80, azim=-90)
     ax.autoscale()
+    ax.set_zlim([-1,1])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
@@ -232,7 +233,7 @@ def vis_model(model):
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    euler = (0,0,0)
+    euler = (30,0,0)
     a = rot(euler).repeat(16)
     model = h.update_pose(a)
     print(model)
@@ -241,10 +242,4 @@ def rand_pose():
 
 
 if __name__ == "__main__":
-
-
-    import timeit
-    start = timeit.default_timer()
     rand_pose()
-    stop = timeit.default_timer()
-    print(stop-start)
