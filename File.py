@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
 import os, sys
-import numpy as np 
+import numpy as np
 from tqdm import tqdm
-from common.Video import *
+from dataset.Video import *
 from common.human import *
 
 
@@ -79,7 +79,7 @@ class All(Video):
                     x2, y2 = self.bound_number(x2, y2, frame)
                     start = (x1, y1)
                     end = (x2, y2)
-                    if not self.check_valid(k, start, end): 
+                    if not self.check_valid(k, start, end):
                         continue
 
 
@@ -141,7 +141,7 @@ def merge_npz(human):
     print("saved")
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     for human in range(1,9):
         save_frame(human)
         merge_npz(human)
