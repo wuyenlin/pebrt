@@ -1,8 +1,8 @@
+import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2 as cv
 from PIL import Image
 
 
@@ -124,7 +124,6 @@ def try_load():
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
-
 
     plt.show()
 
