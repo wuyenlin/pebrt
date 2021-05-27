@@ -3,7 +3,9 @@
 import os, sys
 import numpy as np 
 from tqdm import tqdm
-from Video import *
+from common.Video import *
+from common.human import *
+
 
 
 class All(Video):
@@ -99,10 +101,18 @@ class All(Video):
                                 pass
 
                         if save_txt:
+                            h = Human(1.8, "cpu")
+                            model = h.update_pose()
+                            t_info = vectorize(model)[:,:3]
+                            pts_2d, pts_3d = self.imgPoint.reshape(-1,2), self.objPoint.reshape(-1,3)
+                            cam_3d = self.to_camera_coordinate(pts_2d, pts_3d)
+
                             data[k]["directory"] = filename
-                            data[k]["2d_keypoints"] = self.imgPoint.reshape(1,-1)
                             data[k]["bbox_start"] = start
-                            data[k]["3d_keypoints"] = self.objPoint.reshape(1,-1)
+                            data[k]["pts_2d"] = pts_2d
+                            data[k]["pts_3d"] = pts_3d
+                            data[k]["cam_3d"] = cam_3d
+                            data[k]["vec_3d"] = convert_gt(cam_3d, t_info)
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
@@ -132,7 +142,6 @@ def merge_npz(human):
 
 
 if __name__ == "__main__": 
-    char_list = sys.argv[1]
     for human in range(1,9):
-        save_frame(char_list)
+        save_frame(human)
         merge_npz(human)
