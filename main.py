@@ -43,7 +43,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             optimizer.zero_grad()
 
-            _, predicted_3d_pos = model(images)
+            predicted_3d_pos = model(images)
 
             loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -67,7 +67,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 inputs_3d = inputs_3d.to(device)
                 images = images.to(device)
 
-                _, predicted_3d_pos = model(images)
+                predicted_3d_pos = model(images)
 
                 loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -124,7 +124,7 @@ def evaluate(test_loader, model, device):
             inputs_3d = inputs_3d.to(device)
             images = images.to(device)
 
-            _, predicted_3d_pos = model(images)
+            predicted_3d_pos = model(images)
             error = mpjpe(predicted_3d_pos, inputs_3d)
 
             epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
@@ -143,7 +143,7 @@ def evaluate(test_loader, model, device):
 def main(args):
 
     device = torch.device(args.device)
-    model = PETR(device, lift=args.lift)
+    model = PETR(device)
     model = model.to(device)
     print(torch.cuda.get_device_name(torch.cuda.current_device()))
 
@@ -152,21 +152,18 @@ def main(args):
         model = nn.DataParallel(model, device_ids=gpus)
         print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
 
-    if args.lift:
-        print("INFO: Model loaded on {}. Using Lifting model.".format(device))
-        backbone_params = 0
-        if args.lr_backbone == 0:
-            print("INFO: Freezing HRNet")
-            for param in model.backbone.parameters():
-                param.requires_grad = False
-                backbone_params += param.numel()
-    else:
-        print("INFO: Model loaded. Using End-to-end model.")
+    print("INFO: Model loaded on {}. Using Lifting model.".format(device))
+    backbone_params = 0
+    if args.lr_backbone == 0:
+        print("INFO: Freezing HRNet")
+        for param in model.backbone.parameters():
+            param.requires_grad = False
+            backbone_params += param.numel()
 
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    if args.lift and args.lr_backbone == 0:
+    if args.lr_backbone == 0:
         model_params -= backbone_params
 
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
@@ -193,8 +190,6 @@ def main(args):
     ]
 
     optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-    if not args.lift:
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
