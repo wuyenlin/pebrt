@@ -95,7 +95,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.ylabel('MPJPE (m)')
             plt.xlabel('Epoch')
             plt.xlim((3, epoch))
-            plt.savefig('./angle_checkpoint/loss_3d.png')
+            plt.savefig('./peltra/loss_3d.png')
 
             plt.close('all')
 
