@@ -47,8 +47,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             predicted_3d_pos = model(inputs_2d)
 
             loss_3d_pos = maev(predicted_3d_pos, vec_3d)
-            epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
-            N += inputs_3d.shape[0]*inputs_3d.shape[1]
+            epoch_loss_3d_train += vec_3d.shape[0]*vec_3d.shape[1] * loss_3d_pos.item()
+            N += vec_3d.shape[0]*vec_3d.shape[1]
 
             loss_total = loss_3d_pos
             loss_total.backward()
@@ -72,8 +72,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 predicted_3d_pos = model(inputs_2d)
 
                 loss_3d_pos = maev(predicted_3d_pos, vec_3d)
-                epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
-                N += inputs_3d.shape[0]*inputs_3d.shape[1]
+                epoch_loss_3d_valid += vec_3d.shape[0]*vec_3d.shape[1] * loss_3d_pos.item()
+                N += vec_3d.shape[0]*vec_3d.shape[1]
 
             losses_3d_valid.append(epoch_loss_3d_valid / N)
 
