@@ -37,7 +37,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, images, _, inputs_3d = data
+            _, images, inputs_3d, _ = data
             inputs_3d = inputs_3d.to(device)
             images = images.to(device)
 
@@ -63,7 +63,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, images, _, inputs_3d = data
+                _, images, inputs_3d, _ = data
                 inputs_3d = inputs_3d.to(device)
                 images = images.to(device)
 
@@ -113,15 +113,14 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 
 def evaluate(test_loader, model, device):
-    print("Testing starts...")
+    print("Evaluation starts...")
     epoch_loss_3d_pos = 0.0
-    epoch_loss_3d_pos_procrustes = 0.0
 
     with torch.no_grad():
         model.eval()
         N = 0
         for data in test_loader:
-            _, images, _, inputs_3d = data
+            _, images, inputs_3d, _ = data
             inputs_3d = inputs_3d.to(device)
             images = images.to(device)
 
@@ -131,21 +130,14 @@ def evaluate(test_loader, model, device):
             epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
             N += inputs_3d.shape[0] * inputs_3d.shape[1]
 
-            inputs = inputs_3d.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
-            predicted_3d_pos = predicted_3d_pos.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
-
-            epoch_loss_3d_pos_procrustes += inputs_3d.shape[0]*inputs_3d.shape[1] * p_mpjpe(predicted_3d_pos, inputs)
-
 
     e1 = (epoch_loss_3d_pos / N)*1000
-    e2 = (epoch_loss_3d_pos_procrustes / N)*1000
 
     print('----------')
     print('Protocol #1 Error (MPJPE):', e1, 'mm')
-    print('Protocol #2 Error (P-MPJPE):', e2, 'mm')
     print('----------')
 
-    return e1, e2, ev
+    return e1
 
 
 def main(args):
@@ -182,8 +174,8 @@ def main(args):
     if args.eval:
         test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
-        e1, e2, ev = evaluate(test_loader, model, device)
-        return e1, e2, ev
+        e1 = evaluate(test_loader, model, device)
+        return e1
 
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
