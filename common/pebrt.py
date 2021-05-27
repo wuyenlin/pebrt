@@ -46,7 +46,7 @@ class TransformerEncoder(nn.Module):
 
 class PEBRT(nn.Module):
     """
-    PEBRT- Pose Estimation on Bone Rotation using Transformer
+    PEBRT- Pose Estimation by Bone Rotation using Transformer
     """
     def __init__(self, device, bs=1):
         super().__init__()
