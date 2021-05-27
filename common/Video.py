@@ -143,10 +143,3 @@ class Video:
         cam_coor = E @ pts_3d
         cam_3d = cam_coor.transpose()
         return cam_3d
-
-    
-    def zero_center(self, cam) -> np.array:
-        """
-        translate root joint to origin (0,0,0)
-        """
-        return cam - cam[2,:]
