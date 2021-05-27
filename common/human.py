@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 import cmath
+from math import sin, cos
 import matplotlib.pyplot as plt
 import torch.nn.functional as f
 import torch
@@ -45,6 +46,7 @@ class Human:
         self.thigh, self.calf = 0.245*H, 0.246*H
         self.root = torch.zeros(3)
 
+# TODO: yeah something is wrong
         self.constraints = {
             'lower_spine': ((-1.0,1.0), (0,0), (-1.0,1.0)),
             'upper_spine': ((-2.0,2.0), (0,0), (-2.0,2.0)),
@@ -121,10 +123,10 @@ class Human:
         k = 0
         for bone in self.constraints.keys():
             R = elem[9*k:9*(k+1)]
-            R, punish_w = self.check_constraints(bone, R)
-            self.punish_list.append(punish_w)
+            # R, punish_w = self.check_constraints(bone, R)
+            # self.punish_list.append(punish_w)
 
-            R = f.normalize(R.view(3,-1))
+            R = f.normalize(R.to(torch.float32).view(3,-1))
             self.rot_mat[bone] = R
             k += 1
 
@@ -239,7 +241,7 @@ def rand_pose():
 
 
 if __name__ == "__main__":
-    from math import sin, cos
+
 
     import timeit
     start = timeit.default_timer()
