@@ -5,6 +5,8 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from common.petr import PETR
+from common.pebrt import PEBRT
+from common.human import *
 
 
 transforms = transforms.Compose([
@@ -25,7 +27,7 @@ def att():
     img = transforms(img_read)
     img = img.unsqueeze(0)
     img = img.cuda()
-    _, output = model(img)
+    output = model(img)
 
 
 def extract_bone(pred, bone, k):
@@ -40,7 +42,7 @@ def plot3d(ax, bones, output):
         yS = extract_bone(output, bone, 1)
         zS = extract_bone(output, bone, 2)
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-70, azim=-90)
+    ax.view_init(elev=-80, azim=-90)
     ax.autoscale()
     plt.xlim(-1,1)
     plt.ylim(-1,1)
@@ -49,16 +51,32 @@ def plot3d(ax, bones, output):
     ax.set_yticklabels([])
     ax.set_zticklabels([])
 
+def plot_human(ax, bones, output):
+    for p in output:
+        ax.scatter(p[0], p[1], p[2], c='r', alpha=0.5)
+
+    for index in bones:
+        xS = (output[index[0]][0],output[index[1]][0])
+        yS = (output[index[0]][1],output[index[1]][1])
+        zS = (output[index[0]][2],output[index[1]][2])
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-80, azim=-90)
+    ax.autoscale()
+    ax.set_zlim(-1,1)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+
 
 def viz(bones, group, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETR(device, lift=True)
+    model = PETR(device)
     model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
     model = model.cuda()
     model.eval()
     if compare:
-        model_2 = PETR(device, lift=True)
-        model_2.load_state_dict(torch.load('../archive/anth_checkpoint/ft_5.bin')['model'])
+        model_2 = PEBRT(device)
+        model_2.load_state_dict(torch.load('./pebrt/epoch_25.bin')['model'])
         model_2 = model_2.cuda()
         model_2.eval()
 
@@ -100,6 +118,7 @@ def viz(bones, group, compare=False, savefig=False):
             "dataset/S3/Seq2/imageSequence/video_4/frame001103.jpg",
             "dataset/S4/Seq2/imageSequence/video_4/frame002144.jpg"],
             ]
+
     img_list = imgs[group]
     k = 1
     fig = plt.figure()
@@ -118,17 +137,20 @@ def viz(bones, group, compare=False, savefig=False):
         ax.set_yticklabels([])
 
 # 2nd row
-        _, output = model(img)
+        output = model(img)
         output = output.cpu().detach().numpy()
         ax = fig.add_subplot(num_row, len(img_list), k+len(img_list), projection='3d')
         plot3d(ax, bones, output)
 
 # 3rd row
         if compare:
-            _, output = model_2(img)
-            output = output.cpu().detach().numpy()
+            h = Human(1.8, "cpu")
+            output = model_2(img)
+            output = h.update_pose(output.detach().numpy())
             ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
-            plot3d(ax, bones, output)
+            plot_human(ax, bones, output)
+            plt.xlim(-1,1)
+            plt.ylim(-1,1)
 
         k += 1
     plt.show()
