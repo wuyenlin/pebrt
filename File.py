@@ -3,7 +3,7 @@
 import os, sys
 import numpy as np 
 from tqdm import tqdm
-from common.Video import *
+from dataset.Video import *
 from common.human import *
 
 
