@@ -25,6 +25,7 @@ bones = (
     (2,11), (14,15), (15,16), # legs
 )
 
+
 def plot3d(ax, bones, output):
     for p in output:
         ax.scatter(p[0], p[1], p[2], c='r', alpha=0.5)
@@ -43,7 +44,7 @@ def plot3d(ax, bones, output):
 
 
 def viz(savefig=False):
-    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
+    train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=8, drop_last=True)
@@ -54,7 +55,7 @@ def viz(savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PELTRA(device)
     # net.load_state_dict(torch.load('../archive/peltra/ft_1_cam.bin')['model'])
-    net.load_state_dict(torch.load('./peltra/epoch_45.bin')['model'])
+    net.load_state_dict(torch.load('./peltra/epoch_5.bin')['model'])
     net = net.cuda()
     net.eval()
 
