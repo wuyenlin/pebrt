@@ -30,8 +30,10 @@ class Data:
 
         for vid in vid_list:
             for frame in data[vid].keys():
-                pts_2d = (data[vid][frame]["pts_2d"])
-                gt_2d = self.vec2d(pts_2d)
+                bbox_start = data[vid][frame]["bbox_start"]
+                pts_2d = data[vid][frame]["pts_2d"]
+                # gt_2d = self.pop_joints(pts_2d) - bbox_start
+                gt_2d = self.zero_center(self.pop_joints(pts_2d))
 
                 # pts_3d = (data[vid][frame]["pts_3d"])
                 # cam_3d = (data[vid][frame]["cam_3d"])
@@ -59,6 +61,23 @@ class Data:
         return len(self.img_path)
     
 
+    def pop_joints(self, kpts):
+        """
+        Get 17 joints from the original 28 
+        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,n))
+        :return new_skel: 
+        """
+        new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
+        ext_list = [2,4,5,6,         # spine+head
+                    9,10,11,14,15,16,  # arms
+                    18,19,20,23,24,25] # legs
+        for row in range(1,17):
+            new_skel[row, :] = kpts[ext_list[row-1], :]
+        # interpolate clavicles to obtain vertebra
+        new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
+        return new_skel
+
+
     def zero_center(self, cam) -> np.array:
         """
         translate root joint to origin (0,0,0)
@@ -81,6 +100,8 @@ class Data:
             vec = input_2d[indices[i][1],:] - input_2d[indices[i][0],:]
             bone_info[i,:] = vec
         return bone_info
+
+
 
 if __name__ == "__main__":
     from torchvision import transforms
