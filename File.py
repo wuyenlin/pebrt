@@ -9,7 +9,6 @@ from tqdm import tqdm
 from common.human import *
 
 
-
 def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
     """ 
     Find the rotation matrix that aligns vec1 to vec2
@@ -46,6 +45,7 @@ def convert_gt(gt_3d: np.array, t_info) -> np.array:
     for k in range(num_bones):
         R_stack[k,:] = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
     return R_stack
+
 
 
 class Video:
@@ -149,6 +149,23 @@ class Video:
         return cam_3d
 
 
+    def pop_joints(self, kpts):
+        """
+        Get 17 joints from the original 28 
+        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,n))
+        :return new_skel: 
+        """
+        new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
+        ext_list = [2,4,5,6,         # spine+head
+                    9,10,11,14,15,16,  # arms
+                    18,19,20,23,24,25] # legs
+        for row in range(1,17):
+            new_skel[row, :] = kpts[ext_list[row-1], :]
+        # interpolate clavicles to obtain vertebra
+        new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
+        return new_skel
+
+
 
 class All(Video):
     def __init__(self, S, Se, vid):
@@ -250,9 +267,9 @@ class All(Video):
                             data[k]["directory"] = filename
                             data[k]["bbox_start"] = start
                             data[k]["bbox_end"] = end
-                            data[k]["pts_2d"] = pts_2d
-                            data[k]["pts_3d"] = pts_3d
-                            data[k]["cam_3d"] = cam_3d
+                            data[k]["pts_2d"] = self.pop_joints(pts_2d)
+                            data[k]["pts_3d"] = self.pop_joints(pts_3d)
+                            data[k]["cam_3d"] = self.pop_joints(cam_3d)
                             data[k]["vec_3d"] = convert_gt(cam_3d, t_info)
             break
         if full:
@@ -272,15 +289,15 @@ def save_frame(human):
 
 def merge_npz(human):
     merge_data = []
-    for s in [1]:
+    for s in [1,2]:
         for k in [0,1,2,4,5,6,7,8]:
             npz = "./dataset/S{}/Seq{}/imageSequence/video_{}.npz".format(human,s,k)
             t = np.load(npz, allow_pickle=True)
             t = t['arr_0'].reshape(1,-1)
             merge_data.append(*t)
-        filename = "./dataset/S{}/Seq1/imageSequence/S{}Seq1".format(human,human)
+        filename = "./dataset/S{}/Seq1/imageSequence/S{}".format(human,human)
         np.savez_compressed(filename, merge_data)
-    print("saved {}".format(filename))
+    print("saved {}.npz".format(filename))
 
 
 if __name__ == "__main__": 
