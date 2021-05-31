@@ -115,19 +115,17 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 
 def main(args):
-
     device = torch.device(args.device)
     model = PELTRA(device, bs=args.bs)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
-    print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
-    print("INFO: Model loaded on {}.".format(device))
+    print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}.".format(args.dataset))
 
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
+    print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
