@@ -5,12 +5,7 @@ from common.peltra import *
 from common.dataloader import *
 from common.loss import *
 
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('Agg')
 from tqdm import tqdm
-import torch
-import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -87,6 +82,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 losses_3d_valid[-1] * 1000))
 
         if args.export_training_curves and ep > 3:
+            import matplotlib.pyplot as plt
+            import matplotlib
+            matplotlib.use('Agg')
             plt.figure()
             epoch_x = np.arange(3, len(losses_3d_train)) + 1
             plt.plot(epoch_x, losses_3d_train[3:], '--', color='C0')
