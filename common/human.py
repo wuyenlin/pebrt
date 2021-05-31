@@ -1,9 +1,5 @@
 import numpy as np
-import cv2 as cv
 import cmath
-from math import sin, cos
-import matplotlib.pyplot as plt
-import torch.nn.functional as f
 import torch
 
 
@@ -16,6 +12,7 @@ def rot(euler) -> torch.tensor:
     
     :return R: a rotation matrix R
     """
+    from math import sin, cos
     a, b, r = euler[0], euler[1], euler[2]
     row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
     row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
@@ -26,6 +23,7 @@ def rot(euler) -> torch.tensor:
 
 
 def euler_from_rot(R: np.array) -> np.array:
+    import cv2 as cv
     angles = cv.RQDecomp3x3(R)[0]
     return np.radians(angles)
 
@@ -90,8 +88,7 @@ class Human:
             'r_thigh': torch.tensor([0, self.thigh, 0]),
             'r_calf': torch.tensor([0, self.calf, 0])
         }
-        for bone in self.bones.keys():
-            self.bones[bone] = self.bones[bone].to(self.device)
+        self.bones = {bone: self.bones[bone].to(self.device) for bone in self.bones.keys()}
         
 
     def check_constraints(self, bone, R: np.array):
@@ -119,6 +116,7 @@ class Human:
         :param ang: a list of 144 elements (9 * 16)
         process PETRA output to rotation matrix of 16 bones
         """
+        import torch.nn.functional as f
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
         k = 0
@@ -216,6 +214,7 @@ def vis_model(model):
         (2,14), (11,12), (12,13),
         (2,11), (14,15), (15,16), # legs
     )
+    import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     for p in model:
