@@ -28,23 +28,14 @@ class Data:
             vid_list = np.arange(6,8)
 
 
-        h = Human(1.8, "cpu")
-        model = h.update_pose()
-        t_info = vectorize(model)[:,:3]
         for vid in vid_list:
             for frame in data[vid].keys():
-                bbox_start = data[vid][frame]['bbox_start']
                 pts_2d = (data[vid][frame]["pts_2d"])
-                # original
-                gt_2d = self.zero_center(self.pop_joints(pts_2d))/2048
-                # gt_2d = self.pop_joints(pts_2d)                    #[X]
-                # gt_2d = self.pop_joints(pts_2d) - bbox_start       #[O]
-                # gt_2d = self.zero_center(self.pop_joints(pts_2d))  #[O]
-                # gt_2d = self.vec2d(self.pop_joints(pts_2d))
+                gt_2d = self.vec2d(pts_2d)
 
-                pts_3d = (data[vid][frame]["pts_3d"])
-                cam_3d = (data[vid][frame]["cam_3d"])
-                gt_3d = self.zero_center(cam_3d)/1000
+                # pts_3d = (data[vid][frame]["pts_3d"])
+                # cam_3d = (data[vid][frame]["cam_3d"])
+                # gt_3d = self.zero_center(cam_3d)/1000
 
                 vec_3d = (data[vid][frame]["vec_3d"])
 
@@ -67,23 +58,6 @@ class Data:
     def __len__(self):
         return len(self.img_path)
     
-
-    def pop_joints(self, kpts):
-        """
-        Get 17 joints from the original 28 
-        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,n))
-        :return new_skel: 
-        """
-        new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
-        ext_list = [2,4,5,6,         # spine+head
-                    9,10,11,14,15,16,  # arms
-                    18,19,20,23,24,25] # legs
-        for row in range(1,17):
-            new_skel[row, :] = kpts[ext_list[row-1], :]
-        # interpolate clavicles to obtain vertebra
-        new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
-        return new_skel
-
 
     def zero_center(self, cam) -> np.array:
         """
