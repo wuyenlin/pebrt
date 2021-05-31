@@ -4,17 +4,15 @@ import cmath
 
 try:
     from common.embed import *
-    from common.human import *
 except ModuleNotFoundError:
     from embed import *
-    from human import *
 
 
 class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
     """
-    def __init__(self, d_model=34, nhead=2, num_layers=6, 
+    def __init__(self, d_model=32, nhead=2, num_layers=8, 
                     num_joints_in=17, num_joints_out=17):
         super().__init__()
 
