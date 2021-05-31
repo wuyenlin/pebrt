@@ -122,6 +122,7 @@ def main(args):
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Model loaded on {}.".format(device))
+    print("INFO: Training using dataset {}.".format(args.dataset))
 
     model_params = 0
     for parameter in model.parameters():
