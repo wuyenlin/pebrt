@@ -166,6 +166,13 @@ class Video:
         return new_skel
 
 
+    def zero_center(self, cam) -> np.array:
+        """
+        translate root joint to origin (0,0,0)
+        """
+        return cam - cam[2,:]
+
+
 
 class All(Video):
     def __init__(self, S, Se, vid):
@@ -263,14 +270,15 @@ class All(Video):
                             t_info = vectorize(model)[:,:3]
                             pts_2d, pts_3d = self.imgPoint.reshape(-1,2), self.objPoint.reshape(-1,3)
                             cam_3d = self.to_camera_coordinate(pts_2d, pts_3d)
+                            gt_3d = self.zero_center(cam_3d)/1000
 
                             data[k]["directory"] = filename
                             data[k]["bbox_start"] = start
                             data[k]["bbox_end"] = end
-                            data[k]["pts_2d"] = self.pop_joints(pts_2d)
-                            data[k]["pts_3d"] = self.pop_joints(pts_3d)
-                            data[k]["cam_3d"] = self.pop_joints(cam_3d)
-                            data[k]["vec_3d"] = convert_gt(cam_3d, t_info)
+                            data[k]["pts_2d"] = pts_2d
+                            data[k]["pts_3d"] = pts_3d
+                            data[k]["cam_3d"] = cam_3d
+                            data[k]["vec_3d"] = convert_gt(gt_3d, t_info)
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
