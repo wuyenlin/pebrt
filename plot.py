@@ -4,8 +4,10 @@ from torchvision import transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 from common.dataloader import *
+from torch.utils.data import DataLoader
 from common.peltra import PELTRA
 from common.human import *
+
 
 
 transforms = transforms.Compose([
@@ -16,11 +18,11 @@ transforms = transforms.Compose([
 
 
 bones = (
-(0,1), (0,3), (1,2), (3,4),  # spine + head
-(0,5), (0,8),
-(5,6), (6,7), (8,9), (9,10), # arms
-(2,14), (2,11),
-(11,12), (12,13), (14,15), (15,16), # legs
+    (2,1), (1,0), (0,3), (3,4),  # spine + head
+    (0,5), (5,6), (6,7), 
+    (0,8), (8,9), (9,10), # arms
+    (2,14), (11,12), (12,13),
+    (2,11), (14,15), (15,16), # legs
 )
 
 def plot3d(ax, bones, output):
@@ -51,7 +53,8 @@ def viz(savefig=False):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PELTRA(device)
-    net.load_state_dict(torch.load('../archive/peltra/ft_1_cam.bin')['model'])
+    # net.load_state_dict(torch.load('../archive/peltra/ft_1_cam.bin')['model'])
+    net.load_state_dict(torch.load('./peltra/epoch_45.bin')['model'])
     net = net.cuda()
     net.eval()
 
@@ -60,10 +63,9 @@ def viz(savefig=False):
         ax = fig.add_subplot(2, 4, k)
         plt.imshow(Image.open(img_path[k-1]))
 
-        h = Human(1.8, "cpu")
-        pts = kpts[k-1]
-        pts = torch.tensor(pts.unsqueeze(0)).cuda()
+        pts = torch.tensor(kpts[k-1].unsqueeze(0)).cuda()
         output = net(pts)
+        h = Human(1.8, "cpu")
         output = h.update_pose(output.detach().numpy())
 
         ax = fig.add_subplot(2, 4, k+4, projection='3d')
