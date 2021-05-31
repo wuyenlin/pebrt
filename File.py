@@ -61,7 +61,6 @@ class Video:
         self.camera = vid # get camera number
         self.annot3D = sio.loadmat(self.mat_path)['annot3']
         self.annot2D = sio.loadmat(self.mat_path)['annot2']
-        # self.nframe = len(self.annot3D[self.camera][0]) # total number of frame 
     
     def __del__(self):
         print("Killed")
@@ -273,14 +272,15 @@ def save_frame(human):
 
 def merge_npz(human):
     merge_data = []
-    for s in [1,2]:
+    for s in [1]:
         for k in [0,1,2,4,5,6,7,8]:
             npz = "./dataset/S{}/Seq{}/imageSequence/video_{}.npz".format(human,s,k)
             t = np.load(npz, allow_pickle=True)
             t = t['arr_0'].reshape(1,-1)
             merge_data.append(*t)
-        np.savez_compressed("./dataset/S{}/Seq1/imageSequence/S{}".format(human,human), merge_data)
-    print("saved")
+        filename = "./dataset/S{}/Seq1/imageSequence/S{}Seq1".format(human,human)
+        np.savez_compressed(filename, merge_data)
+    print("saved {}".format(filename))
 
 
 if __name__ == "__main__": 
