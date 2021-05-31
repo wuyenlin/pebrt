@@ -1,10 +1,10 @@
 import torch
-from torchvision import transforms
-from torch.utils.data import DataLoader
 import numpy as np
-import matplotlib.pyplot as plt
-import cv2 as cv
 from PIL import Image
+try:
+    from common.human import *
+except ModuleNotFoundError:
+    from human import *
 
 
 def collate_fn(batch):
@@ -27,11 +27,20 @@ class Data:
         else:
             vid_list = np.arange(6,8)
 
+
+        h = Human(1.8, "cpu")
+        model = h.update_pose()
+        t_info = vectorize(model)[:,:3]
         for vid in vid_list:
             for frame in data[vid].keys():
                 bbox_start = data[vid][frame]['bbox_start']
                 pts_2d = (data[vid][frame]["pts_2d"])
-                gt_2d = self.pop_joints(pts_2d) - bbox_start
+                # original
+                gt_2d = self.zero_center(self.pop_joints(pts_2d))/2048
+                # gt_2d = self.pop_joints(pts_2d)                    #[X]
+                # gt_2d = self.pop_joints(pts_2d) - bbox_start       #[O]
+                # gt_2d = self.zero_center(self.pop_joints(pts_2d))  #[O]
+                # gt_2d = self.vec2d(self.pop_joints(pts_2d))
 
                 pts_3d = (data[vid][frame]["pts_3d"])
                 cam_3d = (data[vid][frame]["cam_3d"])
@@ -42,6 +51,7 @@ class Data:
                 self.gt_pts2d.append(gt_2d)
                 self.gt_vecs3d.append(vec_3d)
                 self.img_path.append(data[vid][frame]['directory'])
+
 
     def __getitem__(self, index):
         try:
@@ -61,7 +71,7 @@ class Data:
     def pop_joints(self, kpts):
         """
         Get 17 joints from the original 28 
-        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,3))
+        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,n))
         :return new_skel: 
         """
         new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
@@ -82,57 +92,34 @@ class Data:
         return cam - cam[2,:]
 
 
-def try_load():
-    train_npz = "dataset/S1/Seq1/imageSequence/S1Seq1.npz"
-    train_dataset = Data(train_npz, transforms, True)
-    trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=8, drop_last=True)
-    print("data loaded!")
-    dataiter = iter(trainloader)
-    img_path, images, kpts, vec = dataiter.next()
+    def vec2d(self, input_2d):
+        indices = (
+            (2,1), (1,0), (0,3), (3,4),  # spine + head
+            (0,5), (5,6), (6,7), 
+            (0,8), (8,9), (9,10), # arms
+            (2,14), (11,12), (12,13),
+            (2,11), (14,15), (15,16), # legs
+        )
+        num_bones = len(indices)
 
-    
-    bones = (
-    (0,1), (0,3), (1,2), (3,4),  # spine + head
-    (0,5), (0,8),
-    (5,6), (6,7), (8,9), (9,10), # arms
-    (2,14), (2,11),
-    (11,12), (12,13), (14,15), (15,16), # legs
-    )
-
-    # 1st - Image
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 2, 1)
-    plt.imshow(Image.open(img_path[0]))
-
-    # 2nd- 3D Pose
-    pts = vec[0]
-    ax = fig.add_subplot(1, 2, 2, projection='3d')
-    ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    for bone in bones:
-        xS = (pts[bone[0],0], pts[bone[1],0])
-        yS = (pts[bone[0],1], pts[bone[1],1])
-        zS = (pts[bone[0],2], pts[bone[1],2])
-        
-        ax.plot(xS, yS, zS)
-    
-    ax.view_init(elev=-80, azim=-90)
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_zlim(-1,1)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-
-
-    plt.show()
-
+        bone_info = np.zeros([num_bones, 2]) # (16, 2)
+        for i in range(num_bones):
+            vec = input_2d[indices[i][1],:] - input_2d[indices[i][0],:]
+            bone_info[i,:] = vec
+        return bone_info
 
 if __name__ == "__main__":
-
+    from torchvision import transforms
     transforms = transforms.Compose([
         transforms.Resize([224,224]),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ])
-    try_load()
+    train_npz = "dataset/S1/Seq1/imageSequence/S1.npz"
+    train_dataset = Data(train_npz, transforms, True)
+    trainloader = DataLoader(train_dataset, batch_size=4, 
+                        shuffle=True, num_workers=8, drop_last=True)
+    print("data loaded!")
+    dataiter = iter(trainloader)
+    img_path, images, kpts, labels = dataiter.next()
+        
