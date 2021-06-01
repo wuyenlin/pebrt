@@ -1,51 +1,12 @@
 #!/usr/bin/python3
 
 import scipy.io as sio
+from numpy.linalg import norm
 import numpy as np
+import math
 import cv2 as cv
-import os, sys
-import numpy as np 
+import os
 from tqdm import tqdm
-from common.human import *
-
-
-def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
-    """ 
-    Find the rotation matrix that aligns vec1 to vec2
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-
-    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-    
-    Such that vec2 = R @ vec1
-
-    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
-    """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-    return R
-    
-
-def convert_gt(gt_3d: np.array, t_info) -> np.array:
-    """
-    Compare GT3D kpts with T pose and obtain 16 rotation matrices
-
-    :return R_stack: a (16,9) array with flattened rotation matrices for 16 bones
-    """
-    # process GT
-    bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
-
-    num_bones = bone_info.shape[0]
-    R_stack = np.zeros([num_bones, 9])
-    # get rotation matrix for each bone
-    for k in range(num_bones):
-        R_stack[k,:] = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
-    return R_stack
-
 
 
 class Video:
@@ -61,11 +22,11 @@ class Video:
         self.camera = vid # get camera number
         self.annot3D = sio.loadmat(self.mat_path)['annot3']
         self.annot2D = sio.loadmat(self.mat_path)['annot2']
+
     
     def __del__(self):
         print("Killed")
     
-
     def draw_bbox(self, nframe):
         coordinates = self.annot2D[self.camera][0][nframe]
         xS = []
@@ -89,7 +50,23 @@ class Video:
         return x1,y1,x2,y2
 
 
-    def get_intrinsic(self):
+    def get_cross(self, nframe):
+        """
+        Calculate the cross product given a frame
+
+        Output: a 1x3 numpy array
+        """
+        objPoint = self.annot3D[self.camera][0][nframe]
+        objPoint = np.array(objPoint.reshape(-1,3), dtype=np.float32)
+        pt_list = [4, 9, 14]
+        p0 = np.array(objPoint[pt_list[0]])
+        p1 = np.array(objPoint[pt_list[1]])
+        p2 = np.array(objPoint[pt_list[2]])
+        n_vec = np.cross(p1-p0, p2-p0)
+        self.n_vec = n_vec
+
+
+    def cam_matrix(self):
         """
         Parse camera matrix from calibration file
         """
@@ -97,12 +74,14 @@ class Video:
         content = calib.readlines()
         content = [line.strip() for line in content]
         # 3x3 intrinsic matrix
-        intrinsic = np.array(content[7*self.camera+5].split(" ")[3:], dtype=np.float32)
-        intrinsic = np.reshape(intrinsic, (4,-1))
-        self.intrinsic = intrinsic[:3, :3]
-
+        camMatrix = np.array(content[7*self.camera+5].split(" ")[3:], dtype=np.float32)
+        camMatrix = np.reshape(camMatrix, (4,-1))
+        camMatrix = camMatrix[0:3,0:3]
+        self.camMatrix = camMatrix 
+    
 
     def parse_frame(self, nframe):
+        self.get_cross(nframe)
         self.objPoint = self.annot3D[self.camera][0][nframe]
         self.objPoint = np.array(self.objPoint.reshape(-1,3), dtype=np.float32)
         self.imgPoint = self.annot2D[self.camera][0][nframe]
@@ -111,9 +90,9 @@ class Video:
 
 
     def calib(self, nframe):
-        self.get_intrinsic()
+        self.cam_matrix()
         self.parse_frame(nframe)
-        ret, rvec, tvec = cv.solvePnP(self.objPoint, self.imgPoint, self.intrinsic, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
+        ret, rvec, tvec = cv.solvePnP(self.objPoint, self.imgPoint, self.camMatrix, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
         
         assert ret
         self.rvec = rvec
@@ -121,9 +100,30 @@ class Video:
         self.dist = np.zeros(4)
 
 
+    def get_arrow(self, nframe):
+        self.parse_frame(nframe)
+        arrow = []
+        arrow.append(self.root)
+        arrow.append(400*(self.n_vec/norm(self.n_vec))+self.root) # adjust normal vector length
+        projected, _ = cv.projectPoints(np.float32(arrow), self.rvec, self.tvec, self.camMatrix, self.dist)
+        arrow_root = (int(projected[0][0][0]), int(projected[0][0][1]))
+        arrow_end = (int(projected[1][0][0]), int(projected[1][0][1]))
+        self.arrow_root = arrow_root
+        self.arrow_end = arrow_end
+        self.angle = np.dot(self.n_vec, np.array([1,0,0]))/norm(self.n_vec)
+        self.angle = math.acos(self.angle)*180/(math.pi)
+    
+
+    def valid_arrow(self, pt):
+        """
+        A boolean function that verifies whether a given point falls within the frame
+        """
+        return True if (0 <= pt[0] <= 2048) and (0 <= pt[1] <= 2048) else False
+
+
     def get_joints(self, nframe):
         self.parse_frame(nframe)
-        projected, _ = cv.projectPoints(self.objPoint, self.rvec, self.tvec, self.intrinsic, self.dist)
+        projected, _ = cv.projectPoints(self.objPoint, self.rvec, self.tvec, self.camMatrix, self.dist)
         projected = projected.reshape(28,-1)
         proj_xS = []
         proj_yS = []
@@ -134,46 +134,6 @@ class Video:
         self.proj_yS = proj_yS
 
 
-    def to_camera_coordinate(self, pts_2d, pts_3d) -> np.array:
-        self.get_intrinsic()
-        ret, R, t= cv.solvePnP(pts_3d, pts_2d, self.intrinsic, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
-
-        # get extrinsic matrix
-        assert ret
-        R = cv.Rodrigues(R)[0]
-        E = np.concatenate((R,t), axis=1)  # [R|t], a 3x4 matrix
-    
-        pts_3d = cv.convertPointsToHomogeneous(pts_3d).transpose().squeeze(1)
-        cam_coor = E @ pts_3d
-        cam_3d = cam_coor.transpose()
-        return cam_3d
-
-
-    def pop_joints(self, kpts):
-        """
-        Get 17 joints from the original 28 
-        :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,n))
-        :return new_skel: 
-        """
-        new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
-        ext_list = [2,4,5,6,         # spine+head
-                    9,10,11,14,15,16,  # arms
-                    18,19,20,23,24,25] # legs
-        for row in range(1,17):
-            new_skel[row, :] = kpts[ext_list[row-1], :]
-        # interpolate clavicles to obtain vertebra
-        new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
-        return new_skel
-
-
-    def zero_center(self, cam) -> np.array:
-        """
-        translate root joint to origin (0,0,0)
-        """
-        return cam - cam[2,:]
-
-
-
 class All(Video):
     def __init__(self, S, Se, vid):
         super().__init__(S, Se, vid)
@@ -181,8 +141,8 @@ class All(Video):
     def __del__(self):
         print("Killed")
 
-    def bound_number(self, x, y, frame_size):
     # make sure coordinates do not go beyond the frame
+    def bound_number(self, x, y, frame_size):
         if x < 0 :
             x = 0
             if y < 0:
@@ -196,7 +156,6 @@ class All(Video):
         elif y > frame_size.shape[1]:
             y = frame_size.shape[1]
         return x, y
-
 
     def in_box(self, pt, start, end):
         return True if (start[0]<=pt[0]<=end[0] and start[1]<=pt[1]<=end[1]) else False
@@ -217,9 +176,6 @@ class All(Video):
 
 
     def save_cropped(self, save_img=False, save_txt=True, full=False):
-        """
-        :param full: save original frame (in dimension of 2048x2048) if True
-        """
         data = {}
         cap = cv.VideoCapture(self.avi_path)
         if (cap.isOpened()==False):
@@ -246,7 +202,6 @@ class All(Video):
                     if not self.check_valid(k, start, end): 
                         continue
 
-
                     if full:
                         filename = os.path.join("dataset", "S{}/Seq{}/imageSequence/full_video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
                     else:
@@ -265,20 +220,12 @@ class All(Video):
                                 pass
 
                         if save_txt:
-                            h = Human(1.8, "cpu")
-                            model = h.update_pose()
-                            t_info = vectorize(model)[:,:3]
-                            pts_2d, pts_3d = self.imgPoint.reshape(-1,2), self.objPoint.reshape(-1,3)
-                            cam_3d = self.to_camera_coordinate(pts_2d, pts_3d)
-                            gt_3d = self.zero_center(cam_3d)/1000
-
                             data[k]["directory"] = filename
                             data[k]["bbox_start"] = start
                             data[k]["bbox_end"] = end
-                            data[k]["pts_2d"] = pts_2d
-                            data[k]["pts_3d"] = pts_3d
-                            data[k]["cam_3d"] = cam_3d
-                            data[k]["vec_3d"] = convert_gt(gt_3d, t_info)
+                            data[k]["pts_2d"] = self.imgPoint.reshape(-1,2)
+                            data[k]["pts_3d"] = self.objPoint.reshape(-1,3)
+
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
@@ -293,7 +240,6 @@ def save_frame(human):
         for vid in [0,1,2,4,5,6,7,8]:
             v = All(human, seq, vid)
             v.save_cropped(False, True, False)
-
 
 def merge_npz(human):
     merge_data = []
