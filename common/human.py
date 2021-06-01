@@ -1,9 +1,5 @@
 import numpy as np
-import cv2 as cv
 import cmath
-from math import sin, cos
-import matplotlib.pyplot as plt
-import torch.nn.functional as f
 import torch
 
 
@@ -16,6 +12,7 @@ def rot(euler) -> torch.tensor:
     
     :return R: a rotation matrix R
     """
+    from math import sin, cos
     a, b, r = euler[0], euler[1], euler[2]
     row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
     row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
@@ -26,6 +23,7 @@ def rot(euler) -> torch.tensor:
 
 
 def euler_from_rot(R: np.array) -> np.array:
+    import cv2 as cv
     angles = cv.RQDecomp3x3(R)[0]
     return np.radians(angles)
 
@@ -44,7 +42,7 @@ class Human:
 
         self.pelvis = 0.191*H
         self.thigh, self.calf = 0.245*H, 0.246*H
-        self.root = torch.zeros(3)
+        self.root = torch.zeros(3, device=self.device)
 
         self.constraints = {
             'lower_spine': ((-0.52,1.31), (-0.52,0.52), (-0.61,0.61)),
@@ -90,8 +88,7 @@ class Human:
             'r_thigh': torch.tensor([0, self.thigh, 0]),
             'r_calf': torch.tensor([0, self.calf, 0])
         }
-        for bone in self.bones.keys():
-            self.bones[bone] = self.bones[bone].to(self.device)
+        self.bones = {bone: self.bones[bone].to(self.device) for bone in self.bones.keys()}
         
 
     def check_constraints(self, bone, R: np.array):
@@ -109,6 +106,7 @@ class Human:
             elif euler_angles[i] > high:
                 euler_angles[i] = high
                 punish_w += 0.5
+        # sort angles in z-y-x order for rot function
         euler_angles[0], euler_angles[2] = euler_angles[2], euler_angles[0]
         return rot(euler_angles), punish_w
 
@@ -118,15 +116,18 @@ class Human:
         :param ang: a list of 144 elements (9 * 16)
         process PETRA output to rotation matrix of 16 bones
         """
+        import torch.nn.functional as f
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
         k = 0
         for bone in self.constraints.keys():
             R = elem[9*k:9*(k+1)]
-            R, punish_w = self.check_constraints(bone, R)
-            self.punish_list.append(punish_w)
+            # R, punish_w = self.check_constraints(bone, R)
+            # self.punish_list.append(punish_w)
 
-            R = f.normalize(R.to(torch.float32).view(3,-1))
+            # R = f.normalize(R.to(torch.float32).view(3,-1))
+            R = f.normalize(torch.tensor(R, dtype=torch.float32).view(3,-1))
+            assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
             self.rot_mat[bone] = R
             k += 1
 
@@ -151,7 +152,7 @@ class Human:
             for bone in self.constraints.keys():
                 print(bone, ":\n", self.rot_mat[bone])
 
-        root = self.root.to(self.device)
+        root = self.root
         lower_spine = self.bones['lower_spine']
         neck = self.bones['upper_spine'] + lower_spine
         chin = self.bones['neck'] + neck
@@ -195,6 +196,7 @@ def vectorize(gt_3d) -> torch.tensor:
         gt_3d_tensor = torch.from_numpy(gt_3d)
     except TypeError:
         gt_3d_tensor = gt_3d
+
     bone_info = torch.zeros([num_bones, 4], requires_grad=False) # (16, 4)
     for i in range(num_bones):
         vec = gt_3d_tensor[indices[i][1],:] - gt_3d_tensor[indices[i][0],:]
@@ -206,12 +208,13 @@ def vectorize(gt_3d) -> torch.tensor:
 
 def vis_model(model):
     indices = (
-        (0,1), (0,3), (1,2), (3,4),  # spine + head
-        (0,5), (0,8), # clavicle
-        (5,6), (6,7), (8,9), (9,10), # arms
-        (2,14), (2,11), # pelvis
-        (11,12), (12,13), (14,15), (15,16), # legs
+        (2,1), (1,0), (0,3), (3,4),  # spine + head
+        (0,5), (5,6), (6,7), 
+        (0,8), (8,9), (9,10), # arms
+        (2,14), (11,12), (12,13),
+        (2,11), (14,15), (15,16), # legs
     )
+    import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     for p in model:
@@ -233,7 +236,7 @@ def vis_model(model):
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    euler = (30,0,0)
+    euler = (0,0,0)
     a = rot(euler).repeat(16)
     model = h.update_pose(a)
     print(model)
