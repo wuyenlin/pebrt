@@ -134,13 +134,6 @@ class Video:
         self.proj_yS = proj_yS
 
 
-class All(Video):
-    def __init__(self, S, Se, vid):
-        super().__init__(S, Se, vid)
-
-    def __del__(self):
-        print("Killed")
-
     # make sure coordinates do not go beyond the frame
     def bound_number(self, x, y, frame_size):
         if x < 0 :
@@ -238,7 +231,7 @@ class All(Video):
 def save_frame(human):
     for seq in (1,2):
         for vid in [0,1,2,4,5,6,7,8]:
-            v = All(human, seq, vid)
+            v = Video(human, seq, vid)
             v.save_cropped(False, True, False)
 
 def merge_npz(human):
