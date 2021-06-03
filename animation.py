@@ -1,18 +1,32 @@
+#!/usr/bin/python3
+
+import os
+from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+from matplotlib.animation import FuncAnimation, writers
+
+
+def get_frame(file_list, k):
+    img_path = "./dataset/S1/Seq1/imageSequence/video_0/" + file_list[k]
+    return Image.open(img_path)
 
 
 def animate():
+    fig = plt.figure()
+
+    # animate dataset image stream
+    ax1 = fig.add_subplot(121)
+    file_list = sorted(os.listdir("./dataset/S1/Seq1/imageSequence/video_0/"))
+    im = ax1.imshow(get_frame(file_list, 0))
+
+    # animate 3D pose
     data = np.load("./pose_seq.npz", allow_pickle=True)
     data = data["arr_0"].reshape(1,-1)[0][0]
-    pose = [data[frame].astype('float64') for frame in data.keys()]
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax2 = fig.add_subplot(122, projection='3d')
 
     # Initialize scatters
-    scatters = [ ax.scatter(data[0][p,0:1], data[0][p,1:2], data[0][p,2:]) for p in range(data[0].shape[0]) ]
+    scatters = [ ax2.scatter(data[0][p,0:1], data[0][p,1:2], data[0][p,2:]) for p in range(data[0].shape[0]) ]
 
     # Initialize lines
     bones = (
@@ -28,38 +42,43 @@ def animate():
         xS = (data[0][bone[0],0],data[0][bone[1],0])
         yS = (data[0][bone[0],1],data[0][bone[1],1])
         zS = (data[0][bone[0],2],data[0][bone[1],2])
-        lines_3d[n].append(ax.plot(xS, yS, zS))
+        lines_3d[n].append(ax2.plot(xS, yS, zS))
 
 
-    def update(iteration, data, bones):
+    def update(iter, data, bones):
+        im.set_data(get_frame(file_list, iter))
         for i in range(data[0].shape[0]):
-            scatters[i]._offsets3d = (data[iteration][i,0:1], data[iteration][i,1:2], data[iteration][i,2:])
+            scatters[i]._offsets3d = (data[iter][i,0:1], data[iter][i,1:2], data[iter][i,2:])
 
         for n, bone in enumerate(bones):
-            lines_3d[n][0][0].set_xdata(np.array([data[iteration][bone[0],0],data[iteration][bone[1],0]]))
-            lines_3d[n][0][0].set_ydata(np.array([data[iteration][bone[0],1],data[iteration][bone[1],1]]))
-            lines_3d[n][0][0].set_3d_properties(np.array([data[iteration][bone[0],2],data[iteration][bone[1],2]]), zdir="z")
+            lines_3d[n][0][0].set_xdata(np.array([data[iter][bone[0],0],data[iter][bone[1],0]]))
+            lines_3d[n][0][0].set_ydata(np.array([data[iter][bone[0],1],data[iter][bone[1],1]]))
+            lines_3d[n][0][0].set_3d_properties(np.array([data[iter][bone[0],2],data[iter][bone[1],2]]), zdir="z")
 
 
     # Number of iterations
     iterations = len(data)
 
     # Setting the axes properties
-    ax.set_xlim3d([-1.0, 1.0])
-    ax.set_xticklabels([])
+    ax2.set_xlim3d([-1.0, 1.0])
+    ax2.set_xticklabels([])
 
-    ax.set_ylim3d([-1.0, 1.0])
-    ax.set_yticklabels([])
+    ax2.set_ylim3d([-1.0, 1.0])
+    ax2.set_yticklabels([])
 
-    ax.set_zlim3d([-1.0, 1.0])
-    ax.set_zticklabels([])
+    ax2.set_zlim3d([-1.0, 1.0])
+    ax2.set_zticklabels([])
 
-    ax.set_title('Reconstruction')
-    ax.view_init(elev=-80, azim=-90)
+    ax2.set_title('Reconstruction')
+    ax2.view_init(elev=-90, azim=-90)
 
-    ani = animation.FuncAnimation(fig, update, iterations, fargs=(data, bones),
+    anim = FuncAnimation(fig, update, iterations, fargs=(data, bones),
                                         interval=100, blit=False, repeat=False)
-    plt.show()
+
+    # Writer = writers['ffmpeg']
+    # writer = Writer(fps=fps, metadata={}, bitrate=bitrate)
+    # anim.save(output, writer=writer)
+    anim.save("output.gif", dpi=80, writer='imagemagick')
     plt.close()
 
 
