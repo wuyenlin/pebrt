@@ -58,6 +58,7 @@ def animate():
 
     # Number of iterations
     iterations = len(data)
+    print("number of frames:", iterations)
 
     # Setting the axes properties
     ax2.set_xlim3d([-1.0, 1.0])
@@ -75,10 +76,11 @@ def animate():
     anim = FuncAnimation(fig, update, iterations, fargs=(data, bones),
                                         interval=100, blit=False, repeat=False)
 
-    # Writer = writers['ffmpeg']
-    # writer = Writer(fps=fps, metadata={}, bitrate=bitrate)
-    # anim.save(output, writer=writer)
-    anim.save("output.gif", dpi=80, writer='imagemagick')
+    Writer = writers['ffmpeg']
+    writer = Writer(fps=10, metadata={})
+    anim.save("output.mp4", writer=writer)
+
+    # anim.save("output.gif", dpi=80, writer='imagemagick')
     plt.close()
 
 
