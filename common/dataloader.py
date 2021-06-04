@@ -77,7 +77,7 @@ class Data:
             for frame in data[vid].keys():
                 bbox_start = data[vid][frame]['bbox_start']
                 pts_2d = data[vid][frame]['pts_2d'] - bbox_start
-                gt_2d = self.pop_joints(pts_2d)
+                gt_2d = self.zero_center(self.pop_joints(pts_2d))
 
                 pts_3d = data[vid][frame]['pts_3d']
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
@@ -155,3 +155,20 @@ class Data:
         translate root joint to origin (0,0,0)
         """
         return cam - cam[2,:]
+
+
+    def vec2d(self, input_2d):
+        indices = (
+            (2,1), (1,0), (0,3), (3,4),  # spine + head
+            (0,5), (5,6), (6,7), 
+            (0,8), (8,9), (9,10), # arms
+            (2,14), (11,12), (12,13),
+            (2,11), (14,15), (15,16), # legs
+        )
+        num_bones = len(indices)
+
+        bone_info = np.zeros([num_bones, 2]) # (16, 2)
+        for i in range(num_bones):
+            vec = input_2d[indices[i][1],:] - input_2d[indices[i][0],:]
+            bone_info[i,:] = vec
+        return bone_info
