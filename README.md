@@ -6,6 +6,7 @@ The thesis aims to address the widely challenged computer vision task - Human Po
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
 On top of that, we integrate human anthropometric constraints to improve prediction accuracies and achieved real-time 3D human pose estimation.
 
+![](doc/output.gif)
 
 ## Getting started
 
@@ -28,9 +29,10 @@ After downloading the dataset, run the following command to extract frames and c
 python3 common/mpi_dataset.py
 ```
 
-- [ ] Add kinematic constraints
-- [ ] Online implementations of PEBRT
 - [x] Animate results (see animation.py)
 - [x] Create evaluation metrics for bone rotation error
+- [ ] Fix camera angle issue
+- [ ] Add kinematic constraints
+- [ ] Online implementations of PEBRT
 - [ ] Test evaluation metrics on existing methods
 - [ ] Run on distributed systems (for SLI)
