@@ -24,6 +24,8 @@ def rot(euler) -> torch.tensor:
 
 def euler_from_rot(R: np.array) -> np.array:
     import cv2 as cv
+    if torch.is_tensor(R):
+        R = R.detach().numpy()
     angles = cv.RQDecomp3x3(R)[0]
     return np.radians(angles)
 
