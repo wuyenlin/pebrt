@@ -56,14 +56,17 @@ def mbve(predicted, target):
     """
     MBVE - Mean Bone Vector Error
     """
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
     bs, num_bones = predicted.shape[0], predicted.shape[1]
 
     pred_info = torch.zeros(bs, num_bones, 3)
     tar_info = torch.zeros(bs, num_bones, 3)
 
-    pred = Human(1.8, "cpu")
+    pred = Human(1.8)
     pred_model = pred.update_pose(predicted)
-    tar = Human(1.8, "cpu")
+    tar = Human(1.8)
     tar_model = tar.update_pose(target)
     for b in range(bs):
         pred_info[b,:] = vectorize(pred_model)[:,:3]
@@ -82,6 +85,9 @@ def meae(predicted, target):
     e.g. Decomposing a yields = (0,0,45) deg = (0,0,0.7854) rad
     sum of 3 ele is 0.7854, avg of 16 bones is 0.7854
     """
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
     bs, num_bones = predicted.shape[0], predicted.shape[1]
     predicted = predicted.view(bs,num_bones,3,3)
     target = target.view(bs,num_bones,3,3)
