@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import numpy as np
 import torch
 from torchvision import transforms
 from PIL import Image
@@ -35,11 +36,12 @@ def plot3d(ax, bones, output):
         yS = (output[index[0]][1],output[index[1]][1])
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    ax.autoscale()
-    ax.set_zlim(-1,1)
+    ax.view_init(elev=-90, azim=-90)
+    ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
+    ax.set_ylim3d([-1.0, 1.0])
     ax.set_ylabel("Y")
+    ax.set_zlim3d([-1.0, 1.0])
     ax.set_zlabel("Z")
 
 
@@ -55,7 +57,7 @@ def viz(savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PELTRA(device)
     # net.load_state_dict(torch.load('../archive/peltra/ft_1_cam.bin')['model'])
-    net.load_state_dict(torch.load('./peltra/epoch_5.bin')['model'])
+    net.load_state_dict(torch.load('./peltra/ft_1_zero.bin')['model'])
     net = net.cuda()
     net.eval()
 
@@ -71,8 +73,6 @@ def viz(savefig=False):
 
         ax = fig.add_subplot(2, 4, k+4, projection='3d')
         plot3d(ax, bones, output)
-        plt.xlim(-1,1)
-        plt.ylim(-1,1)
 
     plt.show()
     if savefig:
