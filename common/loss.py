@@ -1,5 +1,9 @@
 import cmath
 import torch
+try:
+    from common.human import *
+except ModuleNotFoundError:
+    from human import *
 
 
 def joint_collision(predicted, target, weight, thres=0.1):
@@ -27,6 +31,7 @@ def maev(predicted, target):
     MAEV: Mean Absolute Error of Vectors
     :param predicted: (bs,16,9) tensor
     :param target:  (bs,16,9) tensor
+    average error of 16 bones
     """
     bs, num_bones = predicted.shape[0], predicted.shape[1]
     predicted = predicted.view(bs,num_bones,3,3)
@@ -34,7 +39,7 @@ def maev(predicted, target):
     w_arr = torch.ones(target.shape[:2])
     for b in range(bs):
         for bone in range(num_bones):
-            M = predicted[b,bone,:,:]
+            M = predicted[b,bone]
             w_arr[b,bone] = is_so(M)
     if torch.cuda.is_available():
         predicted = predicted.cuda()
@@ -45,9 +50,57 @@ def maev(predicted, target):
     return maev
 
 
+# 2. L2 norm on unit bone vectors
+
+def mbve(predicted, target):
+    """
+    MBVE - Mean Bone Vector Error
+    """
+    bs, num_bones = predicted.shape[0], predicted.shape[1]
+
+    pred_info = torch.zeros(bs, num_bones, 3)
+    tar_info = torch.zeros(bs, num_bones, 3)
+
+    pred = Human(1.8, "cpu")
+    pred_model = pred.update_pose(predicted)
+    tar = Human(1.8, "cpu")
+    tar_model = tar.update_pose(target)
+    for b in range(bs):
+        pred_info[b,:] = vectorize(pred_model)[:,:3]
+        tar_info[b,:] = vectorize(tar_model)[:,:3]
+    mbve = torch.norm(pred_info - tar_info)
+    return mbve
+
+
+# 3. Decompose SO(3) into Euler angles
+
+def meae(predicted, target):
+    """
+    MEAE: Mean Euler Angle Error
+    :param predicted: a (1,16,9) tensor
+    :param target: a (1,16,9) tensor
+    e.g. Decomposing a yields = (0,0,45) deg = (0,0,0.7854) rad
+    sum of 3 ele is 0.7854, avg of 16 bones is 0.7854
+    """
+    bs, num_bones = predicted.shape[0], predicted.shape[1]
+    predicted = predicted.view(bs,num_bones,3,3)
+    target = target.view(bs,num_bones,3,3)
+
+    pred_euler = torch.zeros(bs,num_bones,3)
+    tar_euler = torch.zeros(bs,num_bones,3)
+    for b in range(bs):
+        for bone in range(num_bones):
+            pred_euler[b,bone,:] = torch.tensor(euler_from_rot(predicted[b,bone]))
+            tar_euler[b,bone,:] = torch.tensor(euler_from_rot(target[b,bone]))
+    return torch.mean(torch.sum(pred_euler - tar_euler, dim=2))
+
+
 if __name__ == "__main__":
     a = torch.tensor([0.707,-0.707,0,0.707,0.707,0,0,0,1])
     a = a.repeat(16).reshape(1,16,9).to(torch.float32)
     b = torch.eye(3).flatten()
     b = b.repeat(16).reshape(1,16,9).to(torch.float32)
+
     print(maev(a,b))
+    print(meae(a,b))
+    print(mbve(a,b))
