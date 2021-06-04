@@ -25,7 +25,7 @@ def rot(euler) -> torch.tensor:
 def euler_from_rot(R: np.array) -> np.array:
     import cv2 as cv
     if torch.is_tensor(R):
-        R = R.detach().numpy()
+        R = R.detach().cpu().numpy()
     angles = cv.RQDecomp3x3(R)[0]
     return np.radians(angles)
 
@@ -154,7 +154,7 @@ class Human:
             for bone in self.constraints.keys():
                 print(bone, ":\n", self.rot_mat[bone])
 
-        root = self.root
+        root = self.root.to(self.device)
         lower_spine = self.bones['lower_spine']
         neck = self.bones['upper_spine'] + lower_spine
         chin = self.bones['neck'] + neck
