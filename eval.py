@@ -22,6 +22,9 @@ transforms = transforms.Compose([
 def evaluate(test_loader, model, device):
     print("Evaluation mode")
 
+    epoch_loss_e1 = 0.0
+    epoch_loss_e2 = 0.0
+    epoch_loss_e3 = 0.0
     with torch.no_grad():
         model.load_state_dict(torch.load('./peltra/ft_1_zero.bin')['model'])
         model = model.cuda()
@@ -38,13 +41,16 @@ def evaluate(test_loader, model, device):
             e1 = maev(predicted_3d_pos, vec_3d)
             e2 = mbve(predicted_3d_pos, vec_3d)
             e3 = meae(predicted_3d_pos, vec_3d)
-            N += vec_3d.shape[0]*vec_3d.shape[1]
             
+            epoch_loss_e1 += vec_3d.shape[0]*vec_3d.shape[1] * e1.item()
+            epoch_loss_e2 += vec_3d.shape[0]*vec_3d.shape[1] * e2.item()
+            epoch_loss_e3 += vec_3d.shape[0]*vec_3d.shape[1] * e3.item()
+            N += vec_3d.shape[0] * vec_3d.shape[1]
 
     print('----------')
-    print('Protocol #1 Error (MAEV):', e1)
-    print('Protocol #2 Error (L2 Norm):', e2)
-    print('Protocol #3 Error (Euler angles):', e3)
+    print('Protocol #1 Error (MAEV):', e1/N)
+    print('Protocol #2 Error (L2 Norm):', e2/N)
+    print('Protocol #3 Error (Euler angles):', e3/N)
     print('----------')
     
     return e1, e2, e3
