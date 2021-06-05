@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 from common.options import args_parser
-from common.petr import *
 from common.peltra import *
 from common.dataloader import *
 from common.loss import *
@@ -21,10 +20,11 @@ transforms = transforms.Compose([
 
 
 def evaluate(test_loader, model, device):
-    print("Testing starts...")
-    epoch_loss_3d_pos = 0.0
+    print("Evaluation mode")
 
     with torch.no_grad():
+        model.load_state_dict(torch.load('./peltra/ft_1_zero.bin')['model'])
+        model = model.cuda()
         model.eval()
         N = 0
         for data in test_loader:
@@ -35,10 +35,11 @@ def evaluate(test_loader, model, device):
 
             predicted_3d_pos = model(inputs_2d)
 
-            error = maev(predicted_3d_pos, vec_3d)
-            epoch_loss_3d_pos += vec_3d.shape[0]*vec_3d.shape[1] * error.item()
+            e1 = maev(predicted_3d_pos, vec_3d)
+            e2 = mbve(predicted_3d_pos, vec_3d)
+            e3 = meae(predicted_3d_pos, vec_3d)
+            N += vec_3d.shape[0]*vec_3d.shape[1]
             
-    e1 = (epoch_loss_3d_pos / N)
 
     print('----------')
     print('Protocol #1 Error (MAEV):', e1)
@@ -46,15 +47,14 @@ def evaluate(test_loader, model, device):
     print('Protocol #3 Error (Euler angles):', e3)
     print('----------')
     
-    return e1
+    return e1, e2, e3
 
 
 def main(args):
 
     device = torch.device(args.device)
-    model = PELTRA(device)
+    model = PELTRA(device, bs=args.bs)
     model = model.to(device)
-    print(torch.cuda.get_device_name(torch.cuda.current_device()))
 
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 
@@ -67,27 +67,8 @@ def main(args):
     print("INFO: Evaluation Mode")
     test_dataset = Data(args.dataset, transforms, False)
     test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
-    e1, e2, ev = evaluate(test_loader, model, device)
-    return e1, e2, ev
-
-    # param_dicts = [
-    #     {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-    #     {
-    #         "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-    #         "lr": args.lr_backbone,
-    #     },
-    # ]
-
-    # optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-
-    # lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
-
-    # print("INFO: Using optimizer {}".format(optimizer))
-
-    # train_list, val_list = train(args.start_epoch, args.epoch, 
-    #                             train_loader, val_loader, model, device,
-    #                             optimizer, lr_scheduler)
-
+    e1, e2, e3 = evaluate(test_loader, model, device)
+    return e1, e2, e3
 
 if __name__ == "__main__":
     args = args_parser()
