@@ -12,7 +12,7 @@ def get_frame(file_list, k):
     return Image.open(img_path)
 
 
-def animate():
+def animate(format="mp4"):
     fig = plt.figure()
 
     # animate dataset image stream
@@ -59,6 +59,7 @@ def animate():
     # Number of iterations
     iterations = len(data)
     print("number of frames:", iterations)
+    print("Processing...")
 
     # Setting the axes properties
     ax2.set_xlim3d([-1.0, 1.0])
@@ -76,11 +77,15 @@ def animate():
     anim = FuncAnimation(fig, update, iterations, fargs=(data, bones),
                                         interval=100, blit=False, repeat=False)
 
-    Writer = writers['ffmpeg']
-    writer = Writer(fps=10, metadata={})
-    anim.save("output.mp4", writer=writer)
+    if format == "mp4":
+        Writer = writers['ffmpeg']
+        writer = Writer(fps=10, metadata={})
+        anim.save("output.mp4", writer=writer)
+    elif format == "gif":
+        anim.save("output.gif", dpi=80, writer='imagemagick')
+    else:
+        print("Unsupported file format")
 
-    # anim.save("output.gif", dpi=80, writer='imagemagick')
     plt.close()
 
 
