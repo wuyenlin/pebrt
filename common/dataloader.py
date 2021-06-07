@@ -72,8 +72,6 @@ class Data:
 
         for vid in vid_list:
             for frame in data[vid].keys():
-                # bbox_start = data[vid][frame]['bbox_start']
-                # pts_2d = data[vid][frame]['pts_2d'] - bbox_start
                 pts_2d = data[vid][frame]['pts_2d']
                 gt_2d = self.zero_center(self.pop_joints(pts_2d))
 
