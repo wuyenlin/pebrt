@@ -126,9 +126,12 @@ def main(args):
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     train_dataset = Data(args.dataset, transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, \
+        shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+
     val_dataset = Data(args.dataset, transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, \
+        shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
