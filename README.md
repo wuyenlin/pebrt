@@ -6,6 +6,7 @@ The thesis aims to address the widely challenged computer vision task - Human Po
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
 On top of that, we integrate human anthropometric constraints to improve prediction accuracies and achieved real-time 3D human pose estimation.
 
+![](doc/output.gif)
 
 ## Getting started
 
@@ -21,12 +22,17 @@ pip3 install -r requirements.txt
 
 ### Download dataset
 
-The dataset MPI-INF-3DHP used in this project can be downloaded [here](http://gvv.mpi-inf.mpg.de/3dhp-dataset/).
+The MPI-INF-3DHP dataset can be downloaded [here](http://gvv.mpi-inf.mpg.de/3dhp-dataset/).
 
-After downloading the dataset, run the following command to extract frames:
+After downloading the dataset, run the following command to extract frames and create npz files for dataloader:
 ```
-python3 utils/File.py
-python3 utils/merge.py
+python3 common/mpi_dataset.py
 ```
 
+- [x] Animate results (see animation.py)
+- [x] Create evaluation metrics for bone rotation error
+- [ ] Fix camera angle issue
+- [ ] Add kinematic constraints
+- [ ] Online implementations of PEBRT
+- [ ] Test evaluation metrics on existing methods
 - [ ] Run on distributed systems (for SLI)
