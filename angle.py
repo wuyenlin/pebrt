@@ -5,9 +5,6 @@ from common.pebrt import *
 from common.dataloader import *
 from common.loss import *
 
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('Agg')
 from tqdm import tqdm
 import torch
 from torchvision import transforms
@@ -86,6 +83,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 losses_3d_valid[-1] * 1000))
 
         if args.export_training_curves and ep > 3:
+            import matplotlib
+            matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
             plt.figure()
             epoch_x = np.arange(3, len(losses_3d_train)) + 1
             plt.plot(epoch_x, losses_3d_train[3:], '--', color='C0')
