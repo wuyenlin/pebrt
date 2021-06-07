@@ -2,7 +2,8 @@ import numpy as np
 import torch
 import cv2 as cv
 import math, cmath
-
+from math import sin, cos
+from scipy.spatial.transform import Rotation as R
 
 def coco_mpi(coco_joints):
     """
@@ -31,13 +32,6 @@ def coco_mpi(coco_joints):
     mpi_joints[3,:] = (mpi_joints[0,:] + mpi_joints[4,:])/2
 
     return mpi_joints
-
-
-def imshow(img):
-    img = img / 2 + 0.5   
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
 
 
 if __name__ == "__main__":
