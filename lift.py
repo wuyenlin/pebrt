@@ -112,6 +112,43 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     return losses_3d_train , losses_3d_valid
 
 
+def evaluate(test_loader, model, device):
+    print("Evaluation mode")
+
+    epoch_loss_e1 = 0.0
+    epoch_loss_e2 = 0.0
+    epoch_loss_e3 = 0.0
+    with torch.no_grad():
+        model.load_state_dict(torch.load('./peltra/ft_1_zero.bin')['model'])
+        model = model.cuda()
+        model.eval()
+        N = 0
+        for data in test_loader:
+            _, images, inputs_2d, vec_3d = data
+            inputs_2d = inputs_2d.to(device)
+            vec_3d = vec_3d.to(device)
+            images = images.to(device)
+
+            predicted_3d_pos = model(inputs_2d)
+
+            e1 = maev(predicted_3d_pos, vec_3d)
+            e2 = mbve(predicted_3d_pos, vec_3d)
+            e3 = meae(predicted_3d_pos, vec_3d)
+            
+            epoch_loss_e1 += vec_3d.shape[0]*vec_3d.shape[1] * e1.item()
+            epoch_loss_e2 += vec_3d.shape[0]*vec_3d.shape[1] * e2.item()
+            epoch_loss_e3 += vec_3d.shape[0]*vec_3d.shape[1] * e3.item()
+            N += vec_3d.shape[0] * vec_3d.shape[1]
+
+    print('----------')
+    print('Protocol #1 Error (MAEV):', e1/N)
+    print('Protocol #2 Error (L2 Norm):', e2/N)
+    print('Protocol #3 Error (Euler angles):', e3/N)
+    print('----------')
+    
+    return e1, e2, e3
+
+
 def main(args):
     device = torch.device(args.device)
     model = PELTRA(device, bs=args.bs)
@@ -125,32 +162,39 @@ def main(args):
         model_params += parameter.numel()
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
-    train_dataset = Data(args.dataset, transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, \
-        shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+    if args.eval:
+        print("INFO: Evaluation Mode")
+        test_dataset = Data(args.dataset, transforms, False)
+        test_loader = DataLoader(test_dataset, batch_size=args.bs, \
+            shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+        e1, e2, e3 = evaluate(test_loader, model, device)
 
-    val_dataset = Data(args.dataset, transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, \
-        shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+    else:
+        train_dataset = Data(args.dataset, transforms)
+        train_loader = DataLoader(train_dataset, batch_size=args.bs, \
+            shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
+        val_dataset = Data(args.dataset, transforms, False)
+        val_loader = DataLoader(val_dataset, batch_size=args.bs, \
+            shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
-    if args.resume:
-        checkpoint = torch.load(args.resume, map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
-        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            args.start_epoch = checkpoint['epoch'] + 1
+        if args.resume:
+            checkpoint = torch.load(args.resume, map_location='cpu')
+            model.load_state_dict(checkpoint['model'])
 
-    print("INFO: Using optimizer {}".format(optimizer))
+            if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+                optimizer.load_state_dict(checkpoint['optimizer'])
+                lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+                args.start_epoch = checkpoint['epoch'] + 1
 
-    train_list, val_list = train(args.start_epoch, args.epoch, 
-                                train_loader, val_loader, model, device,
-                                optimizer, lr_scheduler)
+        print("INFO: Using optimizer {}".format(optimizer))
 
+        train_list, val_list = train(args.start_epoch, args.epoch, 
+                                    train_loader, val_loader, model, device,
+                                    optimizer, lr_scheduler)
 
 if __name__ == "__main__":
     args = args_parser()
