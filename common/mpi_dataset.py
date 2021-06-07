@@ -168,7 +168,7 @@ class Video:
         return False
 
 
-    def save_cropped(self, save_img=False, save_txt=True, full=False):
+    def save_cropped(self, save_img=False, save_npz=True, full=False):
         data = {}
         cap = cv.VideoCapture(self.avi_path)
         if (cap.isOpened()==False):
@@ -212,7 +212,7 @@ class Video:
                             except FileExistsError:
                                 pass
 
-                        if save_txt:
+                        if save_npz:
                             data[k]["directory"] = filename
                             data[k]["bbox_start"] = start
                             data[k]["bbox_end"] = end
