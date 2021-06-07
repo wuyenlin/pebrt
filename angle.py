@@ -36,9 +36,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, image, inputs_3d, vec_3d = data
+            _, image, inputs_2d, vec_3d = data
             image = image.to(device)
-            inputs_3d = inputs_3d.to(device)
+            inputs_2d = inputs_2d.to(device)
             vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
@@ -63,9 +63,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, image, inputs_3d, vec_3d = data
+                _, image, inputs_2d, vec_3d = data
                 image = image.to(device)
-                inputs_3d = inputs_3d.to(device)
+                inputs_2d = inputs_2d.to(device)
                 vec_3d = vec_3d.to(device)
 
                 predicted_3d_pos = model(image)
@@ -117,7 +117,7 @@ def main(args):
 
     device = torch.device(args.device)
     model = PEBRT(device, bs=args.bs)
-    print("INFO: Using PEBRT and Gram-Schmidt process to recover SO(3) rotation matrix")
+    print("INFO: Using end-to-end PEBRT and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Using GPU device {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
 

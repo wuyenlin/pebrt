@@ -21,8 +21,6 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
     :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
     
     Such that vec2 = R @ vec1
-
-    (Credit to Peter from https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space)
     """
     a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
     v = np.cross(a, b)
@@ -48,7 +46,6 @@ def convert_gt(gt_3d: np.array, t_info) -> np.array:
     for k in range(num_row):
         R = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
         R_stack[k,:] = R
-        
     return R_stack
 
 
@@ -75,9 +72,8 @@ class Data:
 
         for vid in vid_list:
             for frame in data[vid].keys():
-                bbox_start = data[vid][frame]['bbox_start']
-                pts_2d = data[vid][frame]['pts_2d'] - bbox_start
-                gt_2d = self.pop_joints(pts_2d)
+                pts_2d = data[vid][frame]['pts_2d']
+                gt_2d = self.zero_center(self.pop_joints(pts_2d))
 
                 pts_3d = data[vid][frame]['pts_3d']
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
