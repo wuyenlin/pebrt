@@ -1,10 +1,7 @@
 import numpy as np
 import cv2 as cv
 from PIL import Image
-try:
-    from common.human import *
-except ModuleNotFoundError:
-    from human import *
+from common.human import *
 
 
 def collate_fn(batch):
