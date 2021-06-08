@@ -1,11 +1,7 @@
 import torch
 import torch.nn as nn
 import cmath
-
-try:
-    from common.embed import *
-except ModuleNotFoundError:
-    from embed import *
+from common.embed import *
 
 
 class TransformerEncoder(nn.Module):
@@ -84,10 +80,3 @@ class PELTRA(nn.Module):
         x = self.gs(x)
 
         return x
-
-
-if __name__ == "__main__":
-    a = torch.rand(2,17,2)
-    model = PELTRA(device="cpu",bs=2)
-    output = model(a)
-    print(output.shape)
