@@ -201,6 +201,8 @@ def vectorize(gt_3d) -> torch.tensor:
     return bone_info
 
 
+# functions below are for demonstration and debuggging purpose
+
 def vis_model(model):
     indices = (
         (2,1), (1,0), (0,3), (3,4),  # spine + head
@@ -232,7 +234,7 @@ def vis_model(model):
 def rand_pose():
     h = Human(1.8, "cpu")
     euler = (250,0,0)
-    a = rot(euler).repeat(16)
+    a = rot(euler).flatten().repeat(16)
     model = h.update_pose(a)
     print(model)
     print(h.punish_list)
