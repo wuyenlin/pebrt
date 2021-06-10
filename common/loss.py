@@ -6,6 +6,20 @@ except ModuleNotFoundError:
     from human import *
 
 
+def mpjpe(predicted, target):
+    """
+    Mean per-joint position error (i.e. mean Euclidean distance),
+    often referred to as "Protocol #1" in many papers.
+    Borrowed from 'facebookresearch/VideoPose3D'.
+    (https://github.com/facebookresearch/VideoPose3D/blob/master/common/loss.py)
+    """
+    assert predicted.shape == target.shape, "{}, {}".format(predicted.shape, target.shape)
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+    return torch.mean(torch.norm(predicted - target, dim=len(target.shape)-1))
+
+
 def joint_collision(predicted, target, weight, thres=0.1):
     """
     verify whether predicted and target joints lie within a given threshold
