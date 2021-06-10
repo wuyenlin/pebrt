@@ -3,9 +3,10 @@ import cmath
 import torch
 
 
-def rot(euler) -> torch.tensor:
+def rot(euler: tuple) -> torch.tensor:
     """
     General rotation matrix
+    :param euler: (a, b, r)
     :param a: yaw (rad) - rotation along z axis
     :param b: pitch (rad) - rotation along y axis
     :param r: roll (rad) - rotation along x axis
@@ -31,9 +32,7 @@ def euler_from_rot(R: np.array) -> np.array:
 
 
 class Human:
-    """
-    Implementation of Winter human model
-    """
+    """ Implementation of Winter human model """
     def __init__(self, H, device="cuda:0"):
         self.device = device
         self.half_face = 0.066*H
@@ -69,7 +68,6 @@ class Human:
 
 
     def _init_bones(self):
-        """get bones as vectors"""
         self.bones = {
             'lower_spine': torch.tensor([0, -self.lower_spine, 0]),
             'upper_spine': torch.tensor([0, -self.upper_spine, 0]),
@@ -95,19 +93,20 @@ class Human:
 
     def check_constraints(self, bone, R: np.array):
         """
-        This function punishes if NN outputs are beyond joint rotation constraints.
+        Punishes if NN outputs are beyond joint rotation constraints.
         """
         punish_w = 1
         euler_angles = euler_from_rot(np.array(R).reshape(3,-1))
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if euler_angles[i] < low:
-                euler_angles[i] = low
-                punish_w += 0.5
-            elif euler_angles[i] > high:
-                euler_angles[i] = high
-                punish_w += 0.5
+            if high != low and low != 0:
+                if euler_angles[i] < low:
+                    euler_angles[i] = low
+                    punish_w += 0.5
+                elif euler_angles[i] > high:
+                    euler_angles[i] = high
+                    punish_w += 0.5
         # sort angles in z-y-x order for rot function
         euler_angles[0], euler_angles[2] = euler_angles[2], euler_angles[0]
         return rot(euler_angles), punish_w
@@ -124,11 +123,10 @@ class Human:
         k = 0
         for bone in self.constraints.keys():
             R = elem[9*k:9*(k+1)]
-            # R, punish_w = self.check_constraints(bone, R)
-            # self.punish_list.append(punish_w)
+            R, punish_w = self.check_constraints(bone, R)
+            self.punish_list.append(punish_w)
 
-            # R = f.normalize(R.to(torch.float32).view(3,-1))
-            R = f.normalize(torch.tensor(R, dtype=torch.float32).view(3,-1))
+            R = f.normalize(R.to(torch.float32).view(3,-1))
             assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
             self.rot_mat[bone] = R
             k += 1
@@ -145,14 +143,11 @@ class Human:
             self.bones = {bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys()}
 
 
-    def update_pose(self, elem=None, debug=False):
+    def update_pose(self, elem=None):
         """
         Assemble bones to make a human body
         """
         self.update_bones(elem)
-        if debug:
-            for bone in self.constraints.keys():
-                print(bone, ":\n", self.rot_mat[bone])
 
         root = self.root.to(self.device)
         lower_spine = self.bones['lower_spine']
@@ -238,7 +233,7 @@ def vis_model(model):
 
 def rand_pose():
     h = Human(1.8, "cpu")
-    euler = (0,0,0)
+    euler = (250,0,0)
     a = rot(euler).repeat(16)
     model = h.update_pose(a)
     print(model)

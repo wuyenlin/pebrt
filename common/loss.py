@@ -1,9 +1,6 @@
 import cmath
 import torch
-try:
-    from common.human import *
-except ModuleNotFoundError:
-    from human import *
+from common.human import *
 
 
 def mpjpe(predicted, target):
@@ -113,14 +110,3 @@ def meae(predicted, target):
             pred_euler[b,bone,:] = torch.tensor(euler_from_rot(predicted[b,bone]))
             tar_euler[b,bone,:] = torch.tensor(euler_from_rot(target[b,bone]))
     return torch.mean(torch.sum(pred_euler - tar_euler, dim=2))
-
-
-if __name__ == "__main__":
-    a = torch.tensor([0.707,-0.707,0,0.707,0.707,0,0,0,1])
-    a = a.repeat(16).reshape(1,16,9).to(torch.float32)
-    b = torch.eye(3).flatten()
-    b = b.repeat(16).reshape(1,16,9).to(torch.float32)
-
-    print(maev(a,b))
-    print(meae(a,b))
-    print(mbve(a,b))

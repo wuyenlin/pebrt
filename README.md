@@ -10,14 +10,17 @@ On top of that, we integrate human kinemtic constraints to improve prediction ac
 ## PEBRT (Pose Estimation by Bone Rotation using Transformer)
 
 PEBRT estimates rotation matrix parameters for each bone that are recovered by Gram-Schmidt orthogonalization.
+It integrates a human kinematic model in backend.
 
 ![](doc/output.gif)
 
 ## PETR (Pose Estimation using TRansformer)
 
 PETR is an end-to-end lifting pipeline used to predict human 3D keypoints from RGB images.
+It uses pre-trained [HRNet](https://github.com/HRNet/HigherHRNet-Human-Pose-Estimation) as backbone and could be later finetuned.
 
 ![](doc/demo_1.png)
+
 
 ## Getting started
 
