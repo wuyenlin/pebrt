@@ -19,8 +19,8 @@ def rot(euler: tuple) -> torch.tensor:
     row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
     row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
     R = torch.stack((row1, row2, row3), 0)
-    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-    return R.flatten()
+    assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+    return R
 
 
 def euler_from_rot(R: np.array) -> np.array:
@@ -93,9 +93,10 @@ class Human:
 
     def check_constraints(self, bone, R: np.array):
         """
-        Punishes if NN outputs are beyond joint rotation constraints.
+        Punish (by adding weights) if NN outputs are beyond joint rotation constraints.
         """
-        punish_w = 1
+        import torch.nn.functional as f
+        punish_w = 1.0
         euler_angles = euler_from_rot(np.array(R).reshape(3,-1))
         for i in range(3):
             low = self.constraints[bone][i][0]
@@ -103,13 +104,15 @@ class Human:
             if high != low and low != 0:
                 if euler_angles[i] < low:
                     euler_angles[i] = low
-                    punish_w += 0.5
+                    punish_w += 1
                 elif euler_angles[i] > high:
                     euler_angles[i] = high
-                    punish_w += 0.5
+                    punish_w += 1
         # sort angles in z-y-x order for rot function
         euler_angles[0], euler_angles[2] = euler_angles[2], euler_angles[0]
-        return rot(euler_angles), punish_w
+        R = f.normalize(rot(euler_angles).to(torch.float32))
+        assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+        return R, punish_w
 
 
     def sort_rot(self, elem):
@@ -117,18 +120,13 @@ class Human:
         :param ang: a list of 144 elements (9 * 16)
         process PETRA output to rotation matrix of 16 bones
         """
-        import torch.nn.functional as f
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
         k = 0
         for bone in self.constraints.keys():
             R = elem[9*k:9*(k+1)]
-            R, punish_w = self.check_constraints(bone, R)
+            self.rot_mat[bone], punish_w = self.check_constraints(bone, R)
             self.punish_list.append(punish_w)
-
-            R = f.normalize(R.to(torch.float32).view(3,-1))
-            assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
-            self.rot_mat[bone] = R
             k += 1
 
 
