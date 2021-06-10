@@ -115,6 +115,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 def evaluate(test_loader, model, device):
     print("Evaluation mode")
 
+    epoch_loss_e0 = 0.0
     epoch_loss_e1 = 0.0
     epoch_loss_e2 = 0.0
     epoch_loss_e3 = 0.0
@@ -131,22 +132,25 @@ def evaluate(test_loader, model, device):
 
             predicted_3d_pos = model(inputs_2d)
 
+            e0 = mpjpe(predicted_3d_pos, vec_3d)
             e1 = maev(predicted_3d_pos, vec_3d)
             e2 = mbve(predicted_3d_pos, vec_3d)
             e3 = meae(predicted_3d_pos, vec_3d)
             
+            epoch_loss_e0 += vec_3d.shape[0]*vec_3d.shape[1] * e0.item()
             epoch_loss_e1 += vec_3d.shape[0]*vec_3d.shape[1] * e1.item()
             epoch_loss_e2 += vec_3d.shape[0]*vec_3d.shape[1] * e2.item()
             epoch_loss_e3 += vec_3d.shape[0]*vec_3d.shape[1] * e3.item()
             N += vec_3d.shape[0] * vec_3d.shape[1]
 
     print('----------')
-    print('Protocol #1 Error (MAEV):', e1/N)
-    print('Protocol #2 Error (L2 Norm):', e2/N)
-    print('Protocol #3 Error (Euler angles):', e3/N)
+    print('Protocol #0 Error (MPJPE):\t', epoch_loss_e0*1000/N, "\t(mm)")
+    print('Protocol #1 Error (MAEV):\t', epoch_loss_e1/N)
+    print('Protocol #2 Error (L2 Norm):\t', epoch_loss_e2*1000/N, "\t (mm)")
+    print('Protocol #3 Error (Euler):\t', epoch_loss_e3/N, "\t(rad)")
     print('----------')
     
-    return e1, e2, e3
+    return e0, e1, e2, e3
 
 
 def main(args):
@@ -155,7 +159,7 @@ def main(args):
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
-    print("INFO: Training using dataset {}.".format(args.dataset))
+    print("INFO: Training using dataset {}".format(args.dataset))
 
     model_params = 0
     for parameter in model.parameters():
@@ -167,7 +171,7 @@ def main(args):
         test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=args.bs, \
             shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-        e1, e2, e3 = evaluate(test_loader, model, device)
+        e0, e1, e2, e3 = evaluate(test_loader, model, device)
 
     else:
         train_dataset = Data(args.dataset, transforms)
