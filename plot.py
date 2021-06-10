@@ -66,7 +66,7 @@ def viz(savefig=False):
         ax = fig.add_subplot(2, 4, k)
         plt.imshow(Image.open(img_path[k-1]))
 
-        pts = torch.tensor(kpts[k-1].unsqueeze(0)).cuda()
+        pts = kpts[k-1].unsqueeze(0).cuda()
         output = net(pts)
         h = Human(1.8, "cpu")
         output = h.update_pose(output.detach().numpy())
