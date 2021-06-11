@@ -25,7 +25,7 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
 def rot(euler: tuple) -> torch.tensor:
     """
     General rotation matrix
-    :param euler: (a, b, r)
+    :param euler: (a, b, r) in ZYX
     :param a: yaw (rad) - rotation along z axis
     :param b: pitch (rad) - rotation along y axis
     :param r: roll (rad) - rotation along x axis
@@ -43,12 +43,16 @@ def rot(euler: tuple) -> torch.tensor:
 
 
 def rot_to_euler(R: np.array) -> np.array:
+    """
+    :return: Euler angles in ZYX
+    """
     import cv2 as cv
-    import math
     if torch.is_tensor(R):
         R = R.detach().cpu().numpy()
     angles = cv.RQDecomp3x3(R)[0]
-    return np.radians(angles) % math.pi
+    angles = np.radians(angles)
+    angles[0], angles[2] = angles[2], angles[0]
+    return angles
 
 
 class Human:
@@ -72,18 +76,19 @@ class Human:
             'head': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
 
             'l_clavicle': ((0,0), (0,0), (0,0)), #4
-            'l_upper_arm': ((-1.57,3.14), (-0.707,2.27), (-1.57,2.28)),
-            'l_lower_arm': ((0,0), (0,0), (-2.62,0)),
+            'l_upper_arm': ((0,0), (-0.707,2.27), (-1.57,3.14)),
+            'l_lower_arm': ((0,0), (0,2.27), (0,0)),
             'r_clavicle': ((0,0), (0,0), (0,0)),
-            'r_upper_arm': ((-1.57,3.14), (-2.27,0.707), (-2.28,1.57)),
-            'r_lower_arm': ((0,0), (0,0), (0,2.62)),
+            'l_upper_arm': ((0,0), (-2.27,0.707), (-1.57,3.14)),
+            'r_upper_arm': ((0,0), (0,0), (0,0)),
+            'r_lower_arm': ((0,0), (-2.27,0), (0,0)),
 
             'l_hip': ((0,0), (0,0), (0,0)), #10
-            'l_thigh': ((-2.09,0.52), (-0.785,0.785), (-0.87,0.35)),
-            'l_calf': ((-2.09,2.79), (0,0), (-0.87,0.35)),
+            'l_thigh': ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
+            'l_calf': ((0,0), (0,0), (0,2.79)),
             'r_hip': ((0,0), (0,0), (0,0)),
-            'r_thigh': ((-0.52,2.09), (-0.785,0.785), (-0.35,0.87)),
-            'r_calf': ((-2.09,2.79), (0,0), (-0.35,0.87)),
+            'r_thigh': ((-0.35,0.87), (-0.785,0.785), (-0.52,2.09)),
+            'r_calf': ((0,0), (0,0), (0,2.79)),
         }
 
 
@@ -111,8 +116,6 @@ class Human:
         self.bones = {bone: self.bones[bone].to(self.device) for bone in self.bones.keys()}
         
 
-    def check_relative(self, pairs):
-        pass
 
     def check_constraints(self, bone, R: np.array):
         """
@@ -121,32 +124,24 @@ class Human:
         import torch.nn.functional as f
         punish_w = 1
         euler_angles = rot_to_euler(np.array(R).reshape(3,-1))
-        print(euler_angles)
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if high != low and low != 0:
+            if high != low and high != 0:
                 if euler_angles[i] < low:
-                    print(euler_angles[i])
                     euler_angles[i] = low
                     punish_w += 1
-                    print(low)
                 elif euler_angles[i] > high:
-                    print(euler_angles[i])
                     euler_angles[i] = high
                     punish_w += 1
-                    print(high)
-        # sort angles in z-y-x order for rot function
-        euler_angles[0], euler_angles[2] = euler_angles[2], euler_angles[0]
         R = f.normalize(rot(euler_angles).to(torch.float32))
-        assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
         return R, punish_w
 
 
     def sort_rot(self, elem):
         """
         :param ang: a list of 144 elements (9 * 16)
-        process PETRA output to rotation matrix of 16 bones
+        process NN output to rotation matrix of 16 bones
         """
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
@@ -263,12 +258,11 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    # k = 6
-    # a[9*k:9*k+9] = rot((-2.7,0,0)).flatten()
-    k = 6
-    a[9*k:9*k+9] = rot((1,2,0)).flatten()
+    k = 11
+    a[9*k:9*k+9] = rot((0,0,-1)).flatten()
+    k = 12
+    a[9*k:9*k+9] = rot((0,0,2.7)).flatten()
     model = h.update_pose(a)
-    print(model)
     print(h.punish_list)
     vis_model(model)
 
