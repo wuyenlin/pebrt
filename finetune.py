@@ -115,46 +115,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     return losses_3d_train , losses_3d_valid
 
 
-def evaluate(test_loader, model, device):
-    print("Testing starts...")
-    epoch_loss_3d_pos = 0.0
-    epoch_loss_3d_pos_procrustes = 0.0
-    epoch_loss_3d_vel = 0.0
-
-    with torch.no_grad():
-        model.eval()
-        N = 0
-        for data in test_loader:
-            _, images, _, inputs_3d = data
-            inputs_3d = inputs_3d.to(device)
-            images = images.to(device)
-
-            _, predicted_3d_pos = model(images)
-            error = mpjpe(predicted_3d_pos, inputs_3d)
-
-            epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
-            N += inputs_3d.shape[0] * inputs_3d.shape[1]
-            
-            inputs = inputs_3d.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
-            predicted_3d_pos = predicted_3d_pos.cpu().numpy().reshape(-1, inputs_3d.shape[-2], inputs_3d.shape[-1])
-
-            epoch_loss_3d_pos_procrustes += inputs_3d.shape[0]*inputs_3d.shape[1] * p_mpjpe(predicted_3d_pos, inputs)
-
-            epoch_loss_3d_vel += inputs_3d.shape[0]*inputs_3d.shape[1] * mean_velocity_error(predicted_3d_pos, inputs)
-
-    e1 = (epoch_loss_3d_pos / N)*1000
-    e2 = (epoch_loss_3d_pos_procrustes / N)*1000
-    ev = (epoch_loss_3d_vel / N)*1000
-
-    print('----------')
-    print('Protocol #1 Error (MPJPE):', e1, 'mm')
-    print('Protocol #2 Error (P-MPJPE):', e2, 'mm')
-    print('Velocity Error (MPJVE):', ev, 'mm')
-    print('----------')
-    
-    return e1, e2, ev
-
-
 def main(args):
 
     device = torch.device(args.device)
