@@ -3,9 +3,29 @@ import cmath
 import torch
 
 
-def rot(euler) -> torch.tensor:
+def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
+    """ 
+    Find the rotation matrix that aligns vec1 to vec2
+    :param vec1: A 3d "source" vector
+    :param vec2: A 3d "destination" vector
+
+    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    
+    Such that vec2 = R @ vec1
+    """
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    c = np.dot(a, b)
+    s = np.linalg.norm(v)
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    return R
+
+
+def rot(euler: tuple) -> torch.tensor:
     """
     General rotation matrix
+    :param euler: (a, b, r) in ZYX
     :param a: yaw (rad) - rotation along z axis
     :param b: pitch (rad) - rotation along y axis
     :param r: roll (rad) - rotation along x axis
@@ -18,20 +38,25 @@ def rot(euler) -> torch.tensor:
     row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
     row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
     R = torch.stack((row1, row2, row3), 0)
-    assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
-    return R.flatten()
+    assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+    return R
 
 
-def euler_from_rot(R: np.array) -> np.array:
+def rot_to_euler(R: np.array) -> np.array:
+    """
+    :return: Euler angles in ZYX
+    """
     import cv2 as cv
+    if torch.is_tensor(R):
+        R = R.detach().cpu().numpy()
     angles = cv.RQDecomp3x3(R)[0]
-    return np.radians(angles)
+    angles = np.radians(angles)
+    angles[0], angles[2] = angles[2], angles[0]
+    return angles
 
 
 class Human:
-    """
-    Implementation of Winter human model
-    """
+    """ Implementation of Winter human model """
     def __init__(self, H, device="cuda:0"):
         self.device = device
         self.half_face = 0.066*H
@@ -50,24 +75,24 @@ class Human:
             'neck': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
             'head': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
 
-            'l_clavicle': ((0,0), (0,0), (0,0)),
-            'l_upper_arm': ((0,0), (-0.707,2.27), (-1.57,2.28)),
-            'l_lower_arm': ((0,0), (-0.707,2.27), (-4.19,2.28)),
+            'l_clavicle': ((0,0), (0,0), (0,0)), #4
+            'l_upper_arm': ((0,0), (-0.707,2.27), (-1.57,3.14)),
+            'l_lower_arm': ((0,0), (0,2.27), (0,0)),
             'r_clavicle': ((0,0), (0,0), (0,0)),
-            'r_upper_arm': ((0,0), (-2.27,0.707), (-2.28,1.57)),
-            'r_lower_arm': ((0,0), (-2.27,0.707), (-2.28,4.19)),
+            'l_upper_arm': ((0,0), (-2.27,0.707), (-1.57,3.14)),
+            'r_upper_arm': ((0,0), (0,0), (0,0)),
+            'r_lower_arm': ((0,0), (-2.27,0), (0,0)),
 
-            'l_hip': ((0,0), (0,0), (0,0)),
-            'l_thigh': ((-2.09,0.52), (0,0), (-0.87,0.35)),
-            'l_calf': ((-2.09,2.79), (0,0), (-0.87,0.35)),
+            'l_hip': ((0,0), (0,0), (0,0)), #10
+            'l_thigh': ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
+            'l_calf': ((0,0), (0,0), (0,2.79)),
             'r_hip': ((0,0), (0,0), (0,0)),
-            'r_thigh': ((-0.52,2.09), (0,0), (-0.35,0.87)),
-            'r_calf': ((-2.09,2.79), (0,0), (-0.35,0.87)),
+            'r_thigh': ((-0.35,0.87), (-0.785,0.785), (-0.52,2.09)),
+            'r_calf': ((0,0), (0,0), (0,2.79)),
         }
 
 
     def _init_bones(self):
-        """get bones as vectors"""
         self.bones = {
             'lower_spine': torch.tensor([0, -self.lower_spine, 0]),
             'upper_spine': torch.tensor([0, -self.upper_spine, 0]),
@@ -91,44 +116,40 @@ class Human:
         self.bones = {bone: self.bones[bone].to(self.device) for bone in self.bones.keys()}
         
 
+
     def check_constraints(self, bone, R: np.array):
         """
-        This function punishes if NN outputs are beyond joint rotation constraints.
+        Punish (by adding weights) if NN outputs are beyond joint rotation constraints.
         """
+        import torch.nn.functional as f
         punish_w = 1
-        euler_angles = euler_from_rot(np.array(R).reshape(3,-1))
+        euler_angles = rot_to_euler(np.array(R).reshape(3,-1))
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if euler_angles[i] < low:
-                euler_angles[i] = low
-                punish_w += 0.5
-            elif euler_angles[i] > high:
-                euler_angles[i] = high
-                punish_w += 0.5
-        # sort angles in z-y-x order for rot function
-        euler_angles[0], euler_angles[2] = euler_angles[2], euler_angles[0]
-        return rot(euler_angles), punish_w
+            if high != low and high != 0:
+                if euler_angles[i] < low:
+                    euler_angles[i] = low
+                    punish_w += 1
+                elif euler_angles[i] > high:
+                    euler_angles[i] = high
+                    punish_w += 1
+        R = f.normalize(rot(euler_angles).to(torch.float32))
+        return R, punish_w
 
 
     def sort_rot(self, elem):
         """
         :param ang: a list of 144 elements (9 * 16)
-        process PETRA output to rotation matrix of 16 bones
+        process NN output to rotation matrix of 16 bones
         """
-        import torch.nn.functional as f
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
         k = 0
         for bone in self.constraints.keys():
             R = elem[9*k:9*(k+1)]
-            # R, punish_w = self.check_constraints(bone, R)
-            # self.punish_list.append(punish_w)
-
-            # R = f.normalize(R.to(torch.float32).view(3,-1))
-            R = f.normalize(torch.tensor(R, dtype=torch.float32).view(3,-1))
-            assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
-            self.rot_mat[bone] = R
+            self.rot_mat[bone], punish_w = self.check_constraints(bone, R)
+            self.punish_list.append(punish_w)
             k += 1
 
 
@@ -140,17 +161,14 @@ class Human:
         self._init_bones()
         if elem is not None:
             self.sort_rot(elem)
-            self.bones = {bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys()}
+            self.bones = { bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys() }
 
 
-    def update_pose(self, elem=None, debug=False):
+    def update_pose(self, elem=None):
         """
         Assemble bones to make a human body
         """
         self.update_bones(elem)
-        if debug:
-            for bone in self.constraints.keys():
-                print(bone, ":\n", self.rot_mat[bone])
 
         root = self.root
         lower_spine = self.bones['lower_spine']
@@ -206,6 +224,8 @@ def vectorize(gt_3d) -> torch.tensor:
     return bone_info
 
 
+# functions below are for demonstration and debuggging purpose
+
 def vis_model(model):
     indices = (
         (2,1), (1,0), (0,3), (3,4),  # spine + head
@@ -237,9 +257,12 @@ def vis_model(model):
 def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
-    a = rot(euler).repeat(16)
+    a = rot(euler).flatten().repeat(16)
+    k = 11
+    a[9*k:9*k+9] = rot((0,0,-1)).flatten()
+    k = 12
+    a[9*k:9*k+9] = rot((0,0,2.7)).flatten()
     model = h.update_pose(a)
-    print(model)
     print(h.punish_list)
     vis_model(model)
 
