@@ -46,6 +46,14 @@ class Human:
         self.thigh, self.calf = 0.245*H, 0.246*H
         self.root = torch.zeros(3, device=self.device)
 
+        self.child = {
+            # child : parent
+            "l_lower_arm": "l_upper_arm",
+            "r_lower_arm": "r_upper_arm",
+            "l_calf": "l_thigh",
+            "r_calf": "r_thigh",
+        }
+
         self.constraints = {
             'lower_spine': ((-0.52,1.31), (-0.52,0.52), (-0.61,0.61)),
             'upper_spine': ((-0.52,1.57), (-0.52,0.52), (-0.61,0.61)),
@@ -124,23 +132,14 @@ class Human:
         """
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
-        child = {
-            # child : parent
-            "l_lower_arm": "l_upper_arm",
-            "r_lower_arm": "r_upper_arm",
-            "l_calf": "l_thigh",
-            "r_calf": "r_thigh",
-        }
-        k = 0
-        for bone in self.constraints.keys():
+        for k, bone in enumerate(self.constraints.keys()):
             R = elem[9*k:9*(k+1)]
-            if not bone in child.keys():
+            if not bone in self.child.keys():
                 self.rot_mat[bone], punish_w = self.check_constraints(bone, R)
             else:
-                parent = child[bone]
+                parent = self.child[bone]
                 self.rot_mat[bone], punish_w = self.check_constraints(bone, R, self.rot_mat[parent])
             self.punish_list.append(punish_w)
-            k += 1
 
 
     def update_bones(self, elem=None):
