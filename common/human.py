@@ -3,25 +3,6 @@ import cmath
 import torch
 
 
-def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
-    """ 
-    Find the rotation matrix R that aligns vec1 to vec2,
-    such that vec2 = R @ vec1
-
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-
-    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-    """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-    return R
-
-
 def rot(euler: tuple) -> torch.tensor:
     """
     General rotation matrix
@@ -117,7 +98,7 @@ class Human:
         Punish (by adding weights) if NN outputs are beyond joint rotation constraints.
         """
         import torch.nn.functional as f
-        punish_w = 1
+        punish_w = 1.0
         euler_angles = rot_to_euler(np.array(R).reshape(3,-1))
         if parent is not None:
             parent_angles = rot_to_euler(parent.detach().numpy())
@@ -128,10 +109,10 @@ class Human:
             if high != low and high != 0:
                 if euler_angles[i] < low:
                     euler_angles[i] = low
-                    punish_w += 1
+                    punish_w += 1.0
                 elif euler_angles[i] > high:
                     euler_angles[i] = high
-                    punish_w += 1
+                    punish_w += 1.0
         R = f.normalize(rot(euler_angles).to(torch.float32))
         return R, punish_w
 
@@ -202,7 +183,6 @@ class Human:
         self.model = torch.stack((neck, lower_spine, root, chin, nose,
                 l_shoulder, l_elbow, l_wrist, r_shoulder, r_elbow, r_wrist,
                 l_hip, l_knee, l_ankle, r_hip, r_knee, r_ankle), 0)
-        
         return self.model
 
 
