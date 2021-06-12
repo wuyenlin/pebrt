@@ -9,8 +9,8 @@ On top of that, we integrate human kinemtic constraints to improve prediction ac
 
 ## PEBRT (Pose Estimation by Bone Rotation using Transformer)
 
-PEBRT estimates rotation matrix parameters for each bone that are recovered by Gram-Schmidt orthogonalization.
-It integrates a human kinematic model in backend.
+PEBRT estimates rotation matrix parameters for each bone which are casted to a human kinematic model.
+Each rotation matrix is recovered by Gram-Schmidt orthogonalization.
 
 ![](doc/output.gif)
 
@@ -28,6 +28,7 @@ Make sure there is 200GB on local hard drive in order to save the original datas
 
 ### Installation
 
+Clone the repository and install required modules.
 ```
 git clone https://github.com/wuyenlin/thesis
 cd thesis/
@@ -43,10 +44,12 @@ After downloading the dataset, run the following command to extract frames and c
 python3 common/mpi_dataset.py
 ```
 
+### Download pre-trained weights
+
 - [x] Animate results (see animation.py)
 - [x] Create evaluation metrics for bone rotation error
+- [x] Add kinematic constraints
+- [ ] Online implementations of PEBRT (training & finetuning now)
 - [ ] Fix camera angle issue
-- [ ] Add kinematic constraints
-- [ ] Online implementations of PEBRT
 - [ ] Test evaluation metrics on existing methods
 - [ ] Run on distributed systems (for SLI)
