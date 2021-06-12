@@ -92,7 +92,8 @@ class Video:
     def calib(self, nframe):
         self.cam_matrix()
         self.parse_frame(nframe)
-        ret, rvec, tvec = cv.solvePnP(self.objPoint, self.imgPoint, self.camMatrix, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
+        ret, rvec, tvec = cv.solvePnP(self.objPoint, self.imgPoint, \
+            self.camMatrix, np.zeros(4), flags=cv.SOLVEPNP_EPNP)
         
         assert ret
         self.rvec = rvec
@@ -105,7 +106,8 @@ class Video:
         arrow = []
         arrow.append(self.root)
         arrow.append(400*(self.n_vec/norm(self.n_vec))+self.root) # adjust normal vector length
-        projected, _ = cv.projectPoints(np.float32(arrow), self.rvec, self.tvec, self.camMatrix, self.dist)
+        projected, _ = cv.projectPoints(np.float32(arrow), \
+            self.rvec, self.tvec, self.camMatrix, self.dist)
         arrow_root = (int(projected[0][0][0]), int(projected[0][0][1]))
         arrow_end = (int(projected[1][0][0]), int(projected[1][0][1]))
         self.arrow_root = arrow_root
@@ -133,13 +135,6 @@ class Video:
         self.proj_xS = proj_xS
         self.proj_yS = proj_yS
 
-
-class All(Video):
-    def __init__(self, S, Se, vid):
-        super().__init__(S, Se, vid)
-
-    def __del__(self):
-        print("Killed")
 
     # make sure coordinates do not go beyond the frame
     def bound_number(self, x, y, frame_size):
@@ -170,12 +165,12 @@ class All(Video):
         root = (self.proj_xS[4], self.proj_yS[4])
         L_shoulder = (self.proj_xS[9], self.proj_yS[9])
         R_shoulder = (self.proj_xS[14], self.proj_yS[14])
-        if ((self.in_box(root,start,end)) and (self.in_box(L_shoulder,start,end)) and (self.in_box(R_shoulder,start,end))):
+        if self.in_box(root,start,end) and self.in_box(L_shoulder,start,end) and self.in_box(R_shoulder,start,end):
             return True
         return False
 
 
-    def save_cropped(self, save_img=False, save_txt=True, full=False):
+    def save_cropped(self, save_img=False, save_npz=True, full=False):
         data = {}
         cap = cv.VideoCapture(self.avi_path)
         if (cap.isOpened()==False):
@@ -203,9 +198,11 @@ class All(Video):
                         continue
 
                     if full:
-                        filename = os.path.join("dataset", "S{}/Seq{}/imageSequence/full_video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+                        filename = os.path.join("dataset", \
+                            "S{}/Seq{}/imageSequence/full_video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
                     else:
-                        filename = os.path.join("dataset", "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+                        filename = os.path.join("dataset", \
+                            "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
 
                     if end[0]-start[0]==end[1]-start[1]:
                         data[k] = {}
@@ -219,7 +216,7 @@ class All(Video):
                             except FileExistsError:
                                 pass
 
-                        if save_txt:
+                        if save_npz:
                             data[k]["directory"] = filename
                             data[k]["bbox_start"] = start
                             data[k]["bbox_end"] = end
@@ -238,7 +235,7 @@ class All(Video):
 def save_frame(human):
     for seq in (1,2):
         for vid in [0,1,2,4,5,6,7,8]:
-            v = All(human, seq, vid)
+            v = Video(human, seq, vid)
             v.save_cropped(False, True, False)
 
 def merge_npz(human):
