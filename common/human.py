@@ -132,7 +132,6 @@ class Human:
         else:
             aug_angles, punish_w = self.check_range(bone, absolute_angles)
             R = rot(aug_angles)
-
         return f.normalize(R.to(torch.float32)), punish_w
 
 
@@ -145,11 +144,11 @@ class Human:
         self.rot_mat, self.punish_list = {}, []
         for k, bone in enumerate(self.constraints.keys()):
             R = elem[9*k:9*(k+1)]
-            if not bone in self.child.keys():
-                self.rot_mat[bone], punish_w = self.check_constraints(bone, R)
-            else:
+            if bone in self.child.keys():
                 parent = self.child[bone]
                 self.rot_mat[bone], punish_w = self.check_constraints(bone, R, self.rot_mat[parent])
+            else:
+                self.rot_mat[bone], punish_w = self.check_constraints(bone, R)
             self.punish_list.append(punish_w)
 
 
