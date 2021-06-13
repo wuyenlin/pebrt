@@ -69,17 +69,17 @@ class Data:
 
         for vid in vid_list:
             for frame in data[vid].keys():
-                pts_2d = data[vid][frame]['pts_2d']
+                pts_2d = data[vid][frame]["pts_2d"]
                 gt_2d = self.zero_center(self.pop_joints(pts_2d))
 
-                pts_3d = data[vid][frame]['pts_3d']
+                pts_3d = data[vid][frame]["pts_3d"]
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                 gt_3d = self.zero_center(cam_3d)/1000
 
                 self.gt_pts2d.append(gt_2d)
                 self.gt_pts3d.append(gt_3d)
                 self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
-                self.img_path.append(data[vid][frame]['directory'])
+                self.img_path.append(data[vid][frame]["directory"])
 
     def __getitem__(self, index):
         try:
