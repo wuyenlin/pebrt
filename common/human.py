@@ -57,47 +57,47 @@ class Human:
         }
 
         self.constraints = {
-            'lower_spine': ((-0.61,0.61), (-0.52,0.52), (-0.52,1.31)),
-            'upper_spine': ((0,0), (0,0), (0,1.66)),
-            'neck': ((0,0), (0,0), (0,1.22)),
-            'head': ((-0.61,0.61), (-1.22,1.22), (-0.96,1.39)),
+            "lower_spine": ((-0.61,0.61), (-0.52,0.52), (-0.52,1.31)),
+            "upper_spine": ((0,0), (0,0), (0,1.66)),
+            "neck": ((0,0), (0,0), (0,1.22)),
+            "head": ((-0.61,0.61), (-1.22,1.22), (-0.96,1.39)),
 
-            'l_clavicle': ((0,0), (0,0), (0,0)), #4
-            'l_upper_arm': ((-1.57,2.28), (-0.707,2.27), (-1.57,3.14)),
-            'l_lower_arm': ((0,0), (0,2.62), (0,0)),
-            'r_clavicle': ((0,0), (0,0), (0,0)),
-            'r_upper_arm': ((-2.28,1.57), (-2.27,0.707), (-1.57,3.14)),
-            'r_lower_arm': ((0,0), (-2.62,0), (0,0)),
+            "l_clavicle": ((0,0), (0,0), (0,0)), #4
+            "l_upper_arm": ((-1.57,2.28), (-0.707,2.27), (-1.57,3.14)),
+            "l_lower_arm": ((0,0), (0,2.62), (0,0)),
+            "r_clavicle": ((0,0), (0,0), (0,0)),
+            "r_upper_arm": ((-2.28,1.57), (-2.27,0.707), (-1.57,3.14)),
+            "r_lower_arm": ((0,0), (-2.62,0), (0,0)),
 
-            'l_hip': ((0,0), (0,0), (0,0)), #10
-            'l_thigh': ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
-            'l_calf': ((0,0), (0,0), (0,2.79)),
-            'r_hip': ((0,0), (0,0), (0,0)),
-            'r_thigh': ((-0.35,0.87), (-0.785,0.785), (-0.52,2.09)),
-            'r_calf': ((0,0), (0,0), (0,2.79)),
+            "l_hip": ((0,0), (0,0), (0,0)), #10
+            "l_thigh": ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
+            "l_calf": ((0,0), (0,0), (0,2.79)),
+            "r_hip": ((0,0), (0,0), (0,0)),
+            "r_thigh": ((-0.35,0.87), (-0.785,0.785), (-0.52,2.09)),
+            "r_calf": ((0,0), (0,0), (0,2.79)),
         }
 
 
     def init_bones(self):
         self.bones = {
-            'lower_spine': torch.tensor([0, -self.lower_spine, 0]),
-            'upper_spine': torch.tensor([0, -self.upper_spine, 0]),
-            'neck': torch.tensor([0, -self.neck, 0]),
-            'head': torch.tensor([0, -self.half_face, 0]),
+            "lower_spine": torch.tensor([0, -self.lower_spine, 0]),
+            "upper_spine": torch.tensor([0, -self.upper_spine, 0]),
+            "neck": torch.tensor([0, -self.neck, 0]),
+            "head": torch.tensor([0, -self.half_face, 0]),
 
-            'l_clavicle': torch.tensor([self.clavicle, 0, 0]),
-            'l_upper_arm': torch.tensor([self.upper_arm, 0, 0]),
-            'l_lower_arm': torch.tensor([self.lower_arm, 0, 0]),
-            'r_clavicle': torch.tensor([-self.clavicle, 0, 0]),
-            'r_upper_arm': torch.tensor([-self.upper_arm, 0, 0]),
-            'r_lower_arm': torch.tensor([-self.lower_arm, 0, 0]),
+            "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
+            "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
+            "l_lower_arm": torch.tensor([self.lower_arm, 0, 0]),
+            "r_clavicle": torch.tensor([-self.clavicle, 0, 0]),
+            "r_upper_arm": torch.tensor([-self.upper_arm, 0, 0]),
+            "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
 
-            'l_hip': torch.tensor([self.pelvis/2, 0, 0]),
-            'l_thigh': torch.tensor([0, self.thigh, 0]),
-            'l_calf': torch.tensor([0, self.calf, 0]),
-            'r_hip': torch.tensor([-self.pelvis/2, 0, 0]),
-            'r_thigh': torch.tensor([0, self.thigh, 0]),
-            'r_calf': torch.tensor([0, self.calf, 0])
+            "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
+            "l_thigh": torch.tensor([0, self.thigh, 0]),
+            "l_calf": torch.tensor([0, self.calf, 0]),
+            "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
+            "r_thigh": torch.tensor([0, self.thigh, 0]),
+            "r_calf": torch.tensor([0, self.calf, 0])
         }
         self.bones = { bone: self.bones[bone].to(self.device) for bone in self.bones.keys() }
         
@@ -170,24 +170,24 @@ class Human:
         self.update_bones(elem)
 
         root = self.root
-        lower_spine = self.bones['lower_spine']
-        neck = self.bones['upper_spine'] + lower_spine
-        chin = self.bones['neck'] + neck
-        nose = self.bones['head'] + chin
+        lower_spine = self.bones["lower_spine"]
+        neck = self.bones["upper_spine"] + lower_spine
+        chin = self.bones["neck"] + neck
+        nose = self.bones["head"] + chin
 
-        l_shoulder = self.bones['l_clavicle'] + neck
-        l_elbow = self.bones['l_upper_arm'] + l_shoulder
-        l_wrist = self.bones['l_lower_arm'] + l_elbow
-        r_shoulder = self.bones['r_clavicle'] + neck
-        r_elbow = self.bones['r_upper_arm'] + r_shoulder
-        r_wrist = self.bones['r_lower_arm'] + r_elbow
+        l_shoulder = self.bones["l_clavicle"] + neck
+        l_elbow = self.bones["l_upper_arm"] + l_shoulder
+        l_wrist = self.bones["l_lower_arm"] + l_elbow
+        r_shoulder = self.bones["r_clavicle"] + neck
+        r_elbow = self.bones["r_upper_arm"] + r_shoulder
+        r_wrist = self.bones["r_lower_arm"] + r_elbow
 
-        l_hip = self.bones['l_hip']
-        l_knee = self.bones['l_thigh'] + l_hip
-        l_ankle = self.bones['l_calf'] + l_knee
-        r_hip = self.bones['r_hip']
-        r_knee = self.bones['r_thigh'] + r_hip
-        r_ankle = self.bones['r_calf'] + r_knee
+        l_hip = self.bones["l_hip"]
+        l_knee = self.bones["l_thigh"] + l_hip
+        l_ankle = self.bones["l_calf"] + l_knee
+        r_hip = self.bones["r_hip"]
+        r_knee = self.bones["r_thigh"] + r_hip
+        r_ankle = self.bones["r_calf"] + r_knee
 
         self.model = torch.stack((neck, lower_spine, root, chin, nose,
                 l_shoulder, l_elbow, l_wrist, r_shoulder, r_elbow, r_wrist,
@@ -234,9 +234,9 @@ def vis_model(model):
     )
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
     for p in model:
-        ax.scatter(p[0], p[1], p[2], c='r')
+        ax.scatter(p[0], p[1], p[2], c="r")
 
     for index in indices:
         xS = (model[index[0]][0], model[index[1]][0])
