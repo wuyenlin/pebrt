@@ -48,6 +48,8 @@ class Human:
 
         self.child = {
             # child : parent
+            "upper_spine": "lower_spine",
+            "head": "neck",
             "l_lower_arm": "l_upper_arm",
             "r_lower_arm": "r_upper_arm",
             "l_calf": "l_thigh",
@@ -55,18 +57,17 @@ class Human:
         }
 
         self.constraints = {
-            'lower_spine': ((-0.52,1.31), (-0.52,0.52), (-0.61,0.61)),
-            'upper_spine': ((-0.52,1.57), (-0.52,0.52), (-0.61,0.61)),
-            'neck': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
-            'head': ((-0.872,1.39), (-1.22,1.22), (-0.61,0.61)),
+            'lower_spine': ((-0.61,0.61), (-0.52,0.52), (-0.52,1.31)),
+            'upper_spine': ((0,0), (0,0), (0,1.66)),
+            'neck': ((0,0), (0,0), (0,1.22)),
+            'head': ((-0.61,0.61), (-1.22,1.22), (-0.96,1.39)),
 
             'l_clavicle': ((0,0), (0,0), (0,0)), #4
-            'l_upper_arm': ((0,0), (-0.707,2.27), (-1.57,3.14)),
-            'l_lower_arm': ((0,0), (0,2.27), (0,0)),
+            'l_upper_arm': ((-1.57,2.28), (-0.707,2.27), (-1.57,3.14)),
+            'l_lower_arm': ((0,0), (0,2.62), (0,0)),
             'r_clavicle': ((0,0), (0,0), (0,0)),
-            'l_upper_arm': ((0,0), (-2.27,0.707), (-1.57,3.14)),
-            'r_upper_arm': ((0,0), (0,0), (0,0)),
-            'r_lower_arm': ((0,0), (-2.27,0), (0,0)),
+            'r_upper_arm': ((-2.28,1.57), (-2.27,0.707), (-1.57,3.14)),
+            'r_lower_arm': ((0,0), (-2.62,0), (0,0)),
 
             'l_hip': ((0,0), (0,0), (0,0)), #10
             'l_thigh': ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
@@ -77,7 +78,7 @@ class Human:
         }
 
 
-    def _init_bones(self):
+    def init_bones(self):
         self.bones = {
             'lower_spine': torch.tensor([0, -self.lower_spine, 0]),
             'upper_spine': torch.tensor([0, -self.upper_spine, 0]),
@@ -101,28 +102,38 @@ class Human:
         self.bones = { bone: self.bones[bone].to(self.device) for bone in self.bones.keys() }
         
 
+    def check_range(self, bone, angles):
+        punish_w = 1.0
+        for i in range(3):
+            low = self.constraints[bone][i][0]
+            high = self.constraints[bone][i][1]
+            if high != low and high != 0:
+                if angles[i] < low:
+                    angles[i] = low
+                    punish_w += 1.0
+                elif angles[i] > high:
+                    angles[i] = high
+                    punish_w += 1.0
+        return angles, punish_w
+
+
     def check_constraints(self, bone, R: np.array, parent=None):
         """
         Punish (by adding weights) if NN outputs are beyond joint rotation constraints.
         """
         import torch.nn.functional as f
-        punish_w = 1.0
-        euler_angles = rot_to_euler(np.array(R).reshape(3,-1))
+        absolute_angles = rot_to_euler(np.array(R).reshape(3,-1))
         if parent is not None:
             parent_angles = rot_to_euler(parent.detach().numpy())
-            euler_angles -= parent_angles  # relative angles
-        for i in range(3):
-            low = self.constraints[bone][i][0]
-            high = self.constraints[bone][i][1]
-            if high != low and high != 0:
-                if euler_angles[i] < low:
-                    euler_angles[i] = low
-                    punish_w += 1.0
-                elif euler_angles[i] > high:
-                    euler_angles[i] = high
-                    punish_w += 1.0
-        R = f.normalize(rot(euler_angles).to(torch.float32))
-        return R, punish_w
+            child_angles = absolute_angles
+            relative_angles = child_angles - parent_angles
+            aug_angles, punish_w = self.check_range(bone, relative_angles)
+            R = rot(aug_angles + parent_angles)
+        else:
+            aug_angles, punish_w = self.check_range(bone, absolute_angles)
+            R = rot(aug_angles)
+
+        return f.normalize(R.to(torch.float32)), punish_w
 
 
     def sort_rot(self, elem):
@@ -147,7 +158,7 @@ class Human:
         Initiates a T-Pose human model and rotate each bone using the given rotation matrices
         :return model: a numpy array of (17,3)
         """
-        self._init_bones()
+        self.init_bones()
         if elem is not None:
             self.sort_rot(elem)
             self.bones = { bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys() }
@@ -246,10 +257,8 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 11
-    a[9*k:9*k+9] = rot((0,0,0.5)).flatten()
-    k = 12
-    a[9*k:9*k+9] = rot((0,0,2.7)).flatten()
+    k = 3
+    a[9*k:9*k+9] = rot((0,0,-0.96)).flatten()
     model = h.update_pose(a)
     print(h.punish_list)
     vis_model(model)
