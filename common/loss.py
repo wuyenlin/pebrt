@@ -1,6 +1,9 @@
 import cmath
 import torch
-from common.human import *
+try:
+    from common.human import *
+except ModuleNotFoundError:
+    from human import *
 
 
 def mpjpe(predicted, target):
@@ -37,7 +40,25 @@ def is_so(M):
     return 1 if orth and det else 2
 
 
-def maev(predicted, target):
+def post_process(predicted):
+    """
+    Impose NN outputs (SO(3)) to kinematic model and 
+    get augmented SO(3) and punish weights
+    """
+    aug_predicted = torch.zeros_like(predicted)
+    w_kc = torch.zeros(predicted.shape[:2])
+
+    for b in range(predicted.shape[0]):
+        h = Human(1.8, "cpu")
+        h.update_pose(predicted)
+        aug_rot = [val.flatten() for val in h.rot_mat.values()]
+
+        aug_predicted[b,:,:] = torch.stack(aug_rot, 0)
+        w_kc[b,:] = torch.tensor(h.punish_list)
+    return aug_predicted, w_kc
+
+
+def maev(predicted, target, kc=False):
     """
     MAEV: Mean Absolute Error of Vectors
     :param predicted: (bs,16,9) tensor
@@ -45,19 +66,21 @@ def maev(predicted, target):
     average error of 16 bones
     """
     bs, num_bones = predicted.shape[0], predicted.shape[1]
+    if kc:
+        predicted, w_kc = post_process(predicted)
     predicted = predicted.view(bs,num_bones,3,3)
     target = target.view(bs,num_bones,3,3)
-    w_arr = torch.ones(target.shape[:2])
+    w_orth = torch.ones(target.shape[:2])
     for b in range(bs):
         for bone in range(num_bones):
             M = predicted[b,bone]
-            w_arr[b,bone] = is_so(M)
+            w_orth[b,bone] = is_so(M)
     if torch.cuda.is_available():
         predicted = predicted.cuda()
         target = target.cuda()
-        w_arr = w_arr.cuda()
+        w_orth = w_orth.cuda()
     aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
-    maev = torch.mean(aev*w_arr)
+    maev = torch.mean(aev*w_orth*w_kc)
     return maev
 
 
@@ -75,9 +98,9 @@ def mbve(predicted, target):
     pred_info = torch.zeros(bs, num_bones, 3)
     tar_info = torch.zeros(bs, num_bones, 3)
 
-    pred = Human(1.8)
+    pred = Human(1.8, "cpu")
     pred_model = pred.update_pose(predicted)
-    tar = Human(1.8)
+    tar = Human(1.8, "cpu")
     tar_model = tar.update_pose(target)
     for b in range(bs):
         pred_info[b,:] = vectorize(pred_model)[:,:3]
@@ -107,6 +130,17 @@ def meae(predicted, target):
     tar_euler = torch.zeros(bs,num_bones,3)
     for b in range(bs):
         for bone in range(num_bones):
-            pred_euler[b,bone,:] = torch.tensor(euler_from_rot(predicted[b,bone]))
-            tar_euler[b,bone,:] = torch.tensor(euler_from_rot(target[b,bone]))
+            pred_euler[b,bone,:] = torch.tensor(rot_to_euler(predicted[b,bone]))
+            tar_euler[b,bone,:] = torch.tensor(rot_to_euler(target[b,bone]))
     return torch.mean(torch.sum(pred_euler - tar_euler, dim=2))
+
+
+if __name__ == "__main__":
+    a = torch.tensor([0.707,-0.707,0,0.707,0.707,0,0,0,1])
+    a = a.repeat(16).reshape(1,16,9).to(torch.float32)
+    b = torch.eye(3).flatten()
+    b = b.repeat(16).reshape(1,16,9).to(torch.float32)
+
+    print(maev(a,b,True))
+    print(meae(a,b))
+    print(mbve(a,b))
