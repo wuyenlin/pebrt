@@ -108,12 +108,13 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if angles[i] < low:
-                angles[i] = low
-                punish_w += 1.0
-            elif angles[i] > high:
-                angles[i] = high
-                punish_w += 1.0
+            if high != low and high != 0:
+                if angles[i] < low:
+                    angles[i] = low
+                    punish_w += 1.0
+                elif angles[i] > high:
+                    angles[i] = high
+                    punish_w += 1.0
         return angles, punish_w
 
 
@@ -124,7 +125,7 @@ class Human:
         import torch.nn.functional as f
         absolute_angles = rot_to_euler(np.array(R).reshape(3,-1))
         if parent is not None:
-            parent_angles = rot_to_euler(parent.detach().numpy())
+            parent_angles = rot_to_euler(parent.detach().cpu().numpy())
             child_angles = absolute_angles
             relative_angles = child_angles - parent_angles
             aug_angles, punish_w = self.check_range(bone, relative_angles)
@@ -132,7 +133,7 @@ class Human:
         else:
             aug_angles, punish_w = self.check_range(bone, absolute_angles)
             R = rot(aug_angles)
-        return f.normalize(R.to(torch.float32)), punish_w
+        return f.normalize(R.to(torch.float32).to(self.device)), punish_w
 
 
     def sort_rot(self, elem):
@@ -253,18 +254,18 @@ def vis_model(model):
 
 
 def rand_pose():
-    h = Human(1.8, "cpu")
+    h = Human(1.8)
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 5
-    a[9*k:9*k+9] = rot((0,2,0)).flatten()
+    k = 3
+    a[9*k:9*k+9] = rot((0,0,-0.96)).flatten()
     model = h.update_pose(a)
-    print(h.punish_list)
-    vis_model(model)
+    # print(h.punish_list)
+    # vis_model(model)
 
-    # aug_rot = [val.flatten() for val in h.rot_mat.values()]
-    # r_stack = torch.stack(aug_rot)
-    # print(r_stack.shape)
+    aug_rot = [val.flatten() for val in h.rot_mat.values()]
+    r_stack = torch.stack(aug_rot)
+    print(r_stack.shape)
 
 
 if __name__ == "__main__":
