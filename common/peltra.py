@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import cmath
 from common.embed import *
+from common.human import *
 
 
 class TransformerEncoder(nn.Module):
@@ -51,7 +52,7 @@ class PELTRA(nn.Module):
         return x/torch.linalg.norm(x)
 
 
-    def gs(self, arr_all: torch.tensor) -> torch.tensor:
+    def gs(self, arr_all):
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
         project 6D to SO(3) via Gram-Schmidt process
@@ -61,6 +62,7 @@ class PELTRA(nn.Module):
         """
         R_stack = torch.zeros(self.bs,16,9)
         arr_all = arr_all.to(torch.float32).view(self.bs,16,-1)
+        w_kc = torch.ones(self.bs,16)
         for b in range(self.bs):
             for k in range(16):
                 arr = arr_all[b,k,:]
@@ -70,13 +72,22 @@ class PELTRA(nn.Module):
                 row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
                 row_3 = self.normalize(torch.cross(row_1,row_2))
                 R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
-                assert cmath.isclose(torch.det(R), 1, rel_tol=1e-04), torch.det(R)
+                assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
                 R_stack[b,k,:] = R.to(self.device).flatten()
-        return R_stack
+            # Impose NN outputs (SO(3)) to kinematic model and 
+            # get augmented SO(3) and punish weights
+            # h = Human(1.8, "cpu")
+            # h.update_pose(R_stack[b,:,:].flatten())
+            # aug_rot = [val.flatten() for val in h.rot_mat.values()]
+
+            # R_stack[b,:,:] = torch.stack(aug_rot)
+            # w_kc[b,:] = torch.tensor(h.punish_list)
+        return R_stack, w_kc
 
 
     def forward(self, x):
         x = self.transformer(x.float())
-        x = self.gs(x)
+        x, w_kc = self.gs(x)
 
-        return x
+
+        return x, w_kc
