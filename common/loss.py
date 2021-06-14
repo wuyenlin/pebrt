@@ -1,9 +1,6 @@
 import cmath
 import torch
-try:
-    from common.human import *
-except ModuleNotFoundError:
-    from human import *
+from common.human import *
 
 
 def mpjpe(predicted, target):
@@ -40,34 +37,15 @@ def is_so(M):
     return 1 if orth and det else 2
 
 
-def post_process(predicted):
-    """
-    Impose NN outputs (SO(3)) to kinematic model and 
-    get augmented SO(3) and punish weights
-    """
-    aug_predicted = torch.zeros_like(predicted)
-    w_kc = torch.zeros(predicted.shape[:2])
-
-    for b in range(predicted.shape[0]):
-        h = Human(1.8, "cpu")
-        h.update_pose(predicted)
-        aug_rot = [val.flatten() for val in h.rot_mat.values()]
-
-        aug_predicted[b,:,:] = torch.stack(aug_rot, 0)
-        w_kc[b,:] = torch.tensor(h.punish_list)
-    return aug_predicted, w_kc
-
-
-def maev(predicted, target, kc=False):
+def maev(predicted, target, w_kc):
     """
     MAEV: Mean Absolute Error of Vectors
     :param predicted: (bs,16,9) tensor
     :param target:  (bs,16,9) tensor
+    :param w_kc: weight of kinematic constraints
     average error of 16 bones
     """
     bs, num_bones = predicted.shape[0], predicted.shape[1]
-    if kc:
-        predicted, w_kc = post_process(predicted)
     predicted = predicted.view(bs,num_bones,3,3)
     target = target.view(bs,num_bones,3,3)
     w_orth = torch.ones(target.shape[:2])
@@ -78,9 +56,11 @@ def maev(predicted, target, kc=False):
     if torch.cuda.is_available():
         predicted = predicted.cuda()
         target = target.cuda()
+        w_kc = w_kc.cuda()
         w_orth = w_orth.cuda()
     aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
-    maev = torch.mean(aev*w_orth*w_kc)
+    # maev = torch.mean(aev*w_kc*w_orth)
+    maev = torch.mean(aev*w_kc)
     return maev
 
 
@@ -141,6 +121,6 @@ if __name__ == "__main__":
     b = torch.eye(3).flatten()
     b = b.repeat(16).reshape(1,16,9).to(torch.float32)
 
-    print(maev(a,b,True))
+    print(maev(a,b))
     print(meae(a,b))
     print(mbve(a,b))
