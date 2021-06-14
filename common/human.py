@@ -15,7 +15,8 @@ def rot(euler: tuple) -> torch.tensor:
     row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
     row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
     row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
-    R = torch.stack((row1, row2, row3), 0).requires_grad_(True)
+    # R = torch.stack((row1, row2, row3), 0).requires_grad_(True)
+    R = torch.stack((row1, row2, row3), 0)
     assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
     return R
 
@@ -73,7 +74,7 @@ class Human:
             "l_thigh": ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
             "l_calf": ((0,0), (0,0), (0,2.79)),
             "r_hip": ((0,0), (0,0), (0,0)),
-            "r_thigh": ((-0.35,0.87), (-0.785,0.785), (-0.52,2.09)),
+            "r_thigh": ((-0.35,0.87), (-0.785,0.785), (-2.09,0.52)),
             "r_calf": ((0,0), (0,0), (0,2.79)),
         }
 
@@ -107,13 +108,12 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if high != low and high != 0:
-                if angles[i] < low:
-                    angles[i] = low
-                    punish_w += 1.0
-                elif angles[i] > high:
-                    angles[i] = high
-                    punish_w += 1.0
+            if angles[i] < low:
+                angles[i] = low
+                punish_w += 1.0
+            elif angles[i] > high:
+                angles[i] = high
+                punish_w += 1.0
         return angles, punish_w
 
 
@@ -256,15 +256,15 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 3
-    a[9*k:9*k+9] = rot((0,0,-0.96)).flatten()
+    k = 5
+    a[9*k:9*k+9] = rot((0,2,0)).flatten()
     model = h.update_pose(a)
-    # print(h.punish_list)
-    # vis_model(model)
+    print(h.punish_list)
+    vis_model(model)
 
-    aug_rot = [val.flatten() for val in h.rot_mat.values()]
-    r_stack = torch.stack(aug_rot)
-    print(r_stack.shape)
+    # aug_rot = [val.flatten() for val in h.rot_mat.values()]
+    # r_stack = torch.stack(aug_rot)
+    # print(r_stack.shape)
 
 
 if __name__ == "__main__":
