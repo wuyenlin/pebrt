@@ -76,12 +76,12 @@ class PELTRA(nn.Module):
                 R_stack[b,k,:] = R.to(self.device).flatten()
             # Impose NN outputs (SO(3)) to kinematic model and 
             # get augmented SO(3) and punish weights
-            # h = Human(1.8, "cpu")
-            # h.update_pose(R_stack[b,:,:].flatten())
-            # aug_rot = [val.flatten() for val in h.rot_mat.values()]
+            h = Human(1.8)
+            h.update_pose(R_stack[b,:,:].flatten())
+            aug_rot = [val.flatten().requires_grad_(True) for val in h.rot_mat.values()]
 
-            # R_stack[b,:,:] = torch.stack(aug_rot)
-            # w_kc[b,:] = torch.tensor(h.punish_list)
+            R_stack[b,:,:] = torch.stack(aug_rot)
+            w_kc[b,:] = torch.tensor(h.punish_list)
         return R_stack, w_kc
 
 
