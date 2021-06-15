@@ -70,7 +70,7 @@ class Data:
         for vid in vid_list:
             for frame in data[vid].keys():
                 pts_2d = data[vid][frame]["pts_2d"]
-                gt_2d = self.zero_center(self.pop_joints(pts_2d))
+                gt_2d = self.zero_center(self.remove_joints(pts_2d))
 
                 pts_3d = data[vid][frame]["pts_3d"]
                 cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
@@ -96,7 +96,7 @@ class Data:
         return len(self.img_path)
     
 
-    def pop_joints(self, kpts):
+    def remove_joints(self, kpts):
         """
         Get 17 joints from the original 28 
         :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,3))
