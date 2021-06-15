@@ -52,10 +52,11 @@ class PELTRA(nn.Module):
         return x/torch.linalg.norm(x)
 
 
-    def gs(self, arr_all):
+    def process(self, arr_all):
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
-        project 6D to SO(3) via Gram-Schmidt process
+        1) project 6D to SO(3) via Gram-Schmidt process
+        2) impose the recovered SO(3) on kinematic model and punish according to kinematic constraints
 
         :param arr: a (96,) tensor, 6D representation of 16 bones
         :return R_stack: (bs,16,9)
@@ -74,20 +75,15 @@ class PELTRA(nn.Module):
                 R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
                 assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
                 R_stack[b,k,:] = R.to(self.device).flatten()
-            # Impose NN outputs (SO(3)) to kinematic model and 
-            # get augmented SO(3) and punish weights
+            # Impose NN outputs SO(3) on kinematic model and get punishing weights
             h = Human(1.8)
             h.update_pose(R_stack[b,:,:].flatten())
-            aug_rot = [val.flatten().requires_grad_(True) for val in h.rot_mat.values()]
-
-            R_stack[b,:,:] = torch.stack(aug_rot)
             w_kc[b,:] = torch.tensor(h.punish_list)
         return R_stack, w_kc
 
 
     def forward(self, x):
         x = self.transformer(x.float())
-        x, w_kc = self.gs(x)
-
+        x, w_kc = self.process(x)
 
         return x, w_kc
