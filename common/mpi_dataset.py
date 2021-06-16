@@ -50,8 +50,6 @@ class Video:
     def get_cross(self, nframe):
         """
         Calculate the cross product given a frame
-
-        Output: a 1x3 numpy array
         """
         objPoint = self.annot3D[self.camera][0][nframe]
         obj = np.array(objPoint.reshape(-1,3), dtype=np.float32)
@@ -140,7 +138,7 @@ class Video:
     def save_cropped(self, save_img=False, save_npz=True, full=False):
         data = {}
         cap = cv.VideoCapture(self.avi_path)
-        if (cap.isOpened()==False):
+        if (cap.isOpened() == False):
             print("Error opening the video file.")
 
         try:
@@ -171,7 +169,7 @@ class Video:
                         filename = os.path.join("dataset", \
                             "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
 
-                    if end[0]-start[0]==end[1]-start[1]:
+                    if end[0]-start[0] == end[1]-start[1]:
                         data[k] = {}
                         if save_img:
                             try:
@@ -189,13 +187,11 @@ class Video:
                             data[k]["bbox_end"] = end
                             data[k]["pts_2d"] = self.imgPoint.reshape(-1,2)
                             data[k]["pts_3d"] = self.objPoint.reshape(-1,3)
-
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
         else:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/video_{}".format(self.S,self.Se,self.vid), data)
-
         cap.release()
 
 
@@ -204,6 +200,7 @@ def save_frame(human):
         for vid in [0,1,2,4,5,6,7,8]:
             v = Video(human, seq, vid)
             v.save_cropped(False, True, False)
+
 
 def merge_npz(human):
     merge_data = []
