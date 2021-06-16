@@ -195,18 +195,30 @@ class Human:
         return self.model
 
 
-def vectorize(gt_3d) -> torch.tensor:
+def vectorize(gt_3d, dataset="mpi") -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
     :return bone_info: [unit bone vector (,3) + bone length (,1)]
     """
-    indices = (
-        (2,1), (1,0), (0,3), (3,4),  # spine + head
-        (0,5), (5,6), (6,7), 
-        (0,8), (8,9), (9,10), # arms
-        (2,14), (11,12), (12,13),
-        (2,11), (14,15), (15,16), # legs
-    )
+    if dataset == "mpi":
+        indices = (
+            (2,1), (1,0), (0,3), (3,4),  # spine + head
+            (0,5), (5,6), (6,7), 
+            (0,8), (8,9), (9,10), # arms
+            (2,11), (11,12), (12,13),
+            (2,14), (14,15), (15,16), # legs
+        )
+    elif dataset == "h36m":
+        indices = (
+            (0,7), (7,8), (8,9), (9,10),  # spine + head
+            (8,11), (11,12), (12,13), 
+            (8,14), (14,15), (15,16), # arms
+            (0,4), (4,5), (5,6),
+            (0,1), (1,2), (2,3), # legs
+        )
+    else:
+        print("Unrecognized dataset name.")
+
     num_bones = len(indices)
     try:
         gt_3d_tensor = torch.from_numpy(gt_3d)
