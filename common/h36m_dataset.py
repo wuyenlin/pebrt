@@ -14,7 +14,7 @@ def merge_npz():
         t = t["positions_2d"].reshape(1,-1) if item.endswith("2d_h36m_gt.npz") else t["positions_3d"].reshape(1,-1)
         merge_data.append(*t)
     filename = "./data_h36m"
-    np.savez_compressed(filename, merge_data)
+    np.savez_compressed(filename, positions_2d=merge_data[0], positions_3d=merge_data[1])
     print("saved {}.npz".format(filename))
 
 output_filename = "data_3d_h36m"
