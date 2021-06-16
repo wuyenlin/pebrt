@@ -59,7 +59,6 @@ def maev(predicted, target, w_kc):
         w_kc = w_kc.cuda()
         w_orth = w_orth.cuda()
     aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
-    # maev = torch.mean(aev*w_kc*w_orth)
     maev = torch.mean(aev*w_kc)
     return maev
 

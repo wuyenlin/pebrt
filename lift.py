@@ -119,6 +119,7 @@ def evaluate(test_loader, model, device):
     epoch_loss_e1 = 0.0
     epoch_loss_e2 = 0.0
     epoch_loss_e3 = 0.0
+
     with torch.no_grad():
         model.load_state_dict(torch.load('./peltra/ft_1_zero.bin')['model'])
         model = model.cuda()
