@@ -103,11 +103,11 @@ class Data:
         :return new_skel: 
         """
         new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
-        ext_list = [2,4,5,6,         # spine+head
+        keep = [2,4,5,6,         # spine+head
                     9,10,11,14,15,16,  # arms
                     18,19,20,23,24,25] # legs
         for row in range(17):
-            new_skel[row, :] = kpts[ext_list[row-1], :]
+            new_skel[row, :] = kpts[keep[row-1], :]
         # interpolate clavicles to obtain vertebra
         new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
         return new_skel
