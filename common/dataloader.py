@@ -67,6 +67,7 @@ class Data:
         data = np.load(npz_path, allow_pickle=True)
 
         if npz_path.endswith("h36m.npz"):
+            print("INFO: Training on Human3.6M dataset.")
             import random
             data_2d = data["positions_2d"].reshape(1,-1)[0][0]["S1"]
             data_3d = data["positions_3d"].reshape(1,-1)[0][0]["S1"]
@@ -88,6 +89,7 @@ class Data:
 
             
         else:
+            print("INFO: Training on MPI-INF-3DHP dataset.")
             data = data["arr_0"].reshape(1,-1)[0]
             vid_list = np.arange(6)
             if not train:
