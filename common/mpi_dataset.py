@@ -240,6 +240,7 @@ def save_frame(human):
 
 def merge_npz(human):
     merge_data = []
+    print("Processing...")
     for s in [1,2]:
         for k in [0,1,2,4,5,6,7,8]:
             npz = "./dataset/S{}/Seq{}/imageSequence/video_{}.npz".format(human,s,k)
