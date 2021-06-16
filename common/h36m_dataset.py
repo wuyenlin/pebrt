@@ -5,6 +5,18 @@ import cdflib
 import sys
 sys.path.append("../")
 
+def merge_npz():
+    merge_data = []
+    files = ["./data_2d_h36m_gt.npz","./data_3d_h36m.npz"]
+    print("Processing...")
+    for item in files:
+        t = np.load(item, allow_pickle=True)
+        t = t["positions_2d"].reshape(1,-1) if item.endswith("2d_h36m_gt.npz") else t["positions_3d"].reshape(1,-1)
+        merge_data.append(*t)
+    filename = "./data_h36m"
+    np.savez_compressed(filename, merge_data)
+    print("saved {}.npz".format(filename))
+
 output_filename = "data_3d_h36m"
 output_filename_2d = "data_2d_h36m_gt"
 subjects = ["S1", "S5", "S6", "S7", "S8", "S9", "S11"]
@@ -66,4 +78,4 @@ def cdf_to_npz(cdf_path, subjects, output_filename):
     print("Done.")
 
 if __name__ == "__main__":
-    pass
+    merge_npz()
