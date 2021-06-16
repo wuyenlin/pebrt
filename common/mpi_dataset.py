@@ -1,9 +1,6 @@
 #!/usr/bin/python3
-
 import scipy.io as sio
-from numpy.linalg import norm
 import numpy as np
-import math
 import cv2 as cv
 import os
 from tqdm import tqdm
@@ -57,13 +54,8 @@ class Video:
         Output: a 1x3 numpy array
         """
         objPoint = self.annot3D[self.camera][0][nframe]
-        objPoint = np.array(objPoint.reshape(-1,3), dtype=np.float32)
-        pt_list = [4, 9, 14]
-        p0 = np.array(objPoint[pt_list[0]])
-        p1 = np.array(objPoint[pt_list[1]])
-        p2 = np.array(objPoint[pt_list[2]])
-        n_vec = np.cross(p1-p0, p2-p0)
-        self.n_vec = n_vec
+        obj = np.array(objPoint.reshape(-1,3), dtype=np.float32)
+        self.n_vec = np.cross(obj[9]-obj[4], obj[14]-obj[4])
 
 
     def cam_matrix(self):
@@ -75,9 +67,7 @@ class Video:
         content = [line.strip() for line in content]
         # 3x3 intrinsic matrix
         camMatrix = np.array(content[7*self.camera+5].split(" ")[3:], dtype=np.float32)
-        camMatrix = np.reshape(camMatrix, (4,-1))
-        camMatrix = camMatrix[0:3,0:3]
-        self.camMatrix = camMatrix 
+        self.camMatrix = np.reshape(camMatrix, (4,-1))[0:3,0:3]
     
 
     def parse_frame(self, nframe):
@@ -101,39 +91,15 @@ class Video:
         self.dist = np.zeros(4)
 
 
-    def get_arrow(self, nframe):
-        self.parse_frame(nframe)
-        arrow = []
-        arrow.append(self.root)
-        arrow.append(400*(self.n_vec/norm(self.n_vec))+self.root) # adjust normal vector length
-        projected, _ = cv.projectPoints(np.float32(arrow), \
-            self.rvec, self.tvec, self.camMatrix, self.dist)
-        arrow_root = (int(projected[0][0][0]), int(projected[0][0][1]))
-        arrow_end = (int(projected[1][0][0]), int(projected[1][0][1]))
-        self.arrow_root = arrow_root
-        self.arrow_end = arrow_end
-        self.angle = np.dot(self.n_vec, np.array([1,0,0]))/norm(self.n_vec)
-        self.angle = math.acos(self.angle)*180/(math.pi)
-    
-
-    def valid_arrow(self, pt):
-        """
-        A boolean function that verifies whether a given point falls within the frame
-        """
-        return True if (0 <= pt[0] <= 2048) and (0 <= pt[1] <= 2048) else False
-
-
     def get_joints(self, nframe):
         self.parse_frame(nframe)
-        projected, _ = cv.projectPoints(self.objPoint, self.rvec, self.tvec, self.camMatrix, self.dist)
+        projected, _ = cv.projectPoints(self.objPoint, self.rvec, self.tvec, \
+                                        self.camMatrix, self.dist)
         projected = projected.reshape(28,-1)
-        proj_xS = []
-        proj_yS = []
+        self.proj_xS, self.proj_yS = [], []
         for x,y in projected:
-            proj_xS.append(int(x))
-            proj_yS.append(int(y))
-        self.proj_xS = proj_xS
-        self.proj_yS = proj_yS
+            self.proj_xS.append(int(x))
+            self.proj_yS.append(int(y))
 
 
     # make sure coordinates do not go beyond the frame
@@ -151,6 +117,7 @@ class Video:
         elif y > frame_size.shape[1]:
             y = frame_size.shape[1]
         return x, y
+
 
     def in_box(self, pt, start, end):
         return True if (start[0]<=pt[0]<=end[0] and start[1]<=pt[1]<=end[1]) else False
