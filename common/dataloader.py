@@ -78,8 +78,8 @@ class Data:
 
             for action in data3d_list:
                 for frame in range(data_3d[action].shape[0]):
-                    gt_2d = data_2d[action][0][frame,:,:]
-                    gt_3d = data_3d[action][frame,:,:]
+                    gt_2d = self.zero_center(data_2d[action][0][frame,:,:], dataset="h36m")
+                    gt_3d = self.zero_center(self.remove_joints(data_3d[action][frame,:,:], dataset="h36m"), dataset="h36m")
 
                     self.gt_pts2d.append(gt_2d)
                     self.gt_pts3d.append(gt_3d)
@@ -178,9 +178,15 @@ class Data:
         return cam_3d
 
     
-    def zero_center(self, cam) -> np.array:
+    def zero_center(self, cam, dataset="mpi") -> np.array:
         """translate root joint to origin (0,0,0)"""
-        return cam - cam[2,:]
+        if dataset == "mpi":
+            return cam - cam[2,:]
+        elif dataset == "h36m":
+            return cam - cam[0,:]
+        else:
+            print("Unrecognized dataset name.")
+
 
 def try_load():
     from torchvision import transforms
