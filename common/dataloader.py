@@ -1,7 +1,12 @@
 import numpy as np
 import cv2 as cv
 from PIL import Image
-from common.human import *
+from torchvision import transforms
+try:
+    from common.human import *
+except ModuleNotFoundError:
+    from human import *
+
 
 
 def collate_fn(batch):
@@ -28,14 +33,14 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
     return R
 
 
-def convert_gt(gt_3d: np.array, t_info) -> np.array:
+def convert_gt(gt_3d: np.array, t_info, dataset="mpi") -> np.array:
     """
     Compare GT3D kpts with T pose and obtain 16 rotation matrices
 
     :return R_stack: a (16,9) arrays with flattened rotation matrix for 16 bones
     """
     # process GT
-    bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
+    bone_info = vectorize(gt_3d, dataset=dataset)[:,:3] # (16,3) bone vecs
 
     num_row = bone_info.shape[0]
     R_stack = np.zeros([num_row, 9])
@@ -48,68 +53,98 @@ def convert_gt(gt_3d: np.array, t_info) -> np.array:
 
 class Data:
     def __init__(self, npz_path, transforms = None, train=True):
-        data = np.load(npz_path, allow_pickle=True)
-        data = data["arr_0"].reshape(1,-1)[0]
-
         self.img_path = []
         self.gt_pts2d = []
         self.gt_pts3d = []
         self.gt_vecs3d = []
         self.transforms = transforms
 
-        if train:
-            vid_list = np.arange(6)
-        else:
-            vid_list = np.arange(6,8)
-
         # T pose
         h = Human(1.8, "cpu")
         model = h.update_pose()
         t_info = vectorize(model)[:,:3]
 
-        for vid in vid_list:
-            for frame in data[vid].keys():
-                pts_2d = data[vid][frame]["pts_2d"]
-                gt_2d = self.zero_center(self.remove_joints(pts_2d))
+        data = np.load(npz_path, allow_pickle=True)
 
-                pts_3d = data[vid][frame]["pts_3d"]
-                cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
-                gt_3d = self.zero_center(cam_3d)/1000
+        if npz_path.endswith("h36m.npz"):
+            import random
+            data_2d = data["positions_2d"].reshape(1,-1)[0][0]["S1"]
+            data_3d = data["positions_3d"].reshape(1,-1)[0][0]["S1"]
+            data2d_list = random.sample(data_2d.keys(), 24)
+            data3d_list = random.sample(data_3d.keys(), 24)
+            if not train:
+                data2d_list = data_2d.keys() - data2d_list
+                data3d_list = data_3d.keys() - data3d_list
 
-                self.gt_pts2d.append(gt_2d)
-                self.gt_pts3d.append(gt_3d)
-                self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
-                self.img_path.append(data[vid][frame]["directory"])
+            for action in data3d_list:
+                for frame in range(data_3d[action].shape[0]):
+                    gt_2d = data_2d[action][0][frame,:,:]
+                    gt_3d = data_3d[action][frame,:,:]
+
+                    self.gt_pts2d.append(gt_2d)
+                    self.gt_pts3d.append(gt_3d)
+                    self.gt_vecs3d.append((convert_gt(gt_3d, t_info, dataset="h36m")))
+                    self.img_path.append(frame)
+
+            
+        else:
+            data = data["arr_0"].reshape(1,-1)[0]
+            vid_list = np.arange(6)
+            if not train:
+                vid_list = np.arange(6,8)
+
+            for vid in vid_list:
+                for frame in data[vid].keys():
+                    pts_2d = data[vid][frame]["pts_2d"]
+                    gt_2d = self.zero_center(self.remove_joints(pts_2d))
+
+                    pts_3d = data[vid][frame]["pts_3d"]
+                    cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
+                    gt_3d = self.zero_center(cam_3d)/1000
+
+                    self.gt_pts2d.append(gt_2d)
+                    self.gt_pts3d.append(gt_3d)
+                    self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
+                    self.img_path.append(data[vid][frame]["directory"])
 
     def __getitem__(self, index):
         try:
-            img_path = self.img_path[index]
-            img = Image.open(img_path)
-            img = self.transforms(img)
+            frame = self.img_path[index]
+            # img = Image.open(img_path)
+            # img = self.transforms(img)
             kpts_2d = self.gt_pts2d[index]
+            kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        return img_path, img, kpts_2d, vecs_3d
+        # return img_path, img, kpts_2d, vecs_3d
+        return frame, kpts_2d, kpts_3d, vecs_3d
 
     def __len__(self):
         return len(self.img_path)
     
 
-    def remove_joints(self, kpts):
+    def remove_joints(self, kpts, dataset="mpi"):
         """
-        Get 17 joints from the original 28 
+        Get 17 joints from the original 28 (MPI) or 32 (Human3.6M)
         :param kpts: orginal kpts from MPI-INF-3DHP (an array of (28,3))
         :return new_skel: 
         """
         new_skel = np.zeros([17,3]) if kpts.shape[-1]==3 else np.zeros([17,2])
-        keep = [2,4,5,6,         # spine+head
+        if dataset == "mpi":
+            keep = [2,4,5,6,         # spine+head
                     9,10,11,14,15,16,  # arms
                     18,19,20,23,24,25] # legs
-        for row in range(17):
-            new_skel[row, :] = kpts[keep[row-1], :]
-        # interpolate clavicles to obtain vertebra
-        new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
+            for row in range(17):
+                new_skel[row, :] = kpts[keep[row-1], :]
+            # interpolate clavicles to obtain vertebra
+            new_skel[0, :] = (new_skel[5,:]+new_skel[8,:])/2
+        elif dataset == "h36m":
+            keep = [0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27]
+            for row in range(17):
+                new_skel[row, :] = kpts[keep[row], :]
+        else:
+            print("Unrecognized dataset name.")
         return new_skel
 
 
@@ -146,3 +181,55 @@ class Data:
     def zero_center(self, cam) -> np.array:
         """translate root joint to origin (0,0,0)"""
         return cam - cam[2,:]
+
+def try_load():
+    from torchvision import transforms
+    from torch.utils.data import DataLoader
+    train_npz = "./data_h36m.npz"
+    train_dataset = Data(train_npz, transforms, True)
+    trainloader = DataLoader(train_dataset, batch_size=4, 
+                        shuffle=True, num_workers=8, drop_last=True)
+    print("data loaded!")
+    dataiter = iter(trainloader)
+    frame, gt_2d, gt_3d, vec_3d = dataiter.next()
+
+    
+    # bones = (
+    # (0,1), (0,3), (1,2), (3,4),  # spine + head
+    # (0,5), (0,8),
+    # (5,6), (6,7), (8,9), (9,10), # arms
+    # (2,14), (2,11),
+    # (11,12), (12,13), (14,15), (15,16), # legs
+    # )
+
+    # # 1st - Image
+    # fig = plt.figure()
+    # ax = fig.add_subplot(1, 2, 1)
+    # plt.imshow(Image.open(img_path[0]))
+
+    # # 2nd- 3D Pose
+    # pts = vec[0]
+    # ax = fig.add_subplot(1, 2, 2, projection='3d')
+    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
+    # for bone in bones:
+    #     xS = (pts[bone[0],0], pts[bone[1],0])
+    #     yS = (pts[bone[0],1], pts[bone[1],1])
+    #     zS = (pts[bone[0],2], pts[bone[1],2])
+        
+    #     ax.plot(xS, yS, zS)
+    
+    # ax.view_init(elev=-80, azim=-90)
+    # plt.xlim(-1,1)
+    # plt.ylim(-1,1)
+    # ax.set_zlim(-1,1)
+    # ax.set_xlabel("X")
+    # ax.set_ylabel("Y")
+    # ax.set_zlabel("Z")
+
+
+    # plt.show()
+
+
+if __name__ == "__main__":
+
+    try_load()
