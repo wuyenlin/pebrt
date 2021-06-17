@@ -16,7 +16,6 @@ class Video:
         self.avi_path = "dataset/S{}/Seq{}/imageSequence/video_{}.avi".format(S,Se,vid)
         self.calib_path = "dataset/S{}/Seq{}/camera.calibration".format(S,Se)
 
-        self.camera = vid # get camera number
         self.annot3D = sio.loadmat(self.mat_path)['annot3']
         self.annot2D = sio.loadmat(self.mat_path)['annot2']
 
@@ -25,7 +24,7 @@ class Video:
         print("Killed")
     
     def draw_bbox(self, nframe):
-        coordinates = self.annot2D[self.camera][0][nframe]
+        coordinates = self.annot2D[self.vid][0][nframe]
         xS = []
         yS = []
         for k in range(0, len(coordinates)):
@@ -51,7 +50,7 @@ class Video:
         """
         Calculate the cross product given a frame
         """
-        objPoint = self.annot3D[self.camera][0][nframe]
+        objPoint = self.annot3D[self.vid][0][nframe]
         obj = np.array(objPoint.reshape(-1,3), dtype=np.float32)
         self.n_vec = np.cross(obj[9]-obj[4], obj[14]-obj[4])
 
@@ -64,15 +63,15 @@ class Video:
         content = calib.readlines()
         content = [line.strip() for line in content]
         # 3x3 intrinsic matrix
-        camMatrix = np.array(content[7*self.camera+5].split(" ")[3:], dtype=np.float32)
-        self.camMatrix = np.reshape(camMatrix, (4,-1))[0:3,0:3]
+        camMatrix = np.array(content[7*self.vid+5].split(" ")[3:], dtype=np.float32)
+        self.camMatrix = camMatrix.reshape(4,-1)[0:3,0:3]
     
 
     def parse_frame(self, nframe):
         self.get_cross(nframe)
-        self.objPoint = self.annot3D[self.camera][0][nframe]
+        self.objPoint = self.annot3D[self.vid][0][nframe]
         self.objPoint = np.array(self.objPoint.reshape(-1,3), dtype=np.float32)
-        self.imgPoint = self.annot2D[self.camera][0][nframe]
+        self.imgPoint = self.annot2D[self.vid][0][nframe]
         self.imgPoint = np.array(self.imgPoint.reshape(-1,2), dtype=np.float32)
         self.root = self.objPoint[4]
 
@@ -100,8 +99,8 @@ class Video:
             self.proj_yS.append(int(y))
 
 
-    # make sure coordinates do not go beyond the frame
     def bound_number(self, x, y, frame_size):
+        """make sure coordinates do not go beyond the frame"""
         if x < 0 :
             x = 0
             if y < 0:
@@ -153,40 +152,40 @@ class Video:
             print("processing S{} Seq{} video_{}".format(self.S, self.Se, self.vid))
             for k in tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT)))):
                 ret, frame = cap.read()
-                if ret:
-                    x1, y1, x2, y2 = self.draw_bbox(k)
-                    x1, y1 = self.bound_number(x1, y1, frame)
-                    x2, y2 = self.bound_number(x2, y2, frame)
-                    start = (x1, y1)
-                    end = (x2, y2)
-                    if not self.check_valid(k, start, end): 
-                        continue
+                assert ret
+                x1, y1, x2, y2 = self.draw_bbox(k)
+                x1, y1 = self.bound_number(x1, y1, frame)
+                x2, y2 = self.bound_number(x2, y2, frame)
+                start = (x1, y1)
+                end = (x2, y2)
+                if not self.check_valid(k, start, end): 
+                    continue
 
-                    if full:
-                        filename = os.path.join("dataset", \
-                            "S{}/Seq{}/imageSequence/full_video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
-                    else:
-                        filename = os.path.join("dataset", \
-                            "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+                if full:
+                    filename = os.path.join("dataset", \
+                        "S{}/Seq{}/imageSequence/full_video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
+                else:
+                    filename = os.path.join("dataset", \
+                        "S{}/Seq{}/imageSequence/video_{}/frame{:06}.jpg".format(self.S, self.Se, self.vid, k))
 
-                    if end[0]-start[0] == end[1]-start[1]:
-                        data[k] = {}
-                        if save_img:
-                            try:
-                                cropped_frame = frame[start[1]:end[1], start[0]:end[0]]
-                                if full:
-                                    cv.imwrite(filename, cv.resize(frame, (512,512), interpolation=cv.INTER_AREA))
-                                else:
-                                    cv.imwrite(filename, cropped_frame)
-                            except FileExistsError:
-                                pass
+                if end[0]-start[0] == end[1]-start[1]:
+                    data[k] = {}
+                    if save_img:
+                        try:
+                            cropped_frame = frame[start[1]:end[1], start[0]:end[0]]
+                            if full:
+                                cv.imwrite(filename, cv.resize(frame, (512,512), interpolation=cv.INTER_AREA))
+                            else:
+                                cv.imwrite(filename, cropped_frame)
+                        except FileExistsError:
+                            pass
 
-                        if save_npz:
-                            data[k]["directory"] = filename
-                            data[k]["bbox_start"] = start
-                            data[k]["bbox_end"] = end
-                            data[k]["pts_2d"] = self.imgPoint.reshape(-1,2)
-                            data[k]["pts_3d"] = self.objPoint.reshape(-1,3)
+                    if save_npz:
+                        data[k]["directory"] = filename
+                        data[k]["bbox_start"] = start
+                        data[k]["bbox_end"] = end
+                        data[k]["pts_2d"] = self.imgPoint.reshape(-1,2)
+                        data[k]["pts_3d"] = self.objPoint.reshape(-1,3)
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
