@@ -121,6 +121,12 @@ def merge_npz():
 
 
 if __name__ == "__main__":
+    action_list = ['Photo', 'Phoning', 'Sitting 1', 'Purchases', 'Purchases 1', 
+                    'WalkTogether', 'Sitting 2', 'WalkDog', 'Smoking 1', 'Phoning 1', 
+                    'Walking 1', 'Walking', 'Discussion 1', 'SittingDown', 'Directions', 
+                    'Greeting 1', 'Eating 2', 'Eating', 'Photo 1', 'WalkTogether 1', 
+                    'Greeting', 'Directions 1', 'WalkDog 1', 'Posing 1', 'Waiting', 
+                    'Posing', 'Discussion', 'Smoking', 'Waiting 1', 'SittingDown 2']
     # merge_npz()
     v = Video(1, "Directions", 54138969)
     v.save_cropped(True, True)
