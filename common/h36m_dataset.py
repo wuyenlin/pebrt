@@ -4,10 +4,33 @@ import cv2 as cv
 from tqdm import tqdm
 
 
+def merge_2d3d():
+    """
+    This function is for merging the 2D and 3D .npz file made by 
+    data/prepare_data_h36m.py in VideoPose3D.
+    Can be used for PEBRT.
+    """
+    merge_data = []
+    files = ["./data_2d_h36m_gt.npz","./data_3d_h36m.npz"]
+    print("Processing...")
+    for item in files:
+        t = np.load(item, allow_pickle=True)
+        t = t["positions_2d"].reshape(1,-1) if item.endswith("2d_h36m_gt.npz") else t["positions_3d"].reshape(1,-1)
+        merge_data.append(*t)
+    filename = "./h36m/data_h36m"
+    np.savez_compressed(filename, positions_2d=merge_data[0], positions_3d=merge_data[1])
+    print("saved {}.npz".format(filename))
+
+
 class Video:
     def __init__(self, S, action, cam):
         self.S = S
-        self.action = action
+        if action == "TakingPhoto":
+            self.action = "Photo"
+        elif action == "WalkingDog":
+            self.action = "WalkDog"
+        else:
+            self.action = action
         self.cam = 54138969
 
         self.vid_path = "./h36m/S{}/Videos/{}.{}.mp4".format(S, action, cam)
@@ -99,34 +122,48 @@ class Video:
                         data[k]["bbox_end"] = end
                         data[k]["pts_2d"] = self.annot2D.reshape(-1,2)
                         data[k]["pts_3d"] = self.annot3D.reshape(-1,3)
-            break
-        if save_npz:
-            print("Saving .npz file...")
-            np.savez_compressed("./h36m/S{}_{}".format(self.S, self.action), data)
-            print("Saved ./h36m/S{}_{}.npz".format(self.S, self.action))
-        cap.release()
+            # break
+            if save_npz:
+                print("Saving .npz file...")
+                self.npz_name = "./h36m/S{}_{}".format(self.S, self.action)
+                np.savez_compressed(self.npz_name, data)
+                print("Saved " + self.npz_name + ".npz")
+            cap.release()
 
 
-def merge_npz():
+def merge_npz(file_list):
+    """
+    This function is for merging the 2D and 3D .npz file made by 
+    data/prepare_data_h36m.py in VideoPose3D.
+    Can be used for PEBRT.
+    """
     merge_data = []
-    files = ["./data_2d_h36m_gt.npz","./data_3d_h36m.npz"]
-    print("Processing...")
-    for item in files:
+    for item in file_list:
         t = np.load(item, allow_pickle=True)
-        t = t["positions_2d"].reshape(1,-1) if item.endswith("2d_h36m_gt.npz") else t["positions_3d"].reshape(1,-1)
+        t = t["arr_0"].reshape(1,-1)
         merge_data.append(*t)
-    filename = "./data_h36m"
-    np.savez_compressed(filename, positions_2d=merge_data[0], positions_3d=merge_data[1])
+    filename = "./h36m/data_h36m_frame"
+    np.savez_compressed(filename, merge_data)
     print("saved {}.npz".format(filename))
 
 
-if __name__ == "__main__":
-    action_list = ['Photo', 'Phoning', 'Sitting 1', 'Purchases', 'Purchases 1', 
-                    'WalkTogether', 'Sitting 2', 'WalkDog', 'Smoking 1', 'Phoning 1', 
+def main():
+    subjects = [1, 5, 6, 7, 8, 9, 11]
+    action_list = ['TakingPhoto', 'Phoning', 'Sitting 1', 'Purchases', 'Purchases 1', 
+                    'WalkTogether', 'Sitting 2', 'WalkingDog', 'Smoking 1', 'Phoning 1', 
                     'Walking 1', 'Walking', 'Discussion 1', 'SittingDown', 'Directions', 
                     'Greeting 1', 'Eating 2', 'Eating', 'Photo 1', 'WalkTogether 1', 
                     'Greeting', 'Directions 1', 'WalkDog 1', 'Posing 1', 'Waiting', 
                     'Posing', 'Discussion', 'Smoking', 'Waiting 1', 'SittingDown 2']
-    # merge_npz()
-    v = Video(1, "Directions", 54138969)
-    v.save_cropped(True, True)
+    file_list = []
+    for s in subjects:
+        for action in action_list:
+            v = Video(s, action, 54138969)
+            v.save_cropped(True, True)
+            file_list.append(v.npz_name + ".npz")
+    print("Merging all npz files.")
+    merge_npz(file_list)
+    print("Done!")
+
+if __name__ == "__main__":
+    main()
