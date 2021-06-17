@@ -57,10 +57,6 @@ class Video:
         return x, y
 
 
-    def in_box(self, pt, start, end):
-        return True if (start[0]<=pt[0]<=end[0] and start[1]<=pt[1]<=end[1]) else False
-
-
     def save_cropped(self, save_img=False, save_npz=True):
         data = {}
         cap = cv.VideoCapture(self.vid_path)
@@ -75,7 +71,7 @@ class Video:
 
         while (cap.isOpened()):
             print("processing S{}, {}...".format(self.S, self.action))
-            for k in tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT)))):
+            for k in tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))-1)):
                 ret, frame = cap.read()
                 assert ret
                 cv.imshow("Vid", frame)
@@ -101,11 +97,13 @@ class Video:
                         data[k]["directory"] = filename
                         data[k]["bbox_start"] = start
                         data[k]["bbox_end"] = end
-                        data[k]["pts_2d"] = self.imgPoint.reshape(-1,2)
-                        data[k]["pts_3d"] = self.objPoint.reshape(-1,3)
+                        data[k]["pts_2d"] = self.annot2D.reshape(-1,2)
+                        data[k]["pts_3d"] = self.annot3D.reshape(-1,3)
             break
         if save_npz:
-            np.savez_compressed("./h36m/S{}".format(self.S), data)
+            print("Saving .npz file...")
+            np.savez_compressed("./h36m/S{}_{}".format(self.S, self.action), data)
+            print("Saved ./h36m/S{}_{}.npz".format(self.S, self.action))
         cap.release()
 
 
@@ -125,4 +123,4 @@ def merge_npz():
 if __name__ == "__main__":
     # merge_npz()
     v = Video(1, "Directions", 54138969)
-    v.save_cropped(True, False)
+    v.save_cropped(True, True)
