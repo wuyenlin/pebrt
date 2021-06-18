@@ -35,11 +35,12 @@ class Video:
 
         self.vid_path = "./h36m/S{}/Videos/{}.{}.mp4".format(S, action, cam)
         self.img_path = "./h36m/S{}/{}.{}/".format(S, action, cam)
+        self.npz_name = "./h36m/S{}_{}".format(self.S, self.action)
 
         data_2d = np.load("./h36m/data_2d_h36m_gt.npz", allow_pickle=True)
-        self.annot2D = data_2d["positions_2d"].reshape(1,-1)[0][0]["S"+str(S)][action][0]
+        self.annot2D = data_2d["positions_2d"].reshape(1,-1)[0][0]["S"+str(S)][self.action][0]
         data_3d = np.load("./h36m/data_3d_h36m.npz", allow_pickle=True)
-        self.annot3D = data_3d["positions_3d"].reshape(1,-1)[0][0]["S"+str(S)][action]
+        self.annot3D = data_3d["positions_3d"].reshape(1,-1)[0][0]["S"+str(S)][self.action]
 
     
     def __del__(self):
@@ -101,7 +102,10 @@ class Video:
                 if cv.waitKey(25) & 0xFF == ord("q"):
                     break
 
-                x1, y1, x2, y2 = self.draw_bbox(k)
+                try:
+                    x1, y1, x2, y2 = self.draw_bbox(k)
+                except IndexError:
+                    continue
                 x1, y1 = self.bound_number(x1, y1, frame)
                 x2, y2 = self.bound_number(x2, y2, frame)
                 start = (x1, y1)
@@ -125,7 +129,6 @@ class Video:
             # break
             if save_npz:
                 print("Saving .npz file...")
-                self.npz_name = "./h36m/S{}_{}".format(self.S, self.action)
                 np.savez_compressed(self.npz_name, data)
                 print("Saved " + self.npz_name + ".npz")
             cap.release()
