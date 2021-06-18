@@ -109,11 +109,11 @@ class Data:
                     self.gt_pts3d.append(gt_3d)
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
-            print(len(self.gt_pts2d))
 
     def __getitem__(self, index):
         try:
             frame = self.img_path[index]
+            # img_path = self.img_path[index]
             # img = Image.open(img_path)
             # img = self.transforms(img)
             kpts_2d = self.gt_pts2d[index]
