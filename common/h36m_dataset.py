@@ -3,6 +3,48 @@ import numpy as np
 import cv2 as cv
 from tqdm import tqdm
 
+subject_action = {
+    "S1": ['Photo', 'Phoning', 'Sitting 1', 'Purchases', 'Purchases 1', 'WalkTogether', 'Sitting 2', 'WalkDog', 
+            'Smoking 1', 'Phoning 1', 'Walking 1', 'Walking', 'Discussion 1', 'SittingDown', 'Directions', 
+            'Greeting 1', 'Eating 2', 'Eating', 'Photo 1', 'WalkTogether 1', 
+            'Greeting', 'Directions 1', 'WalkDog 1', 'Posing 1', 'Waiting', 'Posing', 
+            'Discussion', 'Smoking', 'Waiting 1', 'SittingDown 2'],
+
+    "S5": ['Phoning', 'Sitting 1', 'SittingDown 1', 'Purchases', 'Purchases 1', 
+            'WalkTogether', 'Discussion 3', 'Sitting', 'Waiting 2', 'Smoking 1', 
+            'Photo 2', 'Phoning 1', 'Walking 1', 'Eating 1', 'WalkDog 1', 'Walking', 
+            'SittingDown', 'Greeting 1', 'Eating', 'WalkTogether 1', 'Greeting 2', 
+            'Directions 2', 'Directions 1', 'Posing 1', 'Discussion 2', 
+            'Photo', 'WalkDog', 'Posing', 'Smoking', 'Waiting 1'],
+
+    "S6": ['Phoning', 'Sitting 1', 'SittingDown 1', 'Purchases', 'Purchases 1', 
+            'WalkTogether', 'Sitting 2', 'Smoking 1', 'Waiting 3', 'Phoning 1', 
+            'Photo 1', 'Walking 1', 'Eating 1', 'WalkDog 1', 'Walking', 'Discussion 1', 
+            'SittingDown', 'Directions', 'Greeting 1', 'Eating 2', 'WalkTogether 1', 'Greeting', 
+            'Directions 1', 'Posing 2', 'Waiting', 'Photo', 'WalkDog', 'Posing', 'Discussion', 'Smoking'],
+
+    "S7": ['Phoning', 'Phoning 2', 'Sitting 1', 'SittingDown 1', 'Purchases', 'Purchases 1', 'WalkTogether', 
+            'Sitting', 'Waiting 2', 'Smoking 1', 'Photo 1', 'Walking 1', 'Eating 1', 'WalkDog 1', 
+            'Discussion 1', 'SittingDown', 'Directions', 'Greeting 1', 'Eating', 'WalkTogether 1', 
+            'Greeting', 'Directions 1', 'Posing 1', 'Photo', 'WalkDog', 'Posing', 
+            'Discussion', 'Smoking', 'Waiting 1', 'Walking 2'],
+
+    "S8": ['Phoning', 'Sitting 1', 'SittingDown 1', 'Purchases', 'Purchases 1', 'Sitting', 'Smoking 1', 
+            'Phoning 1', 'Photo 1', 'Walking 1', 'Eating 1', 'WalkDog 1', 'Walking', 'Discussion 1', 'SittingDown', 
+            'Directions', 'Greeting 1', 'WalkTogether 2', 'Eating', 'WalkTogether 1', 'Greeting', 'Directions 1', 
+            'Posing 1', 'Waiting', 'Photo', 'WalkDog', 'Posing', 'Discussion', 'Smoking', 'Waiting 1'],
+
+    "S9": ['Phoning', 'Sitting 1', 'SittingDown 1', 'Purchases', 'Purchases 1', 'WalkTogether', 'Sitting', 'Smoking 1', 
+            'Phoning 1', 'Photo 1', 'Walking 1', 'Eating 1', 'WalkDog 1', 'Walking', 'Discussion 1', 'SittingDown', 
+            'Directions', 'Greeting 1', 'Eating', 'WalkTogether 1', 'Greeting', 'Directions 1', 'Posing 1', 'Discussion 2', 
+            'Waiting', 'Photo', 'WalkDog', 'Posing', 'Smoking', 'Waiting 1'],
+
+    "S11": ['Phoning 2', 'Sitting 1', 'SittingDown 1', 'Purchases', 'Purchases 1', 'WalkTogether', 'Sitting', 'Photo 1', 
+            'Walking 1', 'Eating 1', 'WalkDog 1', 'Walking', 'Discussion 1', 'Phoning 3', 'Smoking 2', 'SittingDown', 
+            'Eating', 'WalkTogether 1', 'Greeting', 'Greeting 2', 'Directions 1', 'Posing 1', 'Discussion 2', 'Waiting', 
+            'Photo', 'WalkDog', 'Posing', 'Smoking', 'Waiting 1'],
+}
+
 
 def merge_2d3d():
     """
@@ -25,17 +67,17 @@ def merge_2d3d():
 class Video:
     def __init__(self, S, action, cam):
         self.S = S
-        if action == "TakingPhoto":
-            self.action = "Photo"
-        elif action == "WalkingDog":
-            self.action = "WalkDog"
+        if "TakingPhoto" in action:
+            self.action = action.replace("TakingPhoto", "Photo")
+        elif "WalkingDog" in action:
+            self.action = action.replace("WalkingDog", "WalkDog")
         else:
             self.action = action
         self.cam = 54138969
 
-        self.vid_path = "./h36m/S{}/Videos/{}.{}.mp4".format(S, action, cam)
-        self.img_path = "./h36m/S{}/{}.{}/".format(S, action, cam)
-        self.npz_name = "./h36m/S{}_{}".format(self.S, self.action)
+        self.vid_path = "./h36m/{}/Videos/{}.{}.mp4".format(S, action, cam)
+        self.img_path = "./h36m/{}/{}.{}/".format(S, action, cam)
+        self.npz_name = "./h36m/{}_{}".format(self.S, self.action)
 
         data_2d = np.load("./h36m/data_2d_h36m_gt.npz", allow_pickle=True)
         self.annot2D = data_2d["positions_2d"].reshape(1,-1)[0][0]["S"+str(S)][self.action][0]
@@ -88,13 +130,13 @@ class Video:
             print("Error opening the video file.")
 
         try:
-            os.mkdir("./h36m/S{}/{}.{}"\
+            os.mkdir("./h36m/{}/{}.{}"\
                         .format(self.S, self.action, self.cam))
         except FileExistsError:
             pass
 
         while (cap.isOpened()):
-            print("processing S{}, {}...".format(self.S, self.action))
+            print("processing {}, {}...".format(self.S, self.action))
             for k in tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))-1)):
                 ret, frame = cap.read()
                 assert ret
@@ -111,7 +153,7 @@ class Video:
                 start = (x1, y1)
                 end = (x2, y2)
 
-                filename = "./h36m/S{}/{}.{}/frame{:06}.jpg"\
+                filename = "./h36m/{}/{}.{}/frame{:06}.jpg"\
                             .format(self.S, self.action, self.cam, k)
 
                 if end[0]-start[0] == end[1]-start[1]:
@@ -150,17 +192,10 @@ def merge_npz(file_list):
     print("saved {}.npz".format(filename))
 
 
-def main():
-    subjects = [1, 5, 6, 7, 8, 9, 11]
-    action_list = ['TakingPhoto', 'Phoning', 'Sitting 1', 'Purchases', 'Purchases 1', 
-                    'WalkTogether', 'Sitting 2', 'WalkingDog', 'Smoking 1', 'Phoning 1', 
-                    'Walking 1', 'Walking', 'Discussion 1', 'SittingDown', 'Directions', 
-                    'Greeting 1', 'Eating 2', 'Eating', 'Photo 1', 'WalkTogether 1', 
-                    'Greeting', 'Directions 1', 'WalkDog 1', 'Posing 1', 'Waiting', 
-                    'Posing', 'Discussion', 'Smoking', 'Waiting 1', 'SittingDown 2']
+def main(subject_action):
     file_list = []
-    for s in subjects:
-        for action in action_list:
+    for s in subject_action.keys():
+        for action in subject_action[s]:
             v = Video(s, action, 54138969)
             v.save_cropped(True, True)
             file_list.append(v.npz_name + ".npz")
