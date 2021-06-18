@@ -100,7 +100,6 @@ class Video:
             for k in tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))-1)):
                 ret, frame = cap.read()
                 assert ret
-                cv.imshow("Vid", frame)
                 if cv.waitKey(25) & 0xFF == ord("q"):
                     break
 
