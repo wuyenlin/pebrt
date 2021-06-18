@@ -1,4 +1,6 @@
 dataset/S*/
+dataset/h36m/
+h36m/
 checkpoint/
 anth_checkpoint/
 weights/
