@@ -82,7 +82,6 @@ class Data:
                     assert gt_2d.shape == (17,2) and gt_3d.shape == (17,3)
                     self.gt_pts2d.append(gt_2d)
                     self.gt_pts3d.append(gt_3d)
-                    self.gt_vecs3d.append(convert_gt(gt_3d, t_info, "h36m"))
                     self.img_path.append(frames[f]["directory"])
 
         else:
@@ -113,10 +112,10 @@ class Data:
             img = Image.open(img_path)
             img = self.transforms(img)
             kpts_2d = self.gt_pts2d[index]
-            vecs_3d = self.gt_vecs3d[index]
+            kpts_3d = self.gt_pts3d[index]
         except:
             return None
-        return img_path, img, kpts_2d, vecs_3d
+        return img_path, img, kpts_2d, kpts_3d
         
 
     def __len__(self):
