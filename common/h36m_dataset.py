@@ -9,7 +9,7 @@ def merge_2d3d():
     """
     This function is for merging the 2D and 3D .npz file made by 
     data/prepare_data_h36m.py in VideoPose3D.
-    Can be used for PEBRT.
+    Can be used for lifting models.
     """
     merge_data = []
     files = ["./data_2d_h36m_gt.npz","./data_3d_h36m.npz"]
@@ -130,8 +130,8 @@ class Video:
 
 def main(subject_action):
     """
-    This function is for merging the 2D and 3D .npz file made by 
-    data/prepare_data_h36m.py in VideoPose3D.
+    This function is to save video frames and save their paths along with
+    2D/3D keypoints and bounding box coordinates in a .npz file.
     Can be used for PEBRT.
     """
     tabs = {}
