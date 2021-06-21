@@ -122,8 +122,8 @@ class Video:
                         data[k]["directory"] = filename
                         data[k]["bbox_start"] = start
                         data[k]["bbox_end"] = end
-                        data[k]["positions_2d"] = self.annot2D.reshape(-1,2)
-                        data[k]["positions_3d"] = self.annot3D.reshape(-1,3)
+                        data[k]["positions_2d"] = self.annot2D[k,:,:]
+                        data[k]["positions_3d"] = self.annot3D[k,:,:]
             cap.release()
         return data if save_npz else None
 
@@ -142,7 +142,7 @@ def main(subject_action):
             category = s + "/" + action
             tabs[category] = data
     print("Merging all npz files.")
-    filename = "./h36m/data_h36m_frame"
+    filename = "./h36m/data_h36m_frame_all"
     np.savez_compressed(filename, **tabs)
     print("saved {}.npz".format(filename))
     print("Done!")
