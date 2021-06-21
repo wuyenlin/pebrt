@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import cv2 as cv
-from numpy.lib.npyio import save
 from tqdm import tqdm
 
 
@@ -87,8 +86,6 @@ class Video:
         if (cap.isOpened() == False):
             print("Error opening the video file: " + self.vid_path)
 
-        # if os.path.exists(self.npz_name + ".npz"):
-        #     print("The dataset already exists at", self.npz_name + ".npz")
         try:
             os.mkdir("./h36m/{}/{}.{}"\
                         .format(self.S, self.action, self.cam))
@@ -128,7 +125,7 @@ class Video:
                         data[k]["positions_2d"] = self.annot2D.reshape(-1,2)
                         data[k]["positions_3d"] = self.annot3D.reshape(-1,3)
             cap.release()
-            return data if save_npz else None
+        return data if save_npz else None
 
 
 def main(subject_action):
