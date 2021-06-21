@@ -1,5 +1,6 @@
 dataset/S*/
 checkpoint/
+h36m/
 weights/
 *.bin
 *.out
