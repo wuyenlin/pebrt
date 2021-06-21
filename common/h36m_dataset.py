@@ -139,8 +139,8 @@ def main(subject_action):
         for action in subject_action[s]:
             v = Video(s, action, 54138969)
             data = (v.save(save_img=False, save_npz=True))
-            cat = s + "/" + action
-            tabs[cat] = data
+            category = s + "/" + action
+            tabs[category] = data
     print("Merging all npz files.")
     filename = "./h36m/data_h36m_frame"
     np.savez_compressed(filename, **tabs)
