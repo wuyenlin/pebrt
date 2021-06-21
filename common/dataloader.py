@@ -8,12 +8,6 @@ except ModuleNotFoundError:
     from human import *
 
 
-transform = transforms.Compose([
-    transforms.Resize([256,256]),
-    transforms.ToTensor(),  
-    transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-])
-
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
     return torch.utils.data.dataloader.default_collate(batch)
@@ -100,12 +94,10 @@ class Data:
 
             for vid in vid_list:
                 for frame in data[vid].keys():
-                    pts_2d = data[vid][frame]["pts_2d"]
-                    # pts_2d = data[vid][frame]["positions_2d"]
+                    pts_2d = data[vid][frame]["positions_2d"]
                     gt_2d = self.zero_center(self.remove_joints(pts_2d))
 
-                    pts_3d = data[vid][frame]["pts_3d"]
-                    # pts_3d = data[vid][frame]["positions_3d"]
+                    pts_3d = data[vid][frame]["positions_3d"]
                     cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                     gt_3d = self.zero_center(cam_3d)/1000
 
@@ -113,7 +105,6 @@ class Data:
                     self.gt_pts3d.append(gt_3d)
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
-                    print(self.img_path[-1])
 
 
     def __getitem__(self, index):
@@ -195,8 +186,8 @@ class Data:
 
 def try_load():
     from torch.utils.data import DataLoader
-    # train_npz = "./h36m/data_h36m_frame_S1.npz"
-    train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
+    train_npz = "./h36m/data_h36m_frame_S1.npz"
+    # train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=16, drop_last=True,
@@ -244,4 +235,9 @@ def try_load():
 
 if __name__ == "__main__":
 
+    transforms = transforms.Compose([
+        transforms.Resize([256,256]),
+        transforms.ToTensor(),  
+        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
+    ])
     try_load()
