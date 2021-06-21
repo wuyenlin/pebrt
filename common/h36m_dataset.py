@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import cv2 as cv
-from numpy.lib.npyio import save
 from tqdm import tqdm
 
 
@@ -10,7 +9,7 @@ def merge_2d3d():
     """
     This function is for merging the 2D and 3D .npz file made by 
     data/prepare_data_h36m.py in VideoPose3D.
-    Can be used for PEBRT.
+    Can be used for lifting models.
     """
     merge_data = []
     files = ["./data_2d_h36m_gt.npz","./data_3d_h36m.npz"]
@@ -87,8 +86,6 @@ class Video:
         if (cap.isOpened() == False):
             print("Error opening the video file: " + self.vid_path)
 
-        # if os.path.exists(self.npz_name + ".npz"):
-        #     print("The dataset already exists at", self.npz_name + ".npz")
         try:
             os.mkdir("./h36m/{}/{}.{}"\
                         .format(self.S, self.action, self.cam))
@@ -125,27 +122,27 @@ class Video:
                         data[k]["directory"] = filename
                         data[k]["bbox_start"] = start
                         data[k]["bbox_end"] = end
-                        data[k]["positions_2d"] = self.annot2D.reshape(-1,2)
-                        data[k]["positions_3d"] = self.annot3D.reshape(-1,3)
+                        data[k]["positions_2d"] = self.annot2D[k,:,:]
+                        data[k]["positions_3d"] = self.annot3D[k,:,:]
             cap.release()
-            return data if save_npz else None
+        return data if save_npz else None
 
 
 def main(subject_action):
     """
-    This function is for merging the 2D and 3D .npz file made by 
-    data/prepare_data_h36m.py in VideoPose3D.
+    This function is to save video frames and save their paths along with
+    2D/3D keypoints and bounding box coordinates in a .npz file.
     Can be used for PEBRT.
     """
     tabs = {}
     for s in subject_action.keys():
         for action in subject_action[s]:
             v = Video(s, action, 54138969)
-            data = (v.save(save_img=False, save_npz=True))
-            cat = s + "/" + action
-            tabs[cat] = data
+            data = v.save(save_img=False, save_npz=True)
+            category = s + "/" + action
+            tabs[category] = data
     print("Merging all npz files.")
-    filename = "./h36m/data_h36m_frame"
+    filename = "./h36m/data_h36m_frame_all"
     np.savez_compressed(filename, **tabs)
     print("saved {}.npz".format(filename))
     print("Done!")
