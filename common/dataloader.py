@@ -8,7 +8,6 @@ except ModuleNotFoundError:
     from human import *
 
 
-
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
     return torch.utils.data.dataloader.default_collate(batch)
@@ -66,31 +65,28 @@ class Data:
 
         data = np.load(npz_path, allow_pickle=True)
 
-        if npz_path.endswith("h36m.npz"):
-            print("INFO: Training on Human3.6M dataset.")
+        if "h36m" in npz_path:
+            print("INFO: Using Human3.6M dataset.")
             import random
-            data_2d = data["positions_2d"].reshape(1,-1)[0][0]["S1"]
-            data_3d = data["positions_3d"].reshape(1,-1)[0][0]["S1"]
-            data2d_list = random.sample(data_2d.keys(), 24)
-            data3d_list = random.sample(data_3d.keys(), 24)
-            if not train:
-                data2d_list = data_2d.keys() - data2d_list
-                data3d_list = data_3d.keys() - data3d_list
+            S1 = [item for item in data.files if "S1/" in item]
+            train_data = random.sample(S1, int(len(S1)*0.7)) if train \
+                else random.sample(S1, int(len(S1)*0.3))
 
-            for action in data3d_list:
-                for frame in range(data_3d[action].shape[0]):
-                    gt_2d = self.zero_center(data_2d[action][0][frame,:,:], "h36m")
+            for action in train_data:
+                frames = data[action].flatten()[0]
+                for f in frames:
+                    gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
                     gt_3d = self.zero_center(self.remove_joints( \
-                            data_3d[action][frame,:,:], "h36m"), "h36m")
+                            frames[f]["positions_3d"], "h36m"), "h36m")
 
+                    assert gt_2d.shape == (17,2) and gt_3d.shape == (17,3)
                     self.gt_pts2d.append(gt_2d)
                     self.gt_pts3d.append(gt_3d)
-                    self.gt_vecs3d.append((convert_gt(gt_3d, t_info, "h36m")))
-                    self.img_path.append(frame)
+                    self.gt_vecs3d.append(convert_gt(gt_3d, t_info, "h36m"))
+                    self.img_path.append(frames[f]["directory"])
 
-            
         else:
-            print("INFO: Training on MPI-INF-3DHP dataset.")
+            print("INFO: Using MPI-INF-3DHP dataset.")
             data = data["arr_0"].reshape(1,-1)[0]
             vid_list = np.arange(6)
             if not train:
@@ -98,10 +94,10 @@ class Data:
 
             for vid in vid_list:
                 for frame in data[vid].keys():
-                    pts_2d = data[vid][frame]["pts_2d"]
+                    pts_2d = data[vid][frame]["positions_2d"]
                     gt_2d = self.zero_center(self.remove_joints(pts_2d))
 
-                    pts_3d = data[vid][frame]["pts_3d"]
+                    pts_3d = data[vid][frame]["positions_3d"]
                     cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                     gt_3d = self.zero_center(cam_3d)/1000
 
@@ -110,23 +106,21 @@ class Data:
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
 
+
     def __getitem__(self, index):
         try:
-            frame = self.img_path[index]
-            # img_path = self.img_path[index]
-            # img = Image.open(img_path)
-            # img = self.transforms(img)
+            img_path = self.img_path[index]
+            img = Image.open(img_path)
+            img = self.transforms(img)
             kpts_2d = self.gt_pts2d[index]
-            kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        # return img_path, img, kpts_2d, vecs_3d
-        return frame, kpts_2d, kpts_3d, vecs_3d
+        return img_path, img, kpts_2d, vecs_3d
         
 
     def __len__(self):
-        return len(self.gt_pts2d)
+        return len(self.img_path)
     
 
     def remove_joints(self, kpts, dataset="mpi"):
@@ -191,13 +185,13 @@ class Data:
 
 
 def try_load():
-    from torchvision import transforms
     from torch.utils.data import DataLoader
-    train_npz = "./data_h36m.npz"
-    train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
+    train_npz = "./h36m/data_h36m_frame_S1.npz"
+    # train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
     train_dataset = Data(train_npz, transforms, True)
     trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=8, drop_last=True)
+                        shuffle=True, num_workers=16, drop_last=True,
+                        collate_fn=collate_fn)
     print("data loaded!")
     dataiter = iter(trainloader)
     frame, gt_2d, gt_3d, vec_3d = dataiter.next()
@@ -241,4 +235,9 @@ def try_load():
 
 if __name__ == "__main__":
 
+    transforms = transforms.Compose([
+        transforms.Resize([256,256]),
+        transforms.ToTensor(),  
+        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
+    ])
     try_load()
