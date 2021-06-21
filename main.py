@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader
 from time import time
 
 
@@ -37,7 +37,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, images, inputs_3d, _ = data
+            _, images, _, inputs_3d = data
             inputs_3d = inputs_3d.to(device)
             images = images.to(device)
 
@@ -63,7 +63,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, images, inputs_3d, _ = data
+                _, images, _, inputs_3d = data
                 inputs_3d = inputs_3d.to(device)
                 images = images.to(device)
 
@@ -98,7 +98,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "./world_checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./petr/epoch_{}_h36m.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
