@@ -184,8 +184,8 @@ class Video:
                         data[k]["directory"] = filename
                         data[k]["bbox_start"] = start
                         data[k]["bbox_end"] = end
-                        data[k]["pts_2d"] = self.imgPoint.reshape(-1,2)
-                        data[k]["pts_3d"] = self.objPoint.reshape(-1,3)
+                        data[k]["positions_2d"] = self.imgPoint.reshape(-1,2)
+                        data[k]["positions_3d"] = self.objPoint.reshape(-1,3)
             break
         if full:
             np.savez_compressed("dataset/S{}/Seq{}/imageSequence/full_video_{}".format(self.S,self.Se,self.vid), data)
