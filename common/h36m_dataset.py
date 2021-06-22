@@ -2,7 +2,6 @@ import os
 import numpy as np
 import cv2 as cv
 from tqdm import tqdm
-import argparse
 
 
 
@@ -22,7 +21,6 @@ def merge_2d3d():
     filename = "./h36m/data_h36m"
     np.savez_compressed(filename, positions_2d=merge_data[0], positions_3d=merge_data[1])
     print("saved {}.npz".format(filename))
-    print("Done.")
 
 
 class Video:
@@ -130,7 +128,7 @@ class Video:
         return data if save_npz else None
 
 
-def extract_frames(subject_action):
+def main(subject_action):
     """
     This function is to save video frames and save their paths along with
     2D/3D keypoints and bounding box coordinates in a .npz file.
@@ -147,59 +145,49 @@ def extract_frames(subject_action):
     filename = "./h36m/data_h36m_frame_all"
     np.savez_compressed(filename, **tabs)
     print("saved {}.npz".format(filename))
-    print("Done.")
+    print("Done!")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Human3.6M dataset npz files merger/processer")
+    subject_action = {
+        "S1": ["Photo", "Phoning", "Sitting 1", "Purchases", "Purchases 1", "WalkTogether", "Sitting 2", "WalkDog", 
+                "Smoking 1", "Phoning 1", "Walking 1", "Walking", "Discussion 1", "SittingDown", "Directions", 
+                "Greeting 1", "Eating 2", "Eating", "Photo 1", "WalkTogether 1", 
+                "Greeting", "Directions 1", "WalkDog 1", "Posing 1", "Waiting", "Posing", 
+                "Discussion", "Smoking", "Waiting 1", "SittingDown 2"],
 
-    parser.add_argument("--merge_2d3d", default="", type=str, help="Merge the 2d_gt and 3d npz files")
-    parser.add_argument("--extract_frames", default="", type=str, help="Extract video frames and include frame file path in npz file")
-    args = parser.parse_args()
+        "S5": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", 
+                "WalkTogether", "Discussion 3", "Sitting", "Waiting 2", "Smoking 1", 
+                "Photo 2", "Phoning 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", 
+                "SittingDown", "Greeting 1", "Eating", "WalkTogether 1", "Greeting 2", 
+                "Directions 2", "Directions 1", "Posing 1", "Discussion 2", 
+                "Photo", "WalkDog", "Posing", "Smoking", "Waiting 1"],
 
-    if args.merge_2d3d:
-        merge_2d3d()
+        "S6": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", 
+                "WalkTogether", "Sitting 2", "Smoking 1", "Waiting 3", "Phoning 1", 
+                "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", 
+                "SittingDown", "Directions", "Greeting 1", "Eating 2", "WalkTogether 1", "Greeting", 
+                "Directions 1", "Posing 2", "Waiting", "Photo", "WalkDog", "Posing", "Discussion", "Smoking"],
 
-    elif args.extract_frames:
-        subject_action = {
-            "S1": ["Photo", "Phoning", "Sitting 1", "Purchases", "Purchases 1", "WalkTogether", "Sitting 2", "WalkDog", 
-                    "Smoking 1", "Phoning 1", "Walking 1", "Walking", "Discussion 1", "SittingDown", "Directions", 
-                    "Greeting 1", "Eating 2", "Eating", "Photo 1", "WalkTogether 1", 
-                    "Greeting", "Directions 1", "WalkDog 1", "Posing 1", "Waiting", "Posing", 
-                    "Discussion", "Smoking", "Waiting 1", "SittingDown 2"],
+        "S7": ["Phoning", "Phoning 2", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "WalkTogether", 
+                "Sitting", "Waiting 2", "Smoking 1", "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", 
+                "Discussion 1", "SittingDown", "Directions", "Greeting 1", "Eating", "WalkTogether 1", 
+                "Greeting", "Directions 1", "Posing 1", "Photo", "WalkDog", "Posing", 
+                "Discussion", "Smoking", "Waiting 1", "Walking 2"],
 
-            "S5": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", 
-                    "WalkTogether", "Discussion 3", "Sitting", "Waiting 2", "Smoking 1", 
-                    "Photo 2", "Phoning 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", 
-                    "SittingDown", "Greeting 1", "Eating", "WalkTogether 1", "Greeting 2", 
-                    "Directions 2", "Directions 1", "Posing 1", "Discussion 2", 
-                    "Photo", "WalkDog", "Posing", "Smoking", "Waiting 1"],
+        "S8": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "Sitting", "Smoking 1", 
+                "Phoning 1", "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", "SittingDown", 
+                "Directions", "Greeting 1", "WalkTogether 2", "Eating", "WalkTogether 1", "Greeting", "Directions 1", 
+                "Posing 1", "Waiting", "Photo", "WalkDog", "Posing", "Discussion", "Smoking", "Waiting 1"],
 
-            "S6": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", 
-                    "WalkTogether", "Sitting 2", "Smoking 1", "Waiting 3", "Phoning 1", 
-                    "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", 
-                    "SittingDown", "Directions", "Greeting 1", "Eating 2", "WalkTogether 1", "Greeting", 
-                    "Directions 1", "Posing 2", "Waiting", "Photo", "WalkDog", "Posing", "Discussion", "Smoking"],
+        "S9": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "WalkTogether", "Sitting", "Smoking 1", 
+                "Phoning 1", "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", "SittingDown", 
+                "Directions", "Greeting 1", "Eating", "WalkTogether 1", "Greeting", "Directions 1", "Posing 1", "Discussion 2", 
+                "Waiting", "Photo", "WalkDog", "Posing", "Smoking", "Waiting 1"],
 
-            "S7": ["Phoning", "Phoning 2", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "WalkTogether", 
-                    "Sitting", "Waiting 2", "Smoking 1", "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", 
-                    "Discussion 1", "SittingDown", "Directions", "Greeting 1", "Eating", "WalkTogether 1", 
-                    "Greeting", "Directions 1", "Posing 1", "Photo", "WalkDog", "Posing", 
-                    "Discussion", "Smoking", "Waiting 1", "Walking 2"],
-
-            "S8": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "Sitting", "Smoking 1", 
-                    "Phoning 1", "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", "SittingDown", 
-                    "Directions", "Greeting 1", "WalkTogether 2", "Eating", "WalkTogether 1", "Greeting", "Directions 1", 
-                    "Posing 1", "Waiting", "Photo", "WalkDog", "Posing", "Discussion", "Smoking", "Waiting 1"],
-
-            "S9": ["Phoning", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "WalkTogether", "Sitting", "Smoking 1", 
-                    "Phoning 1", "Photo 1", "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", "SittingDown", 
-                    "Directions", "Greeting 1", "Eating", "WalkTogether 1", "Greeting", "Directions 1", "Posing 1", "Discussion 2", 
-                    "Waiting", "Photo", "WalkDog", "Posing", "Smoking", "Waiting 1"],
-
-            "S11": ["Phoning 2", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "WalkTogether", "Sitting", "Photo 1", 
-                    "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", "Phoning 3", "Smoking 2", "SittingDown", 
-                    "Eating", "WalkTogether 1", "Greeting", "Greeting 2", "Posing 1", "Discussion 2", "Waiting", 
-                    "Photo", "WalkDog", "Posing", "Smoking", "Waiting 1"],
-        }
-        extract_frames(subject_action)
+        "S11": ["Phoning 2", "Sitting 1", "SittingDown 1", "Purchases", "Purchases 1", "WalkTogether", "Sitting", "Photo 1", 
+                "Walking 1", "Eating 1", "WalkDog 1", "Walking", "Discussion 1", "Phoning 3", "Smoking 2", "SittingDown", 
+                "Eating", "WalkTogether 1", "Greeting", "Greeting 2", "Posing 1", "Discussion 2", "Waiting", 
+                "Photo", "WalkDog", "Posing", "Smoking", "Waiting 1"],
+    }
+    main(subject_action)
