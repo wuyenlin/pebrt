@@ -75,7 +75,8 @@ python3 common/h36m_dataset.py
 - [x] Animate results (see animation.py)
 - [x] Create evaluation metrics for bone rotation error
 - [x] Add kinematic constraints
+- [x] Train and test on Human3.6M
 - [ ] Online implementations of PEBRT (training & finetuning now)
+- [ ] Test evaluation metrics on existing methods (working on it now)
 - [ ] Fix camera angle issue
-- [ ] Test evaluation metrics on existing methods
 - [ ] Run on distributed systems (for SLI)
