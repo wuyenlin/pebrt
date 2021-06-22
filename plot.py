@@ -2,7 +2,6 @@
 import torch
 from torchvision import transforms
 from PIL import Image
-import numpy as np
 import matplotlib.pyplot as plt
 from common.petr import PETR
 from common.pebrt import PEBRT
@@ -71,7 +70,8 @@ def plot_human(ax, bones, output):
 def viz(bones, group, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device)
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./petr/ft_1_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
     if compare:
@@ -159,14 +159,23 @@ def viz(bones, group, compare=False, savefig=False):
 
 
 if __name__ == "__main__":
-    bones = (
-    (0,1), (0,3), (1,2), (3,4),  # spine + head
-    (0,5), (0,8),
-    (5,6), (6,7), (8,9), (9,10), # arms
-    (2,14), (2,11),
-    (11,12), (12,13), (14,15), (15,16), # legs
-    )
+    bones = {
+        "mpi": (
+            (2,1), (1,0), (0,3), (3,4),  # spine + head
+            (0,5), (5,6), (6,7), 
+            (0,8), (8,9), (9,10), # arms
+            (2,14), (11,12), (12,13),
+            (2,11), (14,15), (15,16) # legs
+        ),
+        "h36m": (
+            (0,7), (7,8), (8,9), (9,10),  # spine + head
+            (8,14), (14,15), (15,16), 
+            (8,11), (11,12), (12,13), # arms
+            (0,1), (1,2), (2,3),
+            (0,4), (4,5), (5,6) # legs
+        )
+    }
     import sys
     comp = True
     group = int(sys.argv[1])
-    viz(bones, group, comp)
+    viz(bones["h36m"], group, comp)
