@@ -1,11 +1,7 @@
 import numpy as np
 import cv2 as cv
 from PIL import Image
-from torchvision import transforms
-try:
-    from common.human import *
-except ModuleNotFoundError:
-    from human import *
+from common.human import *
 
 
 def collate_fn(batch):
@@ -182,62 +178,3 @@ class Data:
             return cam - cam[0,:]
         else:
             print("Unrecognized dataset name.")
-
-
-def try_load():
-    from torch.utils.data import DataLoader
-    train_npz = "./h36m/data_h36m_frame_S1.npz"
-    # train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
-    train_dataset = Data(train_npz, transforms, True)
-    trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=16, drop_last=True,
-                        collate_fn=collate_fn)
-    print("data loaded!")
-    dataiter = iter(trainloader)
-    frame, gt_2d, gt_3d, vec_3d = dataiter.next()
-
-    
-    # bones = (
-    # (0,1), (0,3), (1,2), (3,4),  # spine + head
-    # (0,5), (0,8),
-    # (5,6), (6,7), (8,9), (9,10), # arms
-    # (2,14), (2,11),
-    # (11,12), (12,13), (14,15), (15,16), # legs
-    # )
-
-    # # 1st - Image
-    # fig = plt.figure()
-    # ax = fig.add_subplot(1, 2, 1)
-    # plt.imshow(Image.open(img_path[0]))
-
-    # # 2nd- 3D Pose
-    # pts = vec[0]
-    # ax = fig.add_subplot(1, 2, 2, projection='3d')
-    # ax.scatter(pts[:,0], pts[:,1], pts[:,2])
-    # for bone in bones:
-    #     xS = (pts[bone[0],0], pts[bone[1],0])
-    #     yS = (pts[bone[0],1], pts[bone[1],1])
-    #     zS = (pts[bone[0],2], pts[bone[1],2])
-        
-    #     ax.plot(xS, yS, zS)
-    
-    # ax.view_init(elev=-80, azim=-90)
-    # plt.xlim(-1,1)
-    # plt.ylim(-1,1)
-    # ax.set_zlim(-1,1)
-    # ax.set_xlabel("X")
-    # ax.set_ylabel("Y")
-    # ax.set_zlabel("Z")
-
-
-    # plt.show()
-
-
-if __name__ == "__main__":
-
-    transforms = transforms.Compose([
-        transforms.Resize([256,256]),
-        transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-    ])
-    try_load()
