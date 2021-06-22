@@ -1,23 +1,27 @@
 import numpy as np
+import h5py
+
+def read_mat():
+    filepath = "./Directions.54138969.mat"
+    arrays = {}
+    f = h5py.File(filepath)
+    for k, v in f.items():
+        arrays[k] = np.array(v)
+    print(arrays['Masks'][0])
+
 
 def try_read():
     output = "./h36m/data_h36m_frame.npz"
     data = np.load(output, allow_pickle=True)
-    # print(data["arr_0"].reshape(1,-1)[0].keys())
     print(data["arr_0"].reshape(1,-1)[0][0].keys())
+
 
 def debug(plot=False):
     output_2d = "./h36m/data_2d_h36m_gt.npz"
     data_2d = np.load(output_2d, allow_pickle=True)
     
     photo = data_2d["positions_2d"].reshape(1,-1)[0][0]['S1']["Discussion"][0]
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S1'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S5'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S6'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S7'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S8'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S9'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S11'].keys())
+    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S1']['Photo'])
     first = photo[0,:,:]
     
     if plot: 
@@ -104,5 +108,6 @@ def read():
     
 
 if __name__ == "__main__":
-    try_read()
+    # try_read()
     # debug()
+    read_mat()
