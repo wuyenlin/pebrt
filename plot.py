@@ -41,14 +41,22 @@ def plot3d(ax, bones, output):
         yS = extract_bone(output, bone, 1)
         zS = extract_bone(output, bone, 2)
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    ax.autoscale()
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    ax.set_zlim(-1,1)
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_zticklabels([])
+    # ax.view_init(elev=-80, azim=-90)
+    # ax.autoscale()
+    # plt.xlim(-1,1)
+    # plt.ylim(-1,1)
+    # ax.set_zlim(-1,1)
+    # ax.set_xticklabels([])
+    # ax.set_yticklabels([])
+    # ax.set_zticklabels([])
+    ax.view_init(elev=5, azim=90)
+    ax.set_xlim3d([-1.0, 1.0])
+    ax.set_xlabel("X")
+    ax.set_ylim3d([-1.0, 1.0])
+    ax.set_ylabel("Y")
+    ax.set_zlim3d([-1.0, 1.0])
+    ax.set_zlabel("Z")
+
 
 def plot_human(ax, bones, output):
     for p in output:
@@ -67,11 +75,11 @@ def plot_human(ax, bones, output):
     ax.set_zlabel("Z")
 
 
-def viz(bones, group, compare=False, savefig=False):
+def viz(bones, img_list, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device)
     # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
-    model.load_state_dict(torch.load('./petr/ft_1_h36m.bin')['model'])
+    model.load_state_dict(torch.load('./petr/ft_5_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
     if compare:
@@ -80,6 +88,45 @@ def viz(bones, group, compare=False, savefig=False):
         model_2 = model_2.cuda()
         model_2.eval()
 
+    fig = plt.figure()
+    num_row = 3 if comp else 2
+
+    print(len(img_list))
+    for k in range(len(img_list)):
+        img_read = Image.open(img_list[k])
+        img = transforms(img_read)
+        img = img.unsqueeze(0)
+        img = img.cuda()
+
+# 1st row
+        ax = fig.add_subplot(num_row, len(img_list), k+1)
+        ax.imshow(img_read)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+
+# 2nd row
+        output = model(img)
+        output = output.cpu().detach().numpy()
+        ax = fig.add_subplot(num_row, len(img_list), k+len(img_list)+1, projection='3d')
+        plot3d(ax, bones, output)
+
+# 3rd row
+        if compare:
+            h = Human(1.8, "cpu")
+            output = model_2(img)
+            # output = h.update_pose(output.detach().numpy())
+            output = h.update_pose(output)
+            ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
+            plot_human(ax, bones, output)
+            plt.xlim(-1,1)
+            plt.ylim(-1,1)
+
+    plt.show()
+    if savefig:
+        plt.savefig('./checkpoint/this.svg', format='svg', dpi=1200)
+
+
+if __name__ == "__main__":
     imgs = [
         #0
             ["dataset/S1/Seq1/imageSequence/video_4/frame001049.jpg",
@@ -117,48 +164,28 @@ def viz(bones, group, compare=False, savefig=False):
             "dataset/S2/Seq1/imageSequence/video_5/frame004584.jpg",
             "dataset/S3/Seq2/imageSequence/video_4/frame001103.jpg",
             "dataset/S4/Seq2/imageSequence/video_4/frame002144.jpg"],
-            ]
 
-    img_list = imgs[group]
-    k = 1
-    fig = plt.figure()
-    num_row = 3 if comp else 2
+        #6
+            ["./h36m/S1/Phoning 1.54138969/frame000385.jpg",
+            "./h36m/S1/Waiting 1.54138969/frame001220.jpg",
+            "./h36m/S1/Walking.54138969/frame001095.jpg",
+            "./h36m/S1/Photo.54138969/frame000663.jpg"],
 
-    for i in range(len(img_list)):
-        img_read = Image.open(img_list[i])
-        img = transforms(img_read)
-        img = img.unsqueeze(0)
-        img = img.cuda()
+        #7
+            ["./h36m/S1/Greeting 1.54138969/frame000376.jpg",
+            "./h36m/S1/Eating.54138969/frame002624.jpg",
+            "./h36m/S1/Discussion.54138969/frame000673.jpg",
+            "./h36m/S1/WalkTogether 1.54138969/frame000156.jpg"],
 
-# 1st row
-        ax = fig.add_subplot(num_row, len(img_list), k)
-        ax.imshow(img_read)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
+        #8
+            ["./h36m/S1/WalkTogether.54138969/frame000697.jpg",
+            "./h36m/S1/Walking.54138969/frame001092.jpg",
+            "./h36m/S1/Purchases.54138969/frame000437.jpg",
+            "./h36m/S1/SittingDown.54138969/frame001702.jpg"],
 
-# 2nd row
-        output = model(img)
-        output = output.cpu().detach().numpy()
-        ax = fig.add_subplot(num_row, len(img_list), k+len(img_list), projection='3d')
-        plot3d(ax, bones, output)
+        ]
 
-# 3rd row
-        if compare:
-            h = Human(1.8, "cpu")
-            output = model_2(img)
-            output = h.update_pose(output.detach().numpy())
-            ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
-            plot_human(ax, bones, output)
-            plt.xlim(-1,1)
-            plt.ylim(-1,1)
-
-        k += 1
-    plt.show()
-    if savefig:
-        plt.savefig('./checkpoint/this.svg', format='svg', dpi=1200)
-
-
-if __name__ == "__main__":
+    
     bones = {
         "mpi": (
             (2,1), (1,0), (0,3), (3,4),  # spine + head
@@ -175,7 +202,5 @@ if __name__ == "__main__":
             (0,4), (4,5), (5,6) # legs
         )
     }
-    import sys
-    comp = True
-    group = int(sys.argv[1])
-    viz(bones["h36m"], group, comp)
+    comp = False
+    viz(bones["h36m"], imgs[1], comp)
