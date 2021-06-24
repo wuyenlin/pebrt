@@ -13,19 +13,16 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 import torch.optim as optim
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader
 from time import time
 
 
 transforms = transforms.Compose([
     transforms.Resize([256,256]),
-    transforms.ToTensor(),  
+    transforms.ToTensor(),
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ])
 
-def collate_fn(batch):
-    batch = list(filter(lambda x: x is not None, batch))
-    return torch.utils.data.dataloader.default_collate(batch)
 
 def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
     print("Training starts...")
@@ -46,7 +43,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             optimizer.zero_grad()
 
-            _, predicted_3d_pos = model(images)
+            predicted_3d_pos = model(images)
 
             loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
             epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -70,7 +67,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 inputs_3d = inputs_3d.to(device)
                 images = images.to(device)
 
-                _, predicted_3d_pos = model(images)
+                predicted_3d_pos = model(images)
 
                 loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
                 epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
@@ -101,7 +98,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.close('all')
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "./world_checkpoint/epoch_{}.bin".format(ep)
+            exp_name = "./petr/epoch_{}_h36m.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -115,42 +112,73 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     return losses_3d_train , losses_3d_valid
 
 
+def evaluate(test_loader, model, device):
+    print("Evaluation starts...")
+    epoch_loss_3d_pos = 0.0
+
+    with torch.no_grad():
+        model.eval()
+        N = 0
+        for data in test_loader:
+            _, images, inputs_3d, _ = data
+            inputs_3d = inputs_3d.to(device)
+            images = images.to(device)
+
+            predicted_3d_pos = model(images)
+            error = mpjpe(predicted_3d_pos, inputs_3d)
+
+            epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
+            N += inputs_3d.shape[0] * inputs_3d.shape[1]
+
+
+    e1 = (epoch_loss_3d_pos / N)*1000
+
+    print('----------')
+    print('Protocol #1 Error (MPJPE):', e1, 'mm')
+    print('----------')
+
+    return e1
+
+
 def main(args):
 
     device = torch.device(args.device)
-    model = PETR(device, lift=args.lift)
+    model = PETR(device)
     model = model.to(device)
+    print(torch.cuda.get_device_name(torch.cuda.current_device()))
 
     if args.distributed:
         gpus = list(range(torch.cuda.device_count()))
         model = nn.DataParallel(model, device_ids=gpus)
         print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
 
-    if args.lift:
-        print("INFO: Model loaded. Using Lifting model.")
-        backbone_params = 0
-        if args.lr_backbone == 0:
-            print("INFO: Freezing HRNet")
-            #for param in model.backbone.parameters():
-            #    param.requires_grad = False
-            #    backbone_params += param.numel()
-    else:
-        print("INFO: Model loaded. Using End-to-end model.")
+    print("INFO: Model loaded on {}. Using Lifting model.".format(device))
+    backbone_params = 0
+    if args.lr_backbone == 0:
+        print("INFO: Freezing HRNet")
+        for param in model.backbone.parameters():
+            param.requires_grad = False
+            backbone_params += param.numel()
 
     model_params = 0
     for parameter in model.parameters():
         model_params += parameter.numel()
-    if args.lift and args.lr_backbone == 0:
+    if args.lr_backbone == 0:
         model_params -= backbone_params
-    
+
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
 
-    print("INFO: Trained on ", args.dataset.split("/")[-1])
+    if args.eval:
+        test_dataset = Data(args.dataset, transforms, False)
+        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
+        e1 = evaluate(test_loader, model, device)
+        return e1
+
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
-    
+
 
 
     param_dicts = [
@@ -162,8 +190,6 @@ def main(args):
     ]
 
     optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-    if not args.lift:
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
@@ -171,11 +197,15 @@ def main(args):
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
 
+        # if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+        #     optimizer.load_state_dict(checkpoint['optimizer'])
+        #     lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+        #     args.start_epoch = checkpoint['epoch'] + 1
 
     print("INFO: Using optimizer {}".format(optimizer))
 
-    train_list, val_list = train(args.start_epoch, args.epoch, 
-                                train_loader, val_loader, model, device, 
+    train_list, val_list = train(args.start_epoch, args.epoch,
+                                train_loader, val_loader, model, device,
                                 optimizer, lr_scheduler)
 
 
