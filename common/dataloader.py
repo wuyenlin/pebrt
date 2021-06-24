@@ -1,7 +1,6 @@
 import numpy as np
 import cv2 as cv
 from PIL import Image
-from torchvision import transforms
 from common.human import *
 
 
@@ -15,16 +14,9 @@ class Data:
         self.img_path = []
         self.gt_pts2d = []
         self.gt_pts3d = []
-        self.gt_vecs3d = []
         self.transforms = transforms
 
-        # T pose
-        h = Human(1.8, "cpu")
-        model = h.update_pose()
-        t_info = vectorize(model)[:,:3]
-
         data = np.load(npz_path, allow_pickle=True)
-
         if "h36m" in npz_path:
             print("INFO: Using Human3.6M dataset.")
             subject = {
