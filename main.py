@@ -46,8 +46,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             predicted_3d_pos = model(images)
 
             loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
-            epoch_loss_3d_train += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
-            N += inputs_3d.shape[0]*inputs_3d.shape[1]
+            epoch_loss_3d_train += inputs_3d.shape[0] * loss_3d_pos.item()
+            N += inputs_3d.shape[0]
 
             loss_total = loss_3d_pos
             loss_total.backward()
@@ -70,8 +70,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 predicted_3d_pos = model(images)
 
                 loss_3d_pos = anth_mpjpe(predicted_3d_pos, inputs_3d)
-                epoch_loss_3d_valid += inputs_3d.shape[0]*inputs_3d.shape[1] * loss_3d_pos.item()
-                N += inputs_3d.shape[0]*inputs_3d.shape[1]
+                epoch_loss_3d_valid += inputs_3d.shape[0] * loss_3d_pos.item()
+                N += inputs_3d.shape[0]
 
             losses_3d_valid.append(epoch_loss_3d_valid / N)
 
@@ -120,15 +120,16 @@ def evaluate(test_loader, model, device):
         model.eval()
         N = 0
         for data in test_loader:
-            _, images, inputs_3d, _ = data
+            _, images, _, inputs_3d = data
             inputs_3d = inputs_3d.to(device)
             images = images.to(device)
 
             predicted_3d_pos = model(images)
+
             error = mpjpe(predicted_3d_pos, inputs_3d)
 
-            epoch_loss_3d_pos += inputs_3d.shape[0]*inputs_3d.shape[1] * error.item()
-            N += inputs_3d.shape[0] * inputs_3d.shape[1]
+            epoch_loss_3d_pos += inputs_3d.shape[0] * error.item()
+            N += inputs_3d.shape[0]
 
 
     e1 = (epoch_loss_3d_pos / N)*1000
@@ -166,11 +167,13 @@ def main(args):
     if args.lr_backbone == 0:
         model_params -= backbone_params
 
-    print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1000000))
+    print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     if args.eval:
-        test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
+        checkpoint = torch.load(args.resume, map_location='cpu')
+        model.load_state_dict(checkpoint['model'])
+        test_dataset = Data(args.dataset, transforms, True)
+        test_loader = DataLoader(test_dataset, batch_size=512, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
         e1 = evaluate(test_loader, model, device)
         return e1
 
@@ -178,8 +181,6 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
     val_dataset = Data(args.dataset, transforms, False)
     val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
-
-
 
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
