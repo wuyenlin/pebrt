@@ -10,43 +10,6 @@ def collate_fn(batch):
     return torch.utils.data.dataloader.default_collate(batch)
 
 
-def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
-    """ 
-    Find the rotation matrix that aligns vec1 to vec2
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-
-    :return R: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-    
-    Such that vec2 = R @ vec1
-    """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    R = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-    return R
-
-
-def convert_gt(gt_3d: np.array, t_info, dataset="mpi") -> np.array:
-    """
-    Compare GT3D kpts with T pose and obtain 16 rotation matrices
-
-    :return R_stack: a (16,9) arrays with flattened rotation matrix for 16 bones
-    """
-    # process GT
-    bone_info = vectorize(gt_3d, dataset)[:,:3] # (16,3) bone vecs
-
-    num_row = bone_info.shape[0]
-    R_stack = np.zeros([num_row, 9])
-    # get rotation matrix for each bone
-    for k in range(num_row):
-        R = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
-        R_stack[k,:] = R
-    return R_stack
-
-
 class Data:
     def __init__(self, npz_path, transforms=None, train=True):
         self.img_path = []
@@ -64,13 +27,16 @@ class Data:
 
         if "h36m" in npz_path:
             print("INFO: Using Human3.6M dataset.")
-            import random
-            S = [item for item in data.files if "S1/" in item]
-            # S = [item for item in data.files]
-            train_data = random.sample(S, int(len(S)*0.7)) if train \
-                else random.sample(S, int(len(S)*0.3))
+            subject = {
+                "subjects_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
+                "subjects_test": ["S9/", "S11/"]
+            }
+            if train:
+                to_load = [item for item in data.files for S in subject["subjects_train"] if S in item]
+            else:
+                to_load = [item for item in data.files for S in subject["subjects_test"] if S in item]
 
-            for action in train_data:
+            for action in to_load:
                 frames = data[action].flatten()[0]
                 for f in frames:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
@@ -91,16 +57,16 @@ class Data:
 
             for vid in vid_list:
                 for frame in data[vid].keys():
-                    pts_2d = data[vid][frame]["positions_2d"]
+                    # pts_2d = data[vid][frame]["positions_2d"]
+                    pts_2d = data[vid][frame]["pts_2d"]
                     gt_2d = self.zero_center(self.remove_joints(pts_2d))
 
-                    pts_3d = data[vid][frame]["positions_3d"]
+                    pts_3d = data[vid][frame]["pts_3d"]
                     cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                     gt_3d = self.zero_center(cam_3d)/1000
 
                     self.gt_pts2d.append(gt_2d)
                     self.gt_pts3d.append(gt_3d)
-                    self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
 
 
