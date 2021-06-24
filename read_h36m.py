@@ -1,10 +1,13 @@
 import numpy as np
 
 def try_read():
-    output = "./h36m/data_h36m_frame.npz"
+    output = "./h36m/data_h36m_frame_all.npz"
     data = np.load(output, allow_pickle=True)
-    # print(data["arr_0"].reshape(1,-1)[0].keys())
-    print(data["arr_0"].reshape(1,-1)[0][0].keys())
+    subject = {"subject_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
+        "subject_test": ["S9/", "S11/"]
+        }
+    S = [item for item in data.files for S in subject["subject_train"] if S in item]
+
 
 def debug(plot=False):
     output_2d = "./h36m/data_2d_h36m_gt.npz"
@@ -12,12 +15,6 @@ def debug(plot=False):
     
     photo = data_2d["positions_2d"].reshape(1,-1)[0][0]['S1']["Discussion"][0]
     print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S1'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S5'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S6'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S7'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S8'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S9'].keys())
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S11'].keys())
     first = photo[0,:,:]
     
     if plot: 
