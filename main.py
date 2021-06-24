@@ -172,7 +172,7 @@ def main(args):
     if args.eval:
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
-        test_dataset = Data(args.dataset, transforms, True)
+        test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=512, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
         e1 = evaluate(test_loader, model, device)
         return e1
