@@ -1,8 +1,5 @@
-import math, cmath
-from math import sin, cos
+import cmath
 import torch
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def mpjpe(predicted, target):
