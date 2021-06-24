@@ -36,9 +36,12 @@ class Data:
             else:
                 to_load = [item for item in data.files for S in subject["subjects_test"] if S in item]
 
+            import random
             for action in to_load:
                 frames = data[action].flatten()[0]
-                for f in frames:
+                reduced = random.sample(list(frames), int(len(to_load)*0.1))
+                # for f in frames:
+                for f in reduced:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
                     gt_3d = self.zero_center(self.remove_joints( \
                             frames[f]["positions_3d"], "h36m"), "h36m")
