@@ -138,7 +138,7 @@ def main(subject_action):
     for s in subject_action.keys():
         for action in subject_action[s]:
             v = Video(s, action, 54138969)
-            data = v.save(save_img=False, save_npz=True)
+            data = v.save(save_img=True, save_npz=True)
             category = s + "/" + action
             tabs[category] = data
     print("Merging all npz files.")
