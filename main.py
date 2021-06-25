@@ -7,7 +7,7 @@ from common.loss import *
 
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 from tqdm import tqdm
 import torch
 import torch.nn as nn
@@ -78,7 +78,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         lr_scheduler.step()
         elapsed = (time() - start_time)/60
 
-        print('[%d] time %.2f 3d_train %f 3d_valid %f' % (
+        print("[%d] time %.2f 3d_train %f 3d_valid %f" % (
                 ep + 1,
                 elapsed,
                 losses_3d_train[-1] * 1000,
@@ -87,15 +87,15 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         if args.export_training_curves and ep > 3:
             plt.figure()
             epoch_x = np.arange(3, len(losses_3d_train)) + 1
-            plt.plot(epoch_x, losses_3d_train[3:], '--', color='C0')
-            plt.plot(epoch_x, losses_3d_valid[3:], color='C1')
-            plt.legend(['3d train', '3d valid (eval)'])
-            plt.ylabel('MPJPE (m)')
-            plt.xlabel('Epoch')
+            plt.plot(epoch_x, losses_3d_train[3:], "--", color="C0")
+            plt.plot(epoch_x, losses_3d_valid[3:], color="C1")
+            plt.legend(["3d train", "3d valid (eval)"])
+            plt.ylabel("MPJPE (m)")
+            plt.xlabel("Epoch")
             plt.xlim((3, epoch))
-            plt.savefig('./checkpoint/loss_3d.png')
+            plt.savefig("./checkpoint/loss_3d.png")
 
-            plt.close('all')
+            plt.close("all")
 
         if (ep)%5 == 0 and ep != 0:
             exp_name = "./petr/epoch_{}_h36m.bin".format(ep)
@@ -108,7 +108,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             }, exp_name)
             print("Parameters saved to ", exp_name)
 
-    print('Finished Training.')
+    print("Finished Training.")
     return losses_3d_train , losses_3d_valid
 
 
@@ -133,20 +133,22 @@ def evaluate(test_loader, model, device):
 
     e1 = (epoch_loss_3d_pos / N)*1000
 
-    print('----------')
-    print('Protocol #1 Error (MPJPE):', e1, 'mm')
-    print('----------')
+    print("Protocol #1 Error (MPJPE):", e1, "mm")
+    print("----------")
 
     return e1
 
 
 def run_evaluation(actions, model):
+    error_e1 = []
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
         print("-----"+action+"-----")
-        evaluate(test_loader, model, args.device)
+        e1 = evaluate(test_loader, model, args.device)
+        error_e1.append(e1)
         print()
+    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e1), 1), "mm")
 
 
 def main(args):
@@ -181,8 +183,8 @@ def main(args):
         actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
                 "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
                 "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
-        checkpoint = torch.load(args.resume, map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
+        checkpoint = torch.load(args.resume, map_location="cpu")
+        model.load_state_dict(checkpoint["model"])
         print("Evaluation starts...")
         run_evaluation(actions, model)
 
@@ -205,13 +207,13 @@ def main(args):
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
         if args.resume:
-            checkpoint = torch.load(args.resume, map_location='cpu')
-            model.load_state_dict(checkpoint['model'])
+            checkpoint = torch.load(args.resume, map_location="cpu")
+            model.load_state_dict(checkpoint["model"])
 
-            if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-                optimizer.load_state_dict(checkpoint['optimizer'])
-                lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-                args.start_epoch = checkpoint['epoch'] + 1
+            if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
+                optimizer.load_state_dict(checkpoint["optimizer"])
+                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+                args.start_epoch = checkpoint["epoch"] + 1
 
         print("INFO: Using optimizer {}".format(optimizer))
 
