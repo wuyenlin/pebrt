@@ -10,7 +10,7 @@ def collate_fn(batch):
 
 
 class Data:
-    def __init__(self, npz_path, transforms=None, train=True):
+    def __init__(self, npz_path, transforms=None, train=True, action=None):
         self.img_path = []
         self.gt_pts2d = []
         self.gt_pts3d = []
@@ -31,8 +31,7 @@ class Data:
             import random
             for action in to_load:
                 frames = data[action].flatten()[0]
-                reduced = random.sample(list(frames), int(len(to_load)*0.1))
-                # for f in frames:
+                reduced = random.sample(list(frames), int(len(frames)*0.5))
                 for f in reduced:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
                     gt_3d = self.zero_center(self.remove_joints( \
@@ -44,6 +43,9 @@ class Data:
                     self.img_path.append(frames[f]["directory"])
 
         else:
+            if action is not None:
+                print("Only support action parameter in H3.6M dataset.")
+                exit(0)
             print("INFO: Using MPI-INF-3DHP dataset.")
             data = data["arr_0"].reshape(1,-1)[0]
             vid_list = np.arange(6)
