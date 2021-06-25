@@ -113,7 +113,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 
 def evaluate(test_loader, model, device):
-    print("Evaluation starts...")
     epoch_loss_3d_pos = 0.0
 
     with torch.no_grad():
@@ -139,6 +138,13 @@ def evaluate(test_loader, model, device):
     print('----------')
 
     return e1
+
+
+def run_evaluation(actions, model):
+    for action in actions:
+        test_dataset = Data(args.dataset, transforms, False, action)
+        test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
+        evaluate(test_loader, model, args.device)
 
 
 def main(args):
@@ -170,12 +176,13 @@ def main(args):
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     if args.eval:
+        actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
+                "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
+                "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
-        test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=512, shuffle=True, num_workers=args.num_workers, collate_fn=collate_fn)
-        e1 = evaluate(test_loader, model, device)
-        return e1
+        print("Evaluation starts...")
+        run_evaluation(actions)
 
     train_dataset = Data(args.dataset, transforms)
     train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)

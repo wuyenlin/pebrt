@@ -23,14 +23,20 @@ class Data:
                 "subjects_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
                 "subjects_test": ["S9/", "S11/"]
             }
-            if train:
-                to_load = [item for item in data.files for S in subject["subjects_train"] if S in item]
+            if action is None:
+                if train:
+                    to_load = [item for item in data.files \
+                        for S in subject["subjects_train"] if S in item]
+                else:
+                    to_load = [item for item in data.files \
+                        for S in subject["subjects_test"] if S in item]
             else:
-                to_load = [item for item in data.files for S in subject["subjects_test"] if S in item]
+                to_load = [item for item in data.files \
+                    for S in subject["subjects_test"] if S in item and action in item]
 
             import random
-            for action in to_load:
-                frames = data[action].flatten()[0]
+            for act in to_load:
+                frames = data[act].flatten()[0]
                 reduced = random.sample(list(frames), int(len(frames)*0.5))
                 for f in reduced:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
