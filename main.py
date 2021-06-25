@@ -144,7 +144,9 @@ def run_evaluation(actions, model):
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
+        print("-----"+action+"-----")
         evaluate(test_loader, model, args.device)
+        print()
 
 
 def main(args):
@@ -182,39 +184,40 @@ def main(args):
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
         print("Evaluation starts...")
-        run_evaluation(actions)
+        run_evaluation(actions, model)
 
-    train_dataset = Data(args.dataset, transforms)
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
-    val_dataset = Data(args.dataset, transforms, False)
-    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+    else:
+        train_dataset = Data(args.dataset, transforms)
+        train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+        val_dataset = Data(args.dataset, transforms, False)
+        val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
 
-    param_dicts = [
-        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-        {
-            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-            "lr": args.lr_backbone,
-        },
-    ]
+        param_dicts = [
+            {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+            {
+                "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+                "lr": args.lr_backbone,
+            },
+        ]
 
-    optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
+        optimizer = optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
 
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
+        lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
-    if args.resume:
-        checkpoint = torch.load(args.resume, map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
+        if args.resume:
+            checkpoint = torch.load(args.resume, map_location='cpu')
+            model.load_state_dict(checkpoint['model'])
 
-        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            args.start_epoch = checkpoint['epoch'] + 1
+            if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+                optimizer.load_state_dict(checkpoint['optimizer'])
+                lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+                args.start_epoch = checkpoint['epoch'] + 1
 
-    print("INFO: Using optimizer {}".format(optimizer))
+        print("INFO: Using optimizer {}".format(optimizer))
 
-    train_list, val_list = train(args.start_epoch, args.epoch,
-                                train_loader, val_loader, model, device,
-                                optimizer, lr_scheduler)
+        train_list, val_list = train(args.start_epoch, args.epoch,
+                                    train_loader, val_loader, model, device,
+                                    optimizer, lr_scheduler)
 
 
 if __name__ == "__main__":
