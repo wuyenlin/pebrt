@@ -68,6 +68,8 @@ def maev(predicted, target, w_kc):
 def mbve(predicted, target):
     """
     MBVE - Mean Bone Vector Error
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,16,9) tensor
     """
     if torch.cuda.is_available():
         predicted = predicted.cuda()
@@ -93,8 +95,8 @@ def mbve(predicted, target):
 def meae(predicted, target):
     """
     MEAE: Mean Euler Angle Error
-    :param predicted: a (1,16,9) tensor
-    :param target: a (1,16,9) tensor
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,16,9) tensor
     e.g. Decomposing a yields = (0,0,45) deg = (0,0,0.7854) rad
     sum of 3 ele is 0.7854, avg of 16 bones is 0.7854
     """
@@ -112,14 +114,3 @@ def meae(predicted, target):
             pred_euler[b,bone,:] = torch.tensor(rot_to_euler(predicted[b,bone]))
             tar_euler[b,bone,:] = torch.tensor(rot_to_euler(target[b,bone]))
     return torch.mean(torch.sum(pred_euler - tar_euler, dim=2))
-
-
-if __name__ == "__main__":
-    a = torch.tensor([0.707,-0.707,0,0.707,0.707,0,0,0,1])
-    a = a.repeat(16).reshape(1,16,9).to(torch.float32)
-    b = torch.eye(3).flatten()
-    b = b.repeat(16).reshape(1,16,9).to(torch.float32)
-
-    print(maev(a,b))
-    print(meae(a,b))
-    print(mbve(a,b))
