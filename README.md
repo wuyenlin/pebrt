@@ -70,13 +70,19 @@ Now, run the following command to extract video frames and merge 2D/3D annotatio
 python3 common/h36m_dataset.py
 ```
 
-### Download pre-trained weights
+## Evaluation on pre-trained models
+Run 
+```
+python3 main.py --eval --resume ./checkpoint/weight.bin
+```
+
+### New evaluation metrics
 
 - [x] Animate results (see animation.py)
 - [x] Create evaluation metrics for bone rotation error
 - [x] Add kinematic constraints
 - [x] Train and test on Human3.6M
-- [ ] Online implementations of PEBRT (training & finetuning now)
 - [ ] Test evaluation metrics on existing methods (working on it now)
-- [ ] Fix camera angle issue
+- [ ] Online implementations of PEBRT (training & finetuning now)
+- [ ] Fix camera angle issue / add 3D joint position in loss 
 - [ ] Run on distributed systems (for SLI)
