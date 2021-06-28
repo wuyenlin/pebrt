@@ -5,10 +5,9 @@ from common.human import *
 
 
 class Data:
-    def __init__(self, npz_path, transforms=None, train=True):
+    def __init__(self, npz_path, transforms=None, train=True, action=None):
         self.img_path = []
         self.gt_pts2d = []
-        self.gt_pts3d = []
         self.gt_vecs3d = []
         self.transforms = transforms
 
@@ -25,16 +24,21 @@ class Data:
                 "subjects_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
                 "subjects_test": ["S9/", "S11/"]
             }
-            if train:
-                to_load = [item for item in data.files for S in subject["subjects_train"] if S in item]
+            if action is None:
+                if train:
+                    to_load = [item for item in data.files \
+                        for S in subject["subjects_train"] if S in item]
+                else:
+                    to_load = [item for item in data.files \
+                        for S in subject["subjects_test"] if S in item]
             else:
-                to_load = [item for item in data.files for S in subject["subjects_test"] if S in item]
+                to_load = [item for item in data.files \
+                    for S in subject["subjects_test"] if S in item and action in item]
 
             import random
-            for action in to_load:
-                frames = data[action].flatten()[0]
-                reduced = random.sample(list(frames), int(len(to_load)*0.1))
-                # for f in frames:
+            for act in to_load:
+                frames = data[act].flatten()[0]
+                reduced = random.sample(list(frames), int(len(frames)*0.5))
                 for f in reduced:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
                     gt_3d = self.zero_center(self.remove_joints( \
@@ -42,11 +46,13 @@ class Data:
 
                     assert gt_2d.shape == (17,2) and gt_3d.shape == (17,3)
                     self.gt_pts2d.append(gt_2d)
-                    self.gt_pts3d.append(gt_3d)
                     self.gt_vecs3d.append(convert_gt(gt_3d, t_info, "h36m"))
                     self.img_path.append(frames[f]["directory"])
 
         else:
+            if action is not None:
+                print("Only support action parameter in H3.6M dataset.")
+                exit(0)
             print("INFO: Using MPI-INF-3DHP dataset.")
             data = data["arr_0"].reshape(1,-1)[0]
             vid_list = np.arange(6)
@@ -63,7 +69,6 @@ class Data:
                     gt_3d = self.zero_center(cam_3d)/1000
 
                     self.gt_pts2d.append(gt_2d)
-                    self.gt_pts3d.append(gt_3d)
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
 
