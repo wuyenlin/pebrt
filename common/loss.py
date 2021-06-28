@@ -1,5 +1,7 @@
 import cmath
 import torch
+from common.human import *
+from common.misc import *
 
 
 def mpjpe(predicted, target):
@@ -103,6 +105,8 @@ def is_so(M):
     return 1 if orth and det else 2
 
 
+# 1. MAEV 
+
 def maev(predicted, target):
     """
     MAEV: Mean Absolute Error of Vectors
@@ -125,10 +129,55 @@ def maev(predicted, target):
     maev = torch.mean(aev*w_arr)
     return maev
 
+# 2. L2 norm on unit bone vectors
 
-if __name__ == "__main__":
-    a = torch.tensor([0.707,-0.707,0,0.707,0.707,0,0,0,1])
-    a = a.repeat(16).reshape(1,16,9).to(torch.float32)
-    b = torch.eye(3).flatten()
-    b = b.repeat(16).reshape(1,16,9).to(torch.float32)
-    print(maev(a,b))
+def mbve(predicted, target):
+    """
+    MBVE - Mean Bone Vector Error
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,16,9) tensor
+    """
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+    bs, num_bones = predicted.shape[0], predicted.shape[1]
+
+    pred_info = torch.zeros(bs, num_bones, 3)
+    tar_info = torch.zeros(bs, num_bones, 3)
+
+    pred = Human(1.8, "cpu")
+    pred_model = pred.update_pose(predicted)
+    tar = Human(1.8, "cpu")
+    tar_model = tar.update_pose(target)
+    for b in range(bs):
+        pred_info[b,:] = vectorize(pred_model)[:,:3]
+        tar_info[b,:] = vectorize(tar_model)[:,:3]
+    mbve = torch.norm(pred_info - tar_info)
+    return mbve
+
+
+# 3. Decompose SO(3) into Euler angles
+
+def meae(predicted, target):
+    """
+    MEAE: Mean Euler Angle Error
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,16,9) tensor
+    e.g. Decomposing a yields = (0,0,45) deg = (0,0,0.7854) rad
+    sum of 3 ele is 0.7854, avg of 16 bones is 0.7854
+    """
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+    bs, num_bones = predicted.shape[0], predicted.shape[1]
+    predicted = predicted.view(bs,num_bones,3,3)
+    target = target.view(bs,num_bones,3,3)
+
+    pred_euler = torch.zeros(bs,num_bones,3)
+    tar_euler = torch.zeros(bs,num_bones,3)
+    for b in range(bs):
+        for bone in range(num_bones):
+            pred_euler[b,bone,:] = abs(torch.tensor(rot_to_euler(predicted[b,bone])))
+            tar_euler[b,bone,:] = abs(torch.tensor(rot_to_euler(target[b,bone])))
+    return torch.mean(torch.sum(pred_euler - tar_euler, dim=2))
+
