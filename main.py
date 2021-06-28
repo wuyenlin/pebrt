@@ -3,6 +3,8 @@ from common.options import args_parser
 from common.petr import *
 from common.dataloader import *
 from common.loss import *
+from common.human import *
+from common.misc import *
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -137,20 +139,20 @@ def evaluate(test_loader, model, device):
             h = Human(1.8, "cpu")
             model = h.update_pose()
             t_info = vectorize(model)[:,:3]
-            pred = torch.zeros(predicted_3d_pos.shape[0], predicted_3d_pos.shape[1], 16, 9)
-            tar = torch.zeros(inputs_3d.shape[0], inputs_3d.shape[1], 16, 9)
-            for pose in range(predicted_3d_pos.shape[1]):
-                pred[0,pose,:,:] = convert_gt(predicted_3d_pos[0,pose,:,:], t_info, dataset="h36m")
-                tar[0,pose,:,:] = convert_gt(inputs_3d[0,pose,:,:], t_info, dataset="h36m")
+            pred = torch.zeros(predicted_3d_pos.shape[0], 16, 9)
+            tar = torch.zeros(inputs_3d.shape[0], 16, 9)
+            for pose in range(predicted_3d_pos.shape[0]):
+                pred[pose,:,:] = torch.from_numpy(convert_gt(predicted_3d_pos[pose,:,:], t_info, dataset="h36m"))
+                tar[pose,:,:] = torch.from_numpy(convert_gt(inputs_3d[pose,:,:], t_info, dataset="h36m"))
                 
 
             # new metrics
-            n1 = maev(pred[0], tar[0])
-            epoch_loss_3d_n1 += inputs_3d.shape[0]*inputs_3d.shape[1] * n1.item()
-            n2 = mbve(pred[0], tar[0])
-            epoch_loss_3d_n2 += inputs_3d.shape[0]*inputs_3d.shape[1] * n2.item()
-            n3 = meae(pred[0], tar[0])
-            epoch_loss_3d_n3 += inputs_3d.shape[0]*inputs_3d.shape[1] * n3.item()
+            n1 = maev(pred, tar)
+            epoch_loss_3d_n1 += inputs_3d.shape[0] * n1.item()
+            n2 = mbve(pred, tar)
+            epoch_loss_3d_n2 += inputs_3d.shape[0] * n2.item()
+            n3 = meae(pred, tar)
+            epoch_loss_3d_n3 += inputs_3d.shape[0] * n3.item()
 
 
     e1 = (epoch_loss_3d_pos / N)*1000
