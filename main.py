@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 from common.options import args_parser
 from common.petr import *
 from common.dataloader import *
@@ -114,6 +113,9 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 def evaluate(test_loader, model, device):
     epoch_loss_3d_pos = 0.0
+    epoch_loss_3d_n1 = 0
+    epoch_loss_3d_n2 = 0
+    epoch_loss_3d_n3 = 0
 
     with torch.no_grad():
         model.eval()
@@ -131,24 +133,59 @@ def evaluate(test_loader, model, device):
             N += inputs_3d.shape[0]
 
 
+            # convert bone kpts (17,3) to rotation matrix (16,9)
+            h = Human(1.8, "cpu")
+            model = h.update_pose()
+            t_info = vectorize(model)[:,:3]
+            pred = torch.zeros(predicted_3d_pos.shape[0], predicted_3d_pos.shape[1], 16, 9)
+            tar = torch.zeros(inputs_3d.shape[0], inputs_3d.shape[1], 16, 9)
+            for pose in range(predicted_3d_pos.shape[1]):
+                pred[0,pose,:,:] = convert_gt(predicted_3d_pos[0,pose,:,:], t_info, dataset="h36m")
+                tar[0,pose,:,:] = convert_gt(inputs_3d[0,pose,:,:], t_info, dataset="h36m")
+                
+
+            # new metrics
+            n1 = maev(pred[0], tar[0])
+            epoch_loss_3d_n1 += inputs_3d.shape[0]*inputs_3d.shape[1] * n1.item()
+            n2 = mbve(pred[0], tar[0])
+            epoch_loss_3d_n2 += inputs_3d.shape[0]*inputs_3d.shape[1] * n2.item()
+            n3 = meae(pred[0], tar[0])
+            epoch_loss_3d_n3 += inputs_3d.shape[0]*inputs_3d.shape[1] * n3.item()
+
+
     e1 = (epoch_loss_3d_pos / N)*1000
+    n1 = epoch_loss_3d_n1 / N
+    n2 = epoch_loss_3d_n2 / N
+    n3 = epoch_loss_3d_n3 / N
 
     print("Protocol #1 Error (MPJPE):", e1, "mm")
+    print("New Metric #1 Error (MAEV):", n1, "-")
+    print("New Metric #2 Error (MBVE):", n2, "-")
+    print("New Metric #3 Error (MEAE):", n3, "rad")
     print("----------")
 
-    return e1
+    return e1, n1, n2, n3
 
 
 def run_evaluation(actions, model):
     error_e1 = []
+    errors_n1 = []
+    errors_n2 = []
+    errors_n3 = []
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
         print("-----"+action+"-----")
-        e1 = evaluate(test_loader, model, args.device)
+        e1, n1, n2, n3 = evaluate(test_loader, model, args.device)
         error_e1.append(e1)
+        errors_n1.append(n1)
+        errors_n2.append(n2)
+        errors_n3.append(n3)
         print()
     print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e1), 1), "mm")
+    print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
+    print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
+    print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
 
 
 def main(args):
