@@ -79,7 +79,8 @@ def viz(bones, img_list, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device)
     # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
-    model.load_state_dict(torch.load('./petr/ft_5_h36m.bin')['model'])
+    # model.load_state_dict(torch.load('./petr/ft_1_h36m.bin')['model'])
+    model.load_state_dict(torch.load('./petr/epoch_45_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
     if compare:
@@ -91,7 +92,6 @@ def viz(bones, img_list, compare=False, savefig=False):
     fig = plt.figure()
     num_row = 3 if comp else 2
 
-    print(len(img_list))
     for k in range(len(img_list)):
         img_read = Image.open(img_list[k])
         img = transforms(img_read)
@@ -183,6 +183,12 @@ if __name__ == "__main__":
             "./h36m/S1/Purchases.54138969/frame000437.jpg",
             "./h36m/S1/SittingDown.54138969/frame001702.jpg"],
 
+        #9
+            ["./h36m/S7/Directions 1.54138969/frame000655.jpg",
+            "./h36m/S9/Directions.54138969/frame002191.jpg",
+            "./h36m/S5/Directions 1.54138969/frame004797.jpg",
+            "./h36m/S6/Directions 1.54138969/frame000965.jpg"],
+
         ]
 
     
@@ -203,4 +209,4 @@ if __name__ == "__main__":
         )
     }
     comp = False
-    viz(bones["h36m"], imgs[1], comp)
+    viz(bones["h36m"], imgs[8], comp)
