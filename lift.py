@@ -42,8 +42,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             predicted_3d_pos, w_kc = model(inputs_2d)
 
             loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
-            epoch_loss_3d_train += vec_3d.shape[0]*vec_3d.shape[1] * loss_3d_pos.item()
-            N += vec_3d.shape[0]*vec_3d.shape[1]
+            epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
+            N += vec_3d.shape[0]
 
             loss_total = loss_3d_pos
             loss_total.backward()
@@ -67,8 +67,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                 predicted_3d_pos, w_kc = model(inputs_2d)
 
                 loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
-                epoch_loss_3d_valid += vec_3d.shape[0]*vec_3d.shape[1] * loss_3d_pos.item()
-                N += vec_3d.shape[0]*vec_3d.shape[1]
+                epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
+                N += vec_3d.shape[0]
 
             losses_3d_valid.append(epoch_loss_3d_valid / N)
 
@@ -138,11 +138,11 @@ def evaluate(test_loader, model, device):
             e2 = mbve(predicted_3d_pos, vec_3d)
             e3 = meae(predicted_3d_pos, vec_3d)
             
-            epoch_loss_e0 += vec_3d.shape[0]*vec_3d.shape[1] * e0.item()
-            epoch_loss_e1 += vec_3d.shape[0]*vec_3d.shape[1] * e1.item()
-            epoch_loss_e2 += vec_3d.shape[0]*vec_3d.shape[1] * e2.item()
-            epoch_loss_e3 += vec_3d.shape[0]*vec_3d.shape[1] * e3.item()
-            N += vec_3d.shape[0] * vec_3d.shape[1]
+            epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            epoch_loss_e1 += vec_3d.shape[0] * e1.item()
+            epoch_loss_e2 += vec_3d.shape[0] * e2.item()
+            epoch_loss_e3 += vec_3d.shape[0] * e3.item()
+            N += vec_3d.shape[0]
 
     print('----------')
     print('Protocol #0 Error (MPJPE):\t', epoch_loss_e0*1000/N, "\t(mm)")

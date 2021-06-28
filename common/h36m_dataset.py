@@ -13,7 +13,7 @@ def merge_2d3d():
     Can be used for lifting models.
     """
     merge_data = []
-    files = ["./data_2d_h36m_gt.npz","./data_3d_h36m.npz"]
+    files = ["./h36m/data_2d_h36m_gt.npz","./h36m/data_3d_h36m.npz"]
     print("Processing...")
     for item in files:
         t = np.load(item, allow_pickle=True)
