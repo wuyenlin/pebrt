@@ -143,7 +143,7 @@ class Human:
         elem = elem.flatten()
         self.rot_mat, self.punish_list = {}, []
         for k, bone in enumerate(self.constraints.keys()):
-            R = elem[9*k:9*(k+1)].detach().numpy()
+            R = elem[9*k:9*(k+1)].detach().cpu().numpy()
             if bone in self.child.keys():
                 parent = self.child[bone]
                 self.rot_mat[bone], punish_w = self.check_constraints(bone, R, self.rot_mat[parent])
