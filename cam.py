@@ -5,7 +5,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, writers
 from common.dataloader import *
-from torch.utils.data import DataLoader
 from common.petr import PETR
 from common.human import *
 
@@ -72,7 +71,7 @@ def animate(model):
 
     # using opencv to get frame + cv.imshow webcam
     frame = transforms(frame)
-    output = net(frame)
+    output = model(frame)
     output = output.cpu().detach().numpy()
 
 
