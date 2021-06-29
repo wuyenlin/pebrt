@@ -122,7 +122,7 @@ def evaluate(test_loader, model, device):
     epoch_loss_n3 = 0.0
 
     with torch.no_grad():
-        model.load_state_dict(torch.load("./peltra/ft_1_zero.bin")["model"])
+        model.load_state_dict(torch.load("./peltra/epoch_10.bin")["model"])
         model = model.cuda()
         model.eval()
         N = 0
@@ -132,7 +132,7 @@ def evaluate(test_loader, model, device):
             vec_3d = vec_3d.to(device)
             # image = image.to(device)
 
-            predicted_3d_pos = model(inputs_2d)
+            predicted_3d_pos, _ = model(inputs_2d)
 
             # pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
             # h = Human(1.8, "cpu")
@@ -165,7 +165,8 @@ def run_evaluation(actions, model):
     errors_n3 = []
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
-        test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
+        test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
+                                 num_workers=args.num_workers, collate_fn=collate_fn)
         print("-----"+action+"-----")
         e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
         error_e0.append(e0)
@@ -173,7 +174,7 @@ def run_evaluation(actions, model):
         errors_n2.append(n2)
         errors_n3.append(n3)
         print()
-    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "mm")
+#    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "mm")
     print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
     print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
     print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
