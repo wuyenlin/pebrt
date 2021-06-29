@@ -4,6 +4,7 @@ from common.options import args_parser
 from common.peltra import *
 from common.dataloader import *
 from common.loss import *
+from common.human import *
 
 from tqdm import tqdm
 from torchvision import transforms
@@ -33,7 +34,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     # train
         for data in train_loader:
             _, image, inputs_2d, vec_3d = data
-            image = image.to(device)
+            # image = image.to(device)
             inputs_2d = inputs_2d.to(device)
             vec_3d = vec_3d.to(device)
 
@@ -60,7 +61,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             for data in val_loader:
                 _, image, inputs_2d, vec_3d = data
-                image = image.to(device)
+                # image = image.to(device)
                 inputs_2d = inputs_2d.to(device)
                 vec_3d = vec_3d.to(device)
 
@@ -75,7 +76,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         lr_scheduler.step()
         elapsed = (time() - start_time)/60
 
-        print('[%d] time %.2f 3d_train %f 3d_valid %f' % (
+        print("[%d] time %.2f 3d_train %f 3d_valid %f" % (
                 ep + 1,
                 elapsed,
                 losses_3d_train[-1] * 1000,
@@ -84,18 +85,18 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         if args.export_training_curves and ep > 3:
             import matplotlib.pyplot as plt
             import matplotlib
-            matplotlib.use('Agg')
+            matplotlib.use("Agg")
             plt.figure()
             epoch_x = np.arange(3, len(losses_3d_train)) + 1
-            plt.plot(epoch_x, losses_3d_train[3:], '--', color='C0')
-            plt.plot(epoch_x, losses_3d_valid[3:], color='C1')
-            plt.legend(['3d train', '3d valid (eval)'])
-            plt.ylabel('MPJPE (m)')
-            plt.xlabel('Epoch')
+            plt.plot(epoch_x, losses_3d_train[3:], "--", color="C0")
+            plt.plot(epoch_x, losses_3d_valid[3:], color="C1")
+            plt.legend(["3d train", "3d valid (eval)"])
+            plt.ylabel("MPJPE (m)")
+            plt.xlabel("Epoch")
             plt.xlim((3, epoch))
-            plt.savefig('./peltra/loss_3d.png')
+            plt.savefig("./peltra/loss_3d.png")
 
-            plt.close('all')
+            plt.close("all")
 
         if (ep)%5 == 0 and ep != 0:
             exp_name = "./peltra/epoch_{}.bin".format(ep)
@@ -108,7 +109,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             }, exp_name)
             print("Parameters saved to ", exp_name)
 
-    print('Finished Training.')
+    print("Finished Training.")
     return losses_3d_train , losses_3d_valid
 
 
@@ -116,42 +117,66 @@ def evaluate(test_loader, model, device):
     print("Evaluation mode")
 
     epoch_loss_e0 = 0.0
-    epoch_loss_e1 = 0.0
-    epoch_loss_e2 = 0.0
-    epoch_loss_e3 = 0.0
+    epoch_loss_n1 = 0.0
+    epoch_loss_n2 = 0.0
+    epoch_loss_n3 = 0.0
 
     with torch.no_grad():
-        model.load_state_dict(torch.load('./peltra/ft_1_zero.bin')['model'])
+        model.load_state_dict(torch.load("./peltra/ft_1_zero.bin")["model"])
         model = model.cuda()
         model.eval()
         N = 0
         for data in test_loader:
-            _, images, inputs_2d, vec_3d = data
+            _, image, inputs_2d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
             vec_3d = vec_3d.to(device)
-            images = images.to(device)
+            # image = image.to(device)
 
             predicted_3d_pos = model(inputs_2d)
 
+            # pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
+            # h = Human(1.8, "cpu")
+            # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
             e0 = mpjpe(predicted_3d_pos, vec_3d)
-            e1 = maev(predicted_3d_pos, vec_3d)
-            e2 = mbve(predicted_3d_pos, vec_3d)
-            e3 = meae(predicted_3d_pos, vec_3d)
+            n1 = maev(predicted_3d_pos, vec_3d)
+            n2 = mbve(predicted_3d_pos, vec_3d)
+            n3 = meae(predicted_3d_pos, vec_3d)
             
-            epoch_loss_e0 += vec_3d.shape[0] * e0.item()
-            epoch_loss_e1 += vec_3d.shape[0] * e1.item()
-            epoch_loss_e2 += vec_3d.shape[0] * e2.item()
-            epoch_loss_e3 += vec_3d.shape[0] * e3.item()
+            # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            epoch_loss_n1 += vec_3d.shape[0] * n1.item()
+            epoch_loss_n2 += vec_3d.shape[0] * n2.item()
+            epoch_loss_n3 += vec_3d.shape[0] * n3.item()
             N += vec_3d.shape[0]
 
-    print('----------')
-    print('Protocol #0 Error (MPJPE):\t', epoch_loss_e0*1000/N, "\t(mm)")
-    print('Protocol #1 Error (MAEV):\t', epoch_loss_e1/N)
-    print('Protocol #2 Error (L2 Norm):\t', epoch_loss_e2*1000/N, "\t (mm)")
-    print('Protocol #3 Error (Euler):\t', epoch_loss_e3/N, "\t(rad)")
-    print('----------')
+    print("----------")
+    print("Protocol #0 Error (MPJPE):\t", epoch_loss_e0*1000/N, "\t(mm)")
+    print("New Metric #1 Error (MAEV):\t", epoch_loss_n1/N)
+    print("New Metric #2 Error (L2 Norm):\t", epoch_loss_n2/N, "\t (mm)")
+    print("New Metric #3 Error (Euler):\t", epoch_loss_n3/N, "\t(rad)")
+    print("----------")
     
-    return e0, e1, e2, e3
+    return e0, n1, n2, n3
+
+
+def run_evaluation(actions, model):
+    error_e0 = []
+    errors_n1 = []
+    errors_n2 = []
+    errors_n3 = []
+    for action in actions:
+        test_dataset = Data(args.dataset, transforms, False, action)
+        test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
+        print("-----"+action+"-----")
+        e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
+        error_e0.append(e0)
+        errors_n1.append(n1)
+        errors_n2.append(n2)
+        errors_n3.append(n3)
+        print()
+    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "mm")
+    print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
+    print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
+    print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
 
 
 def main(args):
@@ -168,11 +193,13 @@ def main(args):
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     if args.eval:
-        print("INFO: Evaluation Mode")
-        test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=args.bs, \
-            shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-        e0, e1, e2, e3 = evaluate(test_loader, model, device)
+        actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
+                "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
+                "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
+        checkpoint = torch.load(args.resume, map_location="cpu")
+        model.load_state_dict(checkpoint["model"])
+        print("Evaluation starts...")
+        run_evaluation(actions, model)
 
     else:
         train_dataset = Data(args.dataset, transforms)
@@ -187,13 +214,13 @@ def main(args):
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
         if args.resume:
-            checkpoint = torch.load(args.resume, map_location='cpu')
-            model.load_state_dict(checkpoint['model'])
+            checkpoint = torch.load(args.resume, map_location="cpu")
+            model.load_state_dict(checkpoint["model"])
 
-            if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-                optimizer.load_state_dict(checkpoint['optimizer'])
-                lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-                args.start_epoch = checkpoint['epoch'] + 1
+            if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
+                optimizer.load_state_dict(checkpoint["optimizer"])
+                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+                args.start_epoch = checkpoint["epoch"] + 1
 
         print("INFO: Using optimizer {}".format(optimizer))
 
