@@ -3,6 +3,36 @@ import torch
 from common.human import *
 
 
+def pck(predicted, target):
+    """
+    Mean per-joint position error (i.e. mean Euclidean distance),
+    often referred to as "Protocol #1" in many papers.
+    """
+    assert predicted.shape == target.shape
+    dis = torch.norm(predicted - target, dim=len(target.shape)-1)
+    #print(dis.size())
+    t = torch.Tensor([0.15]).cuda()  # threshold
+    out = (dis < t).float() * 1
+    return out.sum()/14.0
+
+
+def auc(predicted, target):
+    """
+    Mean per-joint position error (i.e. mean Euclidean distance),
+    often referred to as "Protocol #1" in many papers.
+    """
+    assert predicted.shape == target.shape
+    dis = torch.norm(predicted - target, dim=len(target.shape)-1)
+    outall = 0
+    #print(dis.size())
+    for i in range(150):
+        t = torch.Tensor([float(i)/1000]).cuda()  # threshold
+        out = (dis < t).float() * 1
+        outall+=out.sum()/14.0
+    outall = outall/150
+    return outall
+
+
 def mpjpe(predicted, target):
     """
     Mean per-joint position error (i.e. mean Euclidean distance),
