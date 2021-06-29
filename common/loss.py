@@ -37,7 +37,7 @@ def is_so(M):
     return 1 if orth and det else 2
 
 
-def maev(predicted, target, w_kc):
+def maev(predicted, target, w_kc=None):
     """
     MAEV: Mean Absolute Error of Vectors
     :param predicted: (bs,16,9) tensor
@@ -45,7 +45,7 @@ def maev(predicted, target, w_kc):
     :param w_kc: weight of kinematic constraints
     average error of 16 bones
     """
-    bs, num_bones = predicted.shape[0], predicted.shape[1]
+    bs, num_bones = predicted.size(0), predicted.size(1)
     predicted = predicted.view(bs,num_bones,3,3)
     target = target.view(bs,num_bones,3,3)
     w_orth = torch.ones(target.shape[:2])
@@ -56,10 +56,10 @@ def maev(predicted, target, w_kc):
     if torch.cuda.is_available():
         predicted = predicted.cuda()
         target = target.cuda()
-        w_kc = w_kc.cuda()
         w_orth = w_orth.cuda()
+        w_kc = w_kc.cuda() if w_kc is not None else w_kc
     aev = torch.norm(torch.norm(predicted - target, dim=len(target.shape)-2), dim=len(target.shape)-2)
-    maev = torch.mean(aev*w_kc)
+    maev = torch.mean(aev*w_kc) if w_kc is not None else torch.mean(aev)
     return maev
 
 
