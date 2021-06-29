@@ -111,6 +111,6 @@ def meae(predicted, target):
     tar_euler = torch.zeros(bs,num_bones,3)
     for b in range(bs):
         for bone in range(num_bones):
-            pred_euler[b,bone,:] = torch.tensor(rot_to_euler(predicted[b,bone]))
-            tar_euler[b,bone,:] = torch.tensor(rot_to_euler(target[b,bone]))
+            pred_euler[b,bone,:] = abs(torch.tensor(rot_to_euler(predicted[b,bone])))
+            tar_euler[b,bone,:] = abs(torch.tensor(rot_to_euler(target[b,bone])))
     return torch.mean(torch.sum(pred_euler - tar_euler, dim=2))
