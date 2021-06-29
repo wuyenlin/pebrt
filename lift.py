@@ -34,7 +34,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     # train
         for data in train_loader:
             _, image, inputs_2d, vec_3d = data
-            # image = image.to(device)
             inputs_2d = inputs_2d.to(device)
             vec_3d = vec_3d.to(device)
 
@@ -61,7 +60,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             for data in val_loader:
                 _, image, inputs_2d, vec_3d = data
-                # image = image.to(device)
                 inputs_2d = inputs_2d.to(device)
                 vec_3d = vec_3d.to(device)
 
@@ -116,6 +114,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 def evaluate(test_loader, model, device):
     print("Evaluation mode")
 
+    e0 = 0
     epoch_loss_e0 = 0.0
     epoch_loss_n1 = 0.0
     epoch_loss_n2 = 0.0
@@ -130,29 +129,33 @@ def evaluate(test_loader, model, device):
             _, image, inputs_2d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
             vec_3d = vec_3d.to(device)
-            # image = image.to(device)
 
             predicted_3d_pos, _ = model(inputs_2d)
 
             # pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
             # h = Human(1.8, "cpu")
             # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
-            e0 = mpjpe(predicted_3d_pos, vec_3d)
+            # e0 = mpjpe(predicted_3d_pos, vec_3d)
             n1 = maev(predicted_3d_pos, vec_3d)
             n2 = mbve(predicted_3d_pos, vec_3d)
             n3 = meae(predicted_3d_pos, vec_3d)
             
-            # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
             epoch_loss_n3 += vec_3d.shape[0] * n3.item()
             N += vec_3d.shape[0]
 
+            e0 = (epoch_loss_e0 / N)*1000
+            n1 = epoch_loss_n1 / N
+            n2 = epoch_loss_n2 / N
+            n3 = np.rad2deg(epoch_loss_n3 / N)
+
     print("----------")
-    print("Protocol #0 Error (MPJPE):\t", epoch_loss_e0*1000/N, "\t(mm)")
-    print("New Metric #1 Error (MAEV):\t", epoch_loss_n1/N)
-    print("New Metric #2 Error (L2 Norm):\t", epoch_loss_n2/N, "\t (mm)")
-    print("New Metric #3 Error (Euler):\t", epoch_loss_n3/N, "\t(rad)")
+    print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
+    print("New Metric #1 Error (MAEV):\t", n1)
+    print("New Metric #2 Error (L2 Norm):\t", n2)
+    print("New Metric #3 Error (Euler):\t", n3, "\t(deg)")
     print("----------")
     
     return e0, n1, n2, n3
@@ -174,7 +177,7 @@ def run_evaluation(actions, model):
         errors_n2.append(n2)
         errors_n3.append(n3)
         print()
-#    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "mm")
+    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "mm")
     print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
     print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
     print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
