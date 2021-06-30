@@ -27,12 +27,15 @@ class Data:
             }
             if action is None:
                 if train:
+                    # training
                     to_load = [item for item in data.files \
                         for S in subject["subjects_train"] if S in item]
                 else:
+                    # validating
                     to_load = [item for item in data.files \
                         for S in subject["subjects_test"] if S in item]
             else:
+                # evaluating
                 to_load = [item for item in data.files \
                     for S in subject["subjects_test"] if S in item and action in item]
 
