@@ -121,7 +121,7 @@ def evaluate(test_loader, model, device):
     epoch_loss_n3 = 0.0
 
     with torch.no_grad():
-        model.load_state_dict(torch.load("./peltra/epoch_10.bin")["model"])
+        model.load_state_dict(torch.load("./peltra/epoch_20.bin")["model"])
         model = model.cuda()
         model.eval()
         N = 0
@@ -151,7 +151,6 @@ def evaluate(test_loader, model, device):
             n2 = epoch_loss_n2 / N
             n3 = np.rad2deg(epoch_loss_n3 / N)
 
-    print("----------")
     print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
     print("New Metric #1 Error (MAEV):\t", n1)
     print("New Metric #2 Error (L2 Norm):\t", n2)
@@ -171,23 +170,24 @@ def run_evaluation(model, actions=None):
         # evaluting on h36m
         for action in actions:
             test_dataset = Data(args.dataset, transforms, False, action)
-            test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
+            test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False,
                                     num_workers=args.num_workers, collate_fn=collate_fn)
             print("-----"+action+"-----")
+            e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
+            error_e0.append(e0)
+            errors_n1.append(n1)
+            errors_n2.append(n2)
+            errors_n3.append(n3)
+        print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
+        print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
+        print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
+        print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "(deg)")
     else:
         # evaluting on MPI-INF-3DHP
         test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
                                 num_workers=args.num_workers, collate_fn=collate_fn)
-    e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
-    error_e0.append(e0)
-    errors_n1.append(n1)
-    errors_n2.append(n2)
-    errors_n3.append(n3)
-    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
-    print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
-    print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
-    print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "(deg)")
+        e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
 
 
 def main(args):
@@ -208,8 +208,6 @@ def main(args):
             actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
                     "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
                     "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
-            # checkpoint = torch.load(args.resume, map_location="cpu")
-            # model.load_state_dict(checkpoint["model"])
             print("Evaluation starts...")
             run_evaluation(model, actions)
         else:
