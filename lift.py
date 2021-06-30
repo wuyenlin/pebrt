@@ -140,7 +140,7 @@ def evaluate(test_loader, model, device):
             n2 = mbve(predicted_3d_pos, vec_3d)
             n3 = meae(predicted_3d_pos, vec_3d)
             
-            epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
             epoch_loss_n3 += vec_3d.shape[0] * n3.item()
@@ -161,26 +161,33 @@ def evaluate(test_loader, model, device):
     return e0, n1, n2, n3
 
 
-def run_evaluation(actions, model):
+def run_evaluation(model, actions=None):
+    """ Evalution on Human3.6M dataset """
     error_e0 = []
     errors_n1 = []
     errors_n2 = []
     errors_n3 = []
-    for action in actions:
-        test_dataset = Data(args.dataset, transforms, False, action)
+    if actions is not None:
+        # evaluting on h36m
+        for action in actions:
+            test_dataset = Data(args.dataset, transforms, False, action)
+            test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
+                                    num_workers=args.num_workers, collate_fn=collate_fn)
+            print("-----"+action+"-----")
+    else:
+        # evaluting on MPI-INF-3DHP
+        test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
-                                 num_workers=args.num_workers, collate_fn=collate_fn)
-        print("-----"+action+"-----")
-        e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
-        error_e0.append(e0)
-        errors_n1.append(n1)
-        errors_n2.append(n2)
-        errors_n3.append(n3)
-        print()
-    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "mm")
+                                num_workers=args.num_workers, collate_fn=collate_fn)
+    e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
+    error_e0.append(e0)
+    errors_n1.append(n1)
+    errors_n2.append(n2)
+    errors_n3.append(n3)
+    print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
     print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
     print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
-    print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
+    print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "(deg)")
 
 
 def main(args):
@@ -197,13 +204,17 @@ def main(args):
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     if args.eval:
-        actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
-                "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
-                "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
-        checkpoint = torch.load(args.resume, map_location="cpu")
-        model.load_state_dict(checkpoint["model"])
-        print("Evaluation starts...")
-        run_evaluation(actions, model)
+        if "h36m" in args.dataset:
+            actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
+                    "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
+                    "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
+            # checkpoint = torch.load(args.resume, map_location="cpu")
+            # model.load_state_dict(checkpoint["model"])
+            print("Evaluation starts...")
+            run_evaluation(model, actions)
+        else:
+            print("Evaluation starts...")
+            run_evaluation(model)
 
     else:
         train_dataset = Data(args.dataset, transforms)
