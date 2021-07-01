@@ -117,8 +117,9 @@ def mbve(predicted, target):
     for b in range(bs):
         pred_info[b,:] = vectorize(pred_model)[:,:3]
         tar_info[b,:] = vectorize(tar_model)[:,:3]
-    mbve = torch.norm(pred_info - tar_info)
-    return mbve
+    #mbve = torch.norm(pred_info - tar_info)
+    #return mbve
+    return torch.mean(torch.norm(pred_info - tar_info, dim=len(tar_info.shape)-1))
 
 
 # 3. Decompose SO(3) into Euler angles
