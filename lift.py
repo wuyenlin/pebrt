@@ -191,10 +191,13 @@ def run_evaluation(model, actions=None):
 
 
 def main(args):
-    device = torch.device(args.device)
+    # device = torch.device(args.device)
+    device = "cuda:0"
     model = PELTRA(device, bs=args.bs)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
-    model = model.to(device)
+    model = model.to("cuda:0")
+    device_list = [i for i in range(torch.cuda.device_count())]
+    model_ddp = nn.DataParallel(model, gpu_ids=device_list)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
 
