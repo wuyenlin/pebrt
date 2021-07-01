@@ -148,12 +148,12 @@ def evaluate(test_loader, model, device):
 
             e0 = (epoch_loss_e0 / N)*1000
             n1 = epoch_loss_n1 / N
-            n2 = epoch_loss_n2 / N
+            n2 = (epoch_loss_n2 / N)*1000
             n3 = np.rad2deg(epoch_loss_n3 / N)
 
     print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
     print("New Metric #1 Error (MAEV):\t", n1)
-    print("New Metric #2 Error (L2 Norm):\t", n2)
+    print("New Metric #2 Error (L2 Norm):\t", n2, "\t(mm)")
     print("New Metric #3 Error (Euler):\t", n3, "\t(deg)")
     print("----------")
     
