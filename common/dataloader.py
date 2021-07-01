@@ -40,6 +40,7 @@ class Data:
                     for S in subject["subjects_test"] if S in item and action in item]
 
             import random
+            random.seed(100)
             for act in to_load:
                 frames = data[act].flatten()[0]
                 reduced = random.sample(list(frames), int(len(frames)*0.5))
