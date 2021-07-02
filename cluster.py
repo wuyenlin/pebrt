@@ -6,7 +6,6 @@ from common.dataloader import *
 from common.loss import *
 from common.human import *
 
-from tqdm import tqdm
 from torchvision import transforms
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
@@ -29,7 +28,7 @@ def train(start_epoch, epoch, train_loader, val_loader,
     losses_3d_train = []
     losses_3d_valid = []
 
-    for ep in tqdm(range(start_epoch, epoch)):
+    for ep in range(start_epoch, epoch):
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
@@ -90,11 +89,12 @@ def train(start_epoch, epoch, train_loader, val_loader,
         lr_scheduler.step()
         elapsed = (time() - start_time)/60
 
-        print("[%d] time %.2f 3d_train %f 3d_valid %f" % (
-                ep + 1,
-                elapsed,
-                losses_3d_train[-1] * 1000,
-                losses_3d_valid[-1] * 1000))
+        if local_rank == 0:
+            print("[%d] time %.2f 3d_train %f 3d_valid %f" % (
+                    ep + 1,
+                    elapsed,
+                    losses_3d_train[-1] * 1000,
+                    losses_3d_valid[-1] * 1000))
 
         if args.export_training_curves and ep > 3:
             import matplotlib.pyplot as plt
