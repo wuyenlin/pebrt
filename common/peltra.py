@@ -1,12 +1,8 @@
 import torch
 import torch.nn as nn
 import cmath
-try:
-    from common.embed import *
-    from common.human import *
-except:
-    from embed import *
-    from human import *
+from common.embed import *
+from common.human import *
 
 
 
@@ -34,9 +30,7 @@ class TransformerEncoder(nn.Module):
     def forward(self, x):
         x = x.flatten(1).unsqueeze(1)
         x = self.pe(x)
-        print(x.device)
         x = self.transformer(x)
-        print(x.device)
         x = self.lin_out(x).squeeze(1)
         x = self.tanh(x)
 
@@ -52,7 +46,7 @@ class PELTRA(nn.Module):
         
         self.bs = bs
         self.device = device
-        self.transformer = TransformerEncoder(num_layers=8)
+        self.transformer = TransformerEncoder(num_layers=8).to(device)
 
  
     def normalize(self, x: torch.tensor) -> torch.tensor:
@@ -94,15 +88,3 @@ class PELTRA(nn.Module):
         x, w_kc = self.process(x)
 
         return x, w_kc
-
-if __name__ == "__main__":
-    transforms = transforms.Compose([
-        transforms.Resize([256,256]),
-        transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-    ]) 
-    model = PELTRA(device="cpu", bs=2)
-    # model = model.cuda()
-    input2d = torch.rand(2,17,2)
-    output, _ = model(input2d)
-    print(output.shape)
