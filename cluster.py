@@ -98,7 +98,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             plt.close("all")
 
-        if (ep)%5 == 0 and ep != 0:
+        if ep%5 == 0 and ep != 0:
             exp_name = "./peltra/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
