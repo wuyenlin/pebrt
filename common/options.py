@@ -29,7 +29,7 @@ def args_parser():
 
     # SLI
     parser.add_argument("--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility.")
-    parser.add_argument("--random_seed", type=int, help="Random seed.", default="random_seed_default")
+    parser.add_argument("--random_seed", type=int, help="Random seed.", default=0)
     # parser.add_argument("--model_dir", type=str, help="Directory for saving models.", default=model_dir_default)
     # parser.add_argument("--model_filename", type=str, help="Model filename.", default=model_filename_default)
   
