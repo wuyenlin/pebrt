@@ -1,8 +1,13 @@
 import torch
 import torch.nn as nn
 import cmath
-from common.embed import *
-from common.human import *
+try:
+    from common.embed import *
+    from common.human import *
+except:
+    from embed import *
+    from human import *
+
 
 
 class TransformerEncoder(nn.Module):
@@ -29,7 +34,9 @@ class TransformerEncoder(nn.Module):
     def forward(self, x):
         x = x.flatten(1).unsqueeze(1)
         x = self.pe(x)
+        print(x.device)
         x = self.transformer(x)
+        print(x.device)
         x = self.lin_out(x).squeeze(1)
         x = self.tanh(x)
 
@@ -76,7 +83,7 @@ class PELTRA(nn.Module):
                 assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
                 R_stack[b,k,:] = R.to(self.device).flatten()
             # Impose NN outputs SO(3) on kinematic model and get punishing weights
-            h = Human(1.8)
+            h = Human(1.8, "cpu")
             h.update_pose(R_stack[b,:,:].flatten())
             w_kc[b,:] = torch.tensor(h.punish_list)
         return R_stack, w_kc
@@ -87,3 +94,15 @@ class PELTRA(nn.Module):
         x, w_kc = self.process(x)
 
         return x, w_kc
+
+if __name__ == "__main__":
+    transforms = transforms.Compose([
+        transforms.Resize([256,256]),
+        transforms.ToTensor(),  
+        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
+    ]) 
+    model = PELTRA(device="cpu", bs=2)
+    # model = model.cuda()
+    input2d = torch.rand(2,17,2)
+    output, _ = model(input2d)
+    print(output.shape)
