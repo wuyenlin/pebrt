@@ -128,6 +128,7 @@ def main(args):
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
+    args.distributed = True
 
     if args.distributed:
         print("INFO: Running on SLI")
