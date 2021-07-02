@@ -5,6 +5,7 @@ from common.embed import *
 from common.human import *
 
 
+
 class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
@@ -45,7 +46,7 @@ class PELTRA(nn.Module):
         
         self.bs = bs
         self.device = device
-        self.transformer = TransformerEncoder(num_layers=8)
+        self.transformer = TransformerEncoder(num_layers=8).to(device)
 
  
     def normalize(self, x: torch.tensor) -> torch.tensor:
@@ -76,7 +77,7 @@ class PELTRA(nn.Module):
                 assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
                 R_stack[b,k,:] = R.to(self.device).flatten()
             # Impose NN outputs SO(3) on kinematic model and get punishing weights
-            h = Human(1.8)
+            h = Human(1.8, "cpu")
             h.update_pose(R_stack[b,:,:].flatten())
             w_kc[b,:] = torch.tensor(h.punish_list)
         return R_stack, w_kc
