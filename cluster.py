@@ -176,12 +176,12 @@ def run_evaluation(model, actions=None):
         e0, n1 = evaluate(test_loader, model, args.device)
 
 def set_random_seeds(random_seed=0):
-
     torch.manual_seed(random_seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     np.random.seed(random_seed)
     random.seed(random_seed)
+
 
 def main(args):
     device = torch.device(args.device)
@@ -191,6 +191,7 @@ def main(args):
     print("INFO: Training using dataset {}".format(args.dataset))
 
     if args.distributed:
+        print("INFO: Running on SLI")
         local_rank = args.local_rank
         random_seed = args.random_seed
         set_random_seeds(random_seed=random_seed)
@@ -200,7 +201,7 @@ def main(args):
         ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
 
     model_params = 0
-    for parameter in model.parameters():
+    for parameter in ddp_model.parameters():
         model_params += parameter.numel()
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
