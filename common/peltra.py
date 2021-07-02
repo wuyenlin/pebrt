@@ -62,10 +62,10 @@ class PELTRA(nn.Module):
         :param arr: a (96,) tensor, 6D representation of 16 bones
         :return R_stack: (bs,16,9)
         """
-        R_stack = torch.zeros(self.bs,16,9)
-        arr_all = arr_all.to(torch.float32).view(self.bs,16,-1)
-        w_kc = torch.ones(self.bs,16)
-        for b in range(self.bs):
+        arr_all = arr_all.to(torch.float32).view(-1,16,6)
+        R_stack = torch.zeros(arr_all.shape[0],16,9)
+        w_kc = torch.ones(arr_all.shape[0],16)
+        for b in range(arr_all.shape[0]):
             for k in range(16):
                 arr = arr_all[b,k,:]
                 assert len(arr) == 6, len(arr)
