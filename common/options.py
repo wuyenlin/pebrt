@@ -13,7 +13,6 @@ def args_parser():
     parser.add_argument('--weight_decay', type=float, default=1e-05)
     parser.add_argument('--lr_drop', default=10, type=int)
 
-
     # Transformer (layers of enc and dec, dropout rate, num_heads, dim_feedforward)
     parser.add_argument('--dropout', type=float, default=0.1, help="Dropout rate applied in transformer")
 
@@ -30,9 +29,6 @@ def args_parser():
     # SLI
     parser.add_argument("--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility.")
     parser.add_argument("--random_seed", type=int, help="Random seed.", default="random_seed_default")
-    # parser.add_argument("--model_dir", type=str, help="Directory for saving models.", default=model_dir_default)
-    # parser.add_argument("--model_filename", type=str, help="Model filename.", default=model_filename_default)
-  
 
     args = parser.parse_args()
     return args
