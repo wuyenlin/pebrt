@@ -22,7 +22,8 @@ transforms = transforms.Compose([
 ])
 
 
-def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
+def train(start_epoch, epoch, train_loader, val_loader, 
+        model, device, optimizer, lr_scheduler, local_rank):
     print("Training starts...")
 
     losses_3d_train = []
@@ -32,6 +33,19 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
+
+        if ep%5 == 0 and ep != 0:
+            if local_rank == 0:
+                exp_name = "./peltra/epoch_{}.bin".format(ep)
+                torch.save({
+                    "epoch": ep,
+                    "lr_scheduler": lr_scheduler.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "model": model.state_dict(),
+                    "args": args,
+                }, exp_name)
+                print("Parameters saved to ", exp_name)
+
         model.train()
     # train
         for data in train_loader:
@@ -98,82 +112,10 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             plt.close("all")
 
-        if ep%5 == 0 and ep != 0:
-            exp_name = "./peltra/epoch_{}.bin".format(ep)
-            torch.save({
-                "epoch": ep,
-                "lr_scheduler": lr_scheduler.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "model": model.state_dict(),
-                "args": args,
-            }, exp_name)
-            print("Parameters saved to ", exp_name)
 
     print("Finished Training.")
     return losses_3d_train , losses_3d_valid
 
-
-def evaluate(test_loader, model, device):
-    print("Evaluation mode")
-
-    e0 = 0
-    epoch_loss_e0 = 0.0
-    epoch_loss_n1 = 0.0
-
-    with torch.no_grad():
-        model.load_state_dict(torch.load("./peltra/epoch_20.bin")["model"])
-        model = model.cuda()
-        model.eval()
-        N = 0
-        for data in test_loader:
-            _, image, inputs_2d, vec_3d = data
-            inputs_2d = inputs_2d.to(device)
-            vec_3d = vec_3d.to(device)
-
-            predicted_3d_pos, _ = model(inputs_2d)
-
-            # pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
-            # h = Human(1.8, "cpu")
-            # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
-            # e0 = mpjpe(predicted_3d_pos, vec_3d)
-            n2 = mbve(predicted_3d_pos, vec_3d)
-            
-            # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
-            epoch_loss_n1 += vec_3d.shape[0] * n1.item()
-            N += vec_3d.shape[0]
-
-            e0 = (epoch_loss_e0 / N)*1000
-            n1 = (epoch_loss_n1 / N)*1000
-
-    print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
-    print("New Metric  Error (MUBVE):\t", n1, "\t(mm)")
-    print("----------")
-    
-    return e0, n1
-
-
-def run_evaluation(model, actions=None):
-    """ Evalution on Human3.6M dataset """
-    error_e0 = []
-    errors_n1 = []
-    if actions is not None:
-        # evaluting on h36m
-        for action in actions:
-            test_dataset = Data(args.dataset, transforms, False, action)
-            test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False,
-                                    num_workers=args.num_workers, collate_fn=collate_fn)
-            print("-----"+action+"-----")
-            e0, n1 = evaluate(test_loader, model, args.device)
-            error_e0.append(e0)
-            errors_n1.append(n1)
-        print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
-        print("New Metric    (MUBVE) action-wise average:", round(np.mean(errors_n1), 1), "(mm)")
-    else:
-        # evaluting on MPI-INF-3DHP
-        test_dataset = Data(args.dataset, transforms, False)
-        test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
-                                num_workers=args.num_workers, collate_fn=collate_fn)
-        e0, n1 = evaluate(test_loader, model, args.device)
 
 def set_random_seeds(random_seed=0):
     torch.manual_seed(random_seed)
@@ -184,71 +126,51 @@ def set_random_seeds(random_seed=0):
 
 
 def main(args):
-    device = torch.device(args.device)
-    ddp_model = PELTRA(device, bs=args.bs)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
 
-    if args.distributed:
-        print("INFO: Running on SLI")
-        local_rank = args.local_rank
-        random_seed = args.random_seed
-        set_random_seeds(random_seed=random_seed)
-        torch.distributed.init_process_group(backend="nccl")
-        device = torch.device("cuda:{}".format(local_rank))
-        model = PELTRA(device, bs=args.bs)
-        ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
+    print("INFO: Running on SLI")
+    local_rank = args.local_rank
+    random_seed = args.random_seed
+    set_random_seeds(random_seed=random_seed)
+    torch.distributed.init_process_group(backend="nccl")
+    device = torch.device("cuda:{}".format(local_rank))
+    model = PELTRA(device, bs=args.bs)
+    ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
 
     model_params = 0
     for parameter in ddp_model.parameters():
         model_params += parameter.numel()
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
-    if args.eval:
-        if "h36m" in args.dataset:
-            actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
-                    "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
-                    "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
-            print("Evaluation starts...")
-            run_evaluation(model, actions)
-        else:
-            print("Evaluation starts...")
-            run_evaluation(model)
+    train_dataset = Data(args.dataset, transforms)
+    train_sampler = DistributedSampler(dataset=train_dataset)
+    val_dataset = Data(args.dataset, transforms, train=False)
 
-    else:
-        train_dataset = Data(args.dataset, transforms)
-        val_dataset = Data(args.dataset, transforms, train=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, \
+        num_workers=args.num_workers, sampler=train_sampler)
+    val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
+            num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
-        if args.distributed:
-            train_sampler = DistributedSampler(dataset=train_dataset)
-            train_loader = DataLoader(train_dataset, batch_size=args.bs, \
-                num_workers=args.num_workers, sampler=train_sampler)
-            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
-                 num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-        else:
-            train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False, \
-                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
-                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+    optimizer = optim.AdamW(ddp_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
-        optimizer = optim.AdamW(ddp_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-        lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
+    if args.resume:
+        map_location = {"cuda:0": "cuda:{}".format(local_rank)}
+        checkpoint = torch.load(args.resume, map_location=map_location)
+        ddp_model.load_state_dict(checkpoint)
 
-        if args.resume:
-            checkpoint = torch.load(args.resume, map_location="cpu")
-            ddp_model.load_state_dict(checkpoint["model"])
+        if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
+            optimizer.load_state_dict(checkpoint["optimizer"])
+            lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            args.start_epoch = checkpoint["epoch"] + 1
 
-            if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
-                optimizer.load_state_dict(checkpoint["optimizer"])
-                lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-                args.start_epoch = checkpoint["epoch"] + 1
+    print("INFO: Using optimizer {}".format(optimizer))
 
-        print("INFO: Using optimizer {}".format(optimizer))
-
-        train_list, val_list = train(args.start_epoch, args.epoch, 
-                                    train_loader, val_loader, ddp_model, device,
-                                    optimizer, lr_scheduler)
+    train_list, val_list = train(args.start_epoch, args.epoch, 
+                                train_loader, val_loader, ddp_model, device,
+                                optimizer, lr_scheduler, local_rank)
 
 if __name__ == "__main__":
     args = args_parser()
