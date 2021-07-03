@@ -35,6 +35,18 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
+
+        if ep%5 == 0 and ep != 0:
+            exp_name = "./petr/epoch_{}_h36m.bin".format(ep)
+            torch.save({
+                "epoch": ep,
+                "lr_scheduler": lr_scheduler.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "model": model.state_dict(),
+                "args": args,
+            }, exp_name)
+            print("Parameters saved to ", exp_name)
+
         model.train()
     # train
         for data in train_loader:
@@ -98,26 +110,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             plt.close("all")
 
-        if (ep)%5 == 0 and ep != 0:
-            exp_name = "./petr/epoch_{}_h36m.bin".format(ep)
-            torch.save({
-                "epoch": ep,
-                "lr_scheduler": lr_scheduler.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "model": model.state_dict(),
-                "args": args,
-            }, exp_name)
-            print("Parameters saved to ", exp_name)
-
     print("Finished Training.")
     return losses_3d_train , losses_3d_valid
 
 
 def evaluate(test_loader, model, device):
     epoch_loss_3d_pos = 0.0
-    epoch_loss_3d_n1 = 0
     epoch_loss_3d_n2 = 0
-    epoch_loss_3d_n3 = 0
 
     with torch.no_grad():
         model.eval()
@@ -145,49 +144,34 @@ def evaluate(test_loader, model, device):
                 pred[pose,:,:] = torch.from_numpy(convert_gt(predicted_3d_pos[pose,:,:], t_info, dataset="h36m"))
                 tar[pose,:,:] = torch.from_numpy(convert_gt(inputs_3d[pose,:,:], t_info, dataset="h36m"))
                 
-
             # new metrics
-            n1 = maev(pred, tar)
-            epoch_loss_3d_n1 += inputs_3d.shape[0] * n1.item()
             n2 = mbve(pred, tar)
             epoch_loss_3d_n2 += inputs_3d.shape[0] * n2.item()
-            n3 = meae(pred, tar)
-            epoch_loss_3d_n3 += inputs_3d.shape[0] * n3.item()
 
 
     e1 = (epoch_loss_3d_pos / N)*1000
-    n1 = epoch_loss_3d_n1 / N
     n2 = epoch_loss_3d_n2 / N
-    n3 = epoch_loss_3d_n3 / N
 
     print("Protocol #1 Error (MPJPE):", e1, "mm")
-    print("New Metric #1 Error (MAEV):", n1, "-")
     print("New Metric #2 Error (MBVE):", n2, "-")
-    print("New Metric #3 Error (MEAE):", n3, "rad")
     print("----------")
 
-    return e1, n1, n2, n3
+    return e1, n2
 
 
 def run_evaluation(actions, model):
     error_e1 = []
-    errors_n1 = []
     errors_n2 = []
-    errors_n3 = []
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
         print("-----"+action+"-----")
-        e1, n1, n2, n3 = evaluate(test_loader, model, args.device)
+        e1, n2 = evaluate(test_loader, model, args.device)
         error_e1.append(e1)
-        errors_n1.append(n1)
         errors_n2.append(n2)
-        errors_n3.append(n3)
         print()
     print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e1), 1), "mm")
-    print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
     print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
-    print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
 
 
 def set_random_seeds(random_seed=0):
@@ -270,7 +254,8 @@ def main(args):
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
         if args.resume:
-            checkpoint = torch.load(args.resume, map_location="cpu")
+            map_location = {"cuda:0": "cuda:{}".format(local_rank)}
+            checkpoint = torch.load(args.resume, map_location=map_location)
             ddp_model.load_state_dict(checkpoint["model"])
 
             if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
