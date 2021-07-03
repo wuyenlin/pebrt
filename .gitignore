@@ -1,6 +1,7 @@
 dataset/S*/
 dataset/h36m/
 h36m/
+mpi_inf_3dhp_test_set/
 checkpoint/
 anth_checkpoint/
 weights/
