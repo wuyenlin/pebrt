@@ -190,28 +190,42 @@ def run_evaluation(actions, model):
     print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "rad")
 
 
-def main(args):
+def set_random_seeds(random_seed=0):
+    import random
+    torch.manual_seed(random_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
 
+
+def main(args):
     device = torch.device(args.device)
-    model = PETR(device)
-    model = model.to(device)
-    print(torch.cuda.get_device_name(torch.cuda.current_device()))
+    ddp_model = PETR(device)
+    # model = model.to(device)
+    print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
+    print("INFO: Training using dataset {}".format(args.dataset))
 
     if args.distributed:
-        gpus = list(range(torch.cuda.device_count()))
-        model = nn.DataParallel(model, device_ids=gpus)
-        print("INFO: Using {} GPUs.".format(torch.cuda.device_count()))
+        from torch.utils.data.distributed import DistributedSampler
+        print("INFO: Running on SLI")
+        local_rank = args.local_rank
+        random_seed = args.random_seed
+        set_random_seeds(random_seed=random_seed)
+        torch.distributed.init_process_group(backend="nccl")
+        device = torch.device("cuda:{}".format(local_rank))
+        model = PETR(device)
+        ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
 
-    print("INFO: Model loaded on {}. Using Lifting model.".format(device))
     backbone_params = 0
     if args.lr_backbone == 0:
         print("INFO: Freezing HRNet")
-        for param in model.backbone.parameters():
+        for param in ddp_model.backbone.parameters():
             param.requires_grad = False
             backbone_params += param.numel()
 
     model_params = 0
-    for parameter in model.parameters():
+    for parameter in ddp_model.parameters():
         model_params += parameter.numel()
     if args.lr_backbone == 0:
         model_params -= backbone_params
@@ -223,20 +237,30 @@ def main(args):
                 "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
                 "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
         checkpoint = torch.load(args.resume, map_location="cpu")
-        model.load_state_dict(checkpoint["model"])
+        ddp_model.load_state_dict(checkpoint["model"])
         print("Evaluation starts...")
-        run_evaluation(actions, model)
+        run_evaluation(actions, ddp_model)
 
     else:
         train_dataset = Data(args.dataset, transforms)
-        train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
         val_dataset = Data(args.dataset, transforms, False)
-        val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, num_workers=args.num_workers, drop_last=False, collate_fn=collate_fn)
+        if args.distributed:
+            train_sampler = DistributedSampler(dataset=train_dataset)
+            train_loader = DataLoader(train_dataset, batch_size=args.bs, \
+                num_workers=args.num_workers, sampler=train_sampler)
+            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
+                    num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+        else:
+            train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False, \
+                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
+                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+
 
         param_dicts = [
-            {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+            {"params": [p for n, p in ddp_model.named_parameters() if "backbone" not in n and p.requires_grad]},
             {
-                "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+                "params": [p for n, p in ddp_model.named_parameters() if "backbone" in n and p.requires_grad],
                 "lr": args.lr_backbone,
             },
         ]
@@ -247,7 +271,7 @@ def main(args):
 
         if args.resume:
             checkpoint = torch.load(args.resume, map_location="cpu")
-            model.load_state_dict(checkpoint["model"])
+            ddp_model.load_state_dict(checkpoint["model"])
 
             if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
                 optimizer.load_state_dict(checkpoint["optimizer"])
