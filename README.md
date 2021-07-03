@@ -1,8 +1,8 @@
-# Thesis proejct (Q3/Q4 2021)
+# One-pose-fits-all
 
 This repository contains files used in the thesis done by Yen-Lin Wu in partial fulfillment of his MSc programme in Mechanical Engineering at Delft University of Technology (2021), supervised by Osama Mazhar and Jens Kober. 
 
-The thesis aims to address the widely challenged computer vision task - Human Pose Estimation. 
+The thesis aims to address the widely challenged computer vision task - 3D Human Pose Estimation. 
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
 On top of that, we integrate human kinemtic constraints to improve prediction accuracies and proposed a new evaluation metric that focuses on human postures, independent of human body shape, age, or gender.
 
@@ -70,13 +70,33 @@ Now, run the following command to extract video frames and merge 2D/3D annotatio
 python3 common/h36m_dataset.py
 ```
 
-### Download pre-trained weights
+## Evaluation on pre-trained models
+Run 
+```
+python3 main.py --eval --resume ./checkpoint/weight.bin
+```
+
+
+### New evaluation metrics
+
+
+## Training from scratch
+To start training the model, run
+```
+python3 lift.py
+```
+
+If you are running on a SLI enabled machine or computing cluster, run the following Pytorch DDP code (example of using 2 GPUs):
+```
+python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 cluster.py
+```
+
 
 - [x] Animate results (see animation.py)
 - [x] Create evaluation metrics for bone rotation error
 - [x] Add kinematic constraints
 - [x] Train and test on Human3.6M
+- [x] Run on distributed systems (for SLI)
 - [ ] Test evaluation metrics on existing methods (working on it now)
-- [ ] Online implementations of PEBRT (training & finetuning now)
+- [ ] Online implementations of PETR (training & finetuning now)
 - [ ] Fix camera angle issue / add 3D joint position in loss 
-- [ ] Run on distributed systems (for SLI)
