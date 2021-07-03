@@ -166,7 +166,8 @@ def main(args):
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
     if args.resume:
-        checkpoint = torch.load(args.resume, map_location="cpu")
+        map_location = {"cuda:0": "cuda:{}".format(local_rank)}
+        checkpoint = torch.load(args.resume, map_location=map_location)
         ddp_model.load_state_dict(checkpoint["model"])
 
         if not args.eval and "optimizer" in checkpoint and "lr_scheduler" in checkpoint and "epoch" in checkpoint:
