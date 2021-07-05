@@ -15,12 +15,13 @@ class Data:
         # T pose
         h = Human(1.8, "cpu")
         model = h.update_pose()
-        t_info = vectorize(model)[:,:3]
 
         data = np.load(npz_path, allow_pickle=True)
+        num_frame = 0
 
         if "h36m" in npz_path:
             print("INFO: Using Human3.6M dataset.")
+            t_info = vectorize(model, "h36m")[:,:3]
             subject = {
                 "subjects_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
                 "subjects_test": ["S9/", "S11/"]
@@ -43,7 +44,8 @@ class Data:
             random.seed(100)
             for act in to_load:
                 frames = data[act].flatten()[0]
-                reduced = random.sample(list(frames), int(len(frames)*0.001))
+                reduced = random.sample(list(frames), int(len(frames)*0.01))
+                num_frame += len(reduced)
                 for f in reduced:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
                     gt_3d = self.zero_center(self.remove_joints( \
@@ -55,6 +57,7 @@ class Data:
                     self.img_path.append(frames[f]["directory"])
 
         else:
+            t_info = vectorize(model)[:,:3]
             if action is not None:
                 print("Only support action parameter in H3.6M dataset.")
                 exit(0)
@@ -65,6 +68,7 @@ class Data:
                 vid_list = np.arange(6,8)
 
             for vid in vid_list:
+                num_frame += len(data[vid].keys())
                 for frame in data[vid].keys():
                     pts_2d = data[vid][frame]["positions_2d"]
                     gt_2d = self.zero_center(self.remove_joints(pts_2d))
@@ -77,6 +81,7 @@ class Data:
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
 
+        print("INFO: Using ", num_frame, " frames")
 
     def __getitem__(self, index):
         try:
