@@ -45,7 +45,8 @@ def plot3d(ax, bones, output, dataset="mpi"):
         yS = (output[index[0]][1],output[index[1]][1])
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-90, azim=-90)
+    #ax.view_init(elev=-90, azim=-90)
+    ax.view_init(elev=0, azim=90)
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
     ax.set_ylim3d([-1.0, 1.0])
@@ -67,7 +68,8 @@ def viz(dataset="mpi", savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PELTRA(device)
     # net.load_state_dict(torch.load("./peltra/ft_1_zero.bin")["model"])
-    net.load_state_dict(torch.load("./peltra/ft_1_h36m.bin")["model"])
+    #net.load_state_dict(torch.load("./peltra/ft_1_h36m.bin")["model"])
+    net.load_state_dict(torch.load("./peltra/cluster_6_lay.bin")["model"])
     net = net.cuda()
     net.eval()
 
@@ -77,9 +79,10 @@ def viz(dataset="mpi", savefig=False):
         plt.imshow(Image.open(img_path[k-1]))
 
         pts = kpts[k-1].unsqueeze(0).cuda()
-        output = net(pts)
+        output, _ = net(pts)
         h = Human(1.8, "cpu")
-        output = h.update_pose(output.detach().numpy())
+        #output = h.update_pose(output.detach().numpy())
+        output = h.update_pose(output)
 
         ax = fig.add_subplot(2, 4, k+4, projection="3d")
         plot3d(ax, bones, output, dataset)
