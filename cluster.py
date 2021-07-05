@@ -1,17 +1,48 @@
 #!/usr/bin/python3
 
-from common.options import args_parser
 from common.peltra import *
 from common.dataloader import *
 from common.loss import *
 from common.human import *
 
+import argparse
 from torchvision import transforms
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from time import time
 import random
+
+
+parser = argparse.ArgumentParser("Set PEBRT parameters", add_help=False)
+
+# Hyperparameters
+parser.add_argument("--start_epoch", type=int, default=0)
+parser.add_argument("--epoch", type=int, default=50)
+parser.add_argument("--bs", type=int, default=2)
+parser.add_argument("--lr", type=float, default=1e-04)
+parser.add_argument("--lr_backbone", type=float, default=0)
+parser.add_argument("--weight_decay", type=float, default=1e-05)
+parser.add_argument("--lr_drop", default=10, type=int)
+
+# Transformer (layers of enc and dec, dropout rate, num_heads, dim_feedforward)
+parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate applied in transformer")
+
+# dataset
+parser.add_argument("--num_workers", default=1, type=int)
+parser.add_argument("--eval", action="store_true")
+parser.add_argument("--export_training_curves", action="store_true", help="Save train/val curves in .png file")
+# parser.add_argument("--dataset", type=str, default="./dataset/S1/Seq1/imageSequence/S1.npz")
+parser.add_argument("--dataset", type=str, default="./h36m/data_h36m_frame_all.npz")
+parser.add_argument("--device", default="cuda", help="device used")
+parser.add_argument("--resume", type=str, default=None, help="Loading model checkpoint")
+parser.add_argument("--distributed", action="store_true")
+
+# SLI
+parser.add_argument("--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility.")
+parser.add_argument("--random_seed", type=int, help="Random seed.", default=0)
+
+args = parser.parse_args()
 
 
 transforms = transforms.Compose([
@@ -127,13 +158,13 @@ def set_random_seeds(random_seed=0):
 def main(args):
     device = torch.device(args.device)
     ddp_model = PELTRA(device, bs=args.bs)
-    print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
+    print("INFO: Using PEBRT and Gram-Schmidt process to recover SO(3) rotation matrix")
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
     args.distributed = True
 
     if args.distributed:
-        print("INFO: Running on SLI")
+        print("INFO: Running on DDP")
         local_rank = args.local_rank
         random_seed = args.random_seed
         set_random_seeds(random_seed=random_seed)
@@ -182,5 +213,4 @@ def main(args):
                                 optimizer, lr_scheduler, local_rank)
 
 if __name__ == "__main__":
-    args = args_parser()
     main(args)
