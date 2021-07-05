@@ -141,6 +141,7 @@ class Human:
         process NN output to rotation matrix of 16 bones
         """
         elem = elem.flatten()
+        assert len(elem) == 144
         self.rot_mat, self.punish_list = {}, []
         for k, bone in enumerate(self.constraints.keys()):
             R = elem[9*k:9*(k+1)].detach().cpu().numpy()
