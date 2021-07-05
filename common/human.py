@@ -268,13 +268,10 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    # k = 5
-    # a[9*k:9*k+9] = rot((0,1,0)).flatten()
     k = 8
     a[9*k:9*k+9] = rot((0,-1,0)).flatten()
-    # k = 14
-    # a[9*k:9*k+9] = rot((0,0,0.5)).flatten()
     model = h.update_pose(a)
+    print(model)
     print(h.punish_list)
     vis_model(model)
 
