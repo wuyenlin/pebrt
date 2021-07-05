@@ -33,15 +33,16 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, image, inputs_2d, vec_3d = data
+            _, inputs_2d, inputs_3d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
+            inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
 
             predicted_3d_pos, w_kc = model(inputs_2d)
 
-            loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
+            loss_3d_pos = mpbve(predicted_3d_pos, vec_3d, w_kc)
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -59,13 +60,14 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, image, inputs_2d, vec_3d = data
+                _, inputs_2d, inputs_3d, vec_3d = data
                 inputs_2d = inputs_2d.to(device)
+                inputs_3d = inputs_3d.to(device)
                 vec_3d = vec_3d.to(device)
 
                 predicted_3d_pos, w_kc = model(inputs_2d)
 
-                loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
+                loss_3d_pos = mpbve(predicted_3d_pos, vec_3d, w_kc)
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
                 N += vec_3d.shape[0]
 
@@ -97,7 +99,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.close("all")
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "./peltra/epoch_{}.bin".format(ep)
+            exp_name = "./mpbve/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
