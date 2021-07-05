@@ -33,16 +33,15 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, inputs_2d, inputs_3d, vec_3d = data
+            _, image, inputs_2d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
-            inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
 
             predicted_3d_pos, w_kc = model(inputs_2d)
 
-            loss_3d_pos = mpbve(predicted_3d_pos, vec_3d, w_kc)
+            loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -60,14 +59,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, inputs_2d, inputs_3d, vec_3d = data
+                _, image, inputs_2d, vec_3d = data
                 inputs_2d = inputs_2d.to(device)
-                inputs_3d = inputs_3d.to(device)
                 vec_3d = vec_3d.to(device)
 
                 predicted_3d_pos, w_kc = model(inputs_2d)
 
-                loss_3d_pos = mpbve(predicted_3d_pos, vec_3d, w_kc)
+                loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
                 N += vec_3d.shape[0]
 
@@ -99,7 +97,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.close("all")
 
         if (ep)%5 == 0 and ep != 0:
-            exp_name = "./mpbve/epoch_{}.bin".format(ep)
+            exp_name = "./peltra/epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -119,6 +117,8 @@ def evaluate(test_loader, model, device):
     e0 = 0
     epoch_loss_e0 = 0.0
     epoch_loss_n1 = 0.0
+    epoch_loss_n2 = 0.0
+    epoch_loss_n3 = 0.0
 
     with torch.no_grad():
         model.load_state_dict(torch.load("./peltra/epoch_20.bin")["model"])
@@ -136,26 +136,36 @@ def evaluate(test_loader, model, device):
             # h = Human(1.8, "cpu")
             # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
             # e0 = mpjpe(predicted_3d_pos, vec_3d)
+            n1 = maev(predicted_3d_pos, vec_3d)
             n2 = mbve(predicted_3d_pos, vec_3d)
+            n3 = meae(predicted_3d_pos, vec_3d)
             
             # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
+            epoch_loss_n2 += vec_3d.shape[0] * n2.item()
+            epoch_loss_n3 += vec_3d.shape[0] * n3.item()
             N += vec_3d.shape[0]
 
             e0 = (epoch_loss_e0 / N)*1000
-            n1 = (epoch_loss_n1 / N)*1000
+            n1 = epoch_loss_n1 / N
+            n2 = epoch_loss_n2 / N
+            n3 = np.rad2deg(epoch_loss_n3 / N)
 
     print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
-    print("New Metric  Error (MUBVE):\t", n1, "\t(mm)")
+    print("New Metric #1 Error (MAEV):\t", n1)
+    print("New Metric #2 Error (L2 Norm):\t", n2)
+    print("New Metric #3 Error (Euler):\t", n3, "\t(deg)")
     print("----------")
     
-    return e0, n1
+    return e0, n1, n2, n3
 
 
 def run_evaluation(model, actions=None):
     """ Evalution on Human3.6M dataset """
     error_e0 = []
     errors_n1 = []
+    errors_n2 = []
+    errors_n3 = []
     if actions is not None:
         # evaluting on h36m
         for action in actions:
@@ -163,23 +173,28 @@ def run_evaluation(model, actions=None):
             test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False,
                                     num_workers=args.num_workers, collate_fn=collate_fn)
             print("-----"+action+"-----")
-            e0, n1 = evaluate(test_loader, model, args.device)
+            e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
             error_e0.append(e0)
             errors_n1.append(n1)
+            errors_n2.append(n2)
+            errors_n3.append(n3)
         print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
-        print("New Metric    (MUBVE) action-wise average:", round(np.mean(errors_n1), 1), "(mm)")
+        print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
+        print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
+        print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "(deg)")
     else:
         # evaluting on MPI-INF-3DHP
         test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
                                 num_workers=args.num_workers, collate_fn=collate_fn)
-        e0, n1 = evaluate(test_loader, model, args.device)
+        e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
 
 
 def main(args):
     device = torch.device(args.device)
     model = PELTRA(device, bs=args.bs)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
+    model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
 
