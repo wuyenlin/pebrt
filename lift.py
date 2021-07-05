@@ -1,16 +1,46 @@
 #!/usr/bin/python3
 
-from common.options import args_parser
 from common.peltra import *
 from common.dataloader import *
 from common.loss import *
 from common.human import *
 
+import argparse
 from tqdm import tqdm
 from torchvision import transforms
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from time import time
+
+parser = argparse.ArgumentParser("Set PEBRT parameters", add_help=False)
+
+# Hyperparameters
+parser.add_argument("--start_epoch", type=int, default=0)
+parser.add_argument("--epoch", type=int, default=50)
+parser.add_argument("--bs", type=int, default=2)
+parser.add_argument("--lr", type=float, default=1e-04)
+parser.add_argument("--lr_backbone", type=float, default=0)
+parser.add_argument("--weight_decay", type=float, default=1e-05)
+parser.add_argument("--lr_drop", default=10, type=int)
+
+# Transformer (layers of enc and dec, dropout rate, num_heads, dim_feedforward)
+parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate applied in transformer")
+
+# dataset
+parser.add_argument("--num_workers", default=1, type=int)
+parser.add_argument("--eval", action="store_true")
+parser.add_argument("--export_training_curves", action="store_true", help="Save train/val curves in .png file")
+# parser.add_argument("--dataset", type=str, default="./dataset/S1/Seq1/imageSequence/S1.npz")
+parser.add_argument("--dataset", type=str, default="./h36m/data_h36m_frame_all.npz")
+parser.add_argument("--device", default="cuda", help="device used")
+parser.add_argument("--resume", type=str, default=None, help="Loading model checkpoint")
+parser.add_argument("--distributed", action="store_true")
+
+# SLI
+parser.add_argument("--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility.")
+parser.add_argument("--random_seed", type=int, help="Random seed.", default=0)
+
+args = parser.parse_args()
 
 
 transforms = transforms.Compose([
@@ -30,6 +60,17 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
+        if ep%5 == 0 and ep != 0:
+            exp_name = "./peltra/epoch_{}.bin".format(ep)
+            torch.save({
+                "epoch": ep,
+                "lr_scheduler": lr_scheduler.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "model": model.state_dict(),
+                "args": args,
+            }, exp_name)
+            print("Parameters saved to ", exp_name)
+
         model.train()
     # train
         for data in train_loader:
@@ -96,34 +137,18 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             plt.close("all")
 
-        if (ep)%5 == 0 and ep != 0:
-            exp_name = "./peltra/epoch_{}.bin".format(ep)
-            torch.save({
-                "epoch": ep,
-                "lr_scheduler": lr_scheduler.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "model": model.state_dict(),
-                "args": args,
-            }, exp_name)
-            print("Parameters saved to ", exp_name)
 
     print("Finished Training.")
     return losses_3d_train , losses_3d_valid
 
 
 def evaluate(test_loader, model, device):
-    print("Evaluation mode")
-
     e0 = 0
     epoch_loss_e0 = 0.0
     epoch_loss_n1 = 0.0
     epoch_loss_n2 = 0.0
-    epoch_loss_n3 = 0.0
 
     with torch.no_grad():
-        model.load_state_dict(torch.load("./peltra/epoch_20.bin")["model"])
-        model = model.cuda()
-        model.eval()
         N = 0
         for data in test_loader:
             _, image, inputs_2d, vec_3d = data
@@ -137,27 +162,23 @@ def evaluate(test_loader, model, device):
             # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
             # e0 = mpjpe(predicted_3d_pos, vec_3d)
             n1 = maev(predicted_3d_pos, vec_3d)
-            n2 = mbve(predicted_3d_pos, vec_3d)
-            n3 = meae(predicted_3d_pos, vec_3d)
+            n2 = mpbve(predicted_3d_pos, vec_3d)
             
             # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
-            epoch_loss_n3 += vec_3d.shape[0] * n3.item()
             N += vec_3d.shape[0]
 
             e0 = (epoch_loss_e0 / N)*1000
             n1 = epoch_loss_n1 / N
-            n2 = epoch_loss_n2 / N
-            n3 = np.rad2deg(epoch_loss_n3 / N)
+            n2 = (epoch_loss_n2 / N)*1000
 
     print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
     print("New Metric #1 Error (MAEV):\t", n1)
-    print("New Metric #2 Error (L2 Norm):\t", n2)
-    print("New Metric #3 Error (Euler):\t", n3, "\t(deg)")
+    print("New Metric #2 Error (MPBVE):\t", n2, "\t(mm)")
     print("----------")
     
-    return e0, n1, n2, n3
+    return e0, n1, n2
 
 
 def run_evaluation(model, actions=None):
@@ -165,29 +186,29 @@ def run_evaluation(model, actions=None):
     error_e0 = []
     errors_n1 = []
     errors_n2 = []
-    errors_n3 = []
     if actions is not None:
         # evaluting on h36m
+        model.load_state_dict(torch.load("./peltra/ft_h36m.bin")["model"])
+        model = model.cuda()
+        model.eval()
         for action in actions:
             test_dataset = Data(args.dataset, transforms, False, action)
-            test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False,
+            test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False, \
                                     num_workers=args.num_workers, collate_fn=collate_fn)
             print("-----"+action+"-----")
-            e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
+            e0, n1, n2 = evaluate(test_loader, model, args.device)
             error_e0.append(e0)
             errors_n1.append(n1)
             errors_n2.append(n2)
-            errors_n3.append(n3)
         print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
         print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
-        print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
-        print("New Metric #3   (MEAE) action-wise average:", round(np.mean(errors_n3), 1), "(deg)")
+        print("New Metric #2   (MPBVE) action-wise average:", round(np.mean(errors_n2), 1), "(mm)")
     else:
         # evaluting on MPI-INF-3DHP
         test_dataset = Data(args.dataset, transforms, False)
         test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
                                 num_workers=args.num_workers, collate_fn=collate_fn)
-        e0, n1, n2, n3 = evaluate(test_loader, model, args.device)
+        e0, n1, n2 = evaluate(test_loader, model, args.device)
 
 
 def main(args):
@@ -208,10 +229,10 @@ def main(args):
             actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
                     "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
                     "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
-            print("Evaluation starts...")
+            print("Evaluation on Human3.6M starts...")
             run_evaluation(model, actions)
         else:
-            print("Evaluation starts...")
+            print("Evaluation on MPI-INF-3DHP starts...")
             run_evaluation(model)
 
     else:
@@ -242,5 +263,4 @@ def main(args):
                                     optimizer, lr_scheduler)
 
 if __name__ == "__main__":
-    args = args_parser()
     main(args)
