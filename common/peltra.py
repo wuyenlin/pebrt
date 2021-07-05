@@ -53,6 +53,19 @@ class PELTRA(nn.Module):
         return x/torch.linalg.norm(x)
 
 
+    def gram_schmidt(self, arr) -> torch.tensor:
+        """
+        Detail implementation of Gram-Schmidt orthogonalization
+        """
+        a_1, a_2 = arr[:3], arr[3:]
+        row_1 = self.normalize(a_1)
+        row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
+        row_3 = self.normalize(torch.cross(row_1,row_2))
+        R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+        assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+        return R
+
+
     def process(self, arr_all):
         """
         an implementation of 6D representation for 3D rotation using Gram-Schmidt process
@@ -61,20 +74,17 @@ class PELTRA(nn.Module):
 
         :param arr: a (96,) tensor, 6D representation of 16 bones
         :return R_stack: (bs,16,9)
+        :return w_kc: (bs, 16)
         """
         arr_all = arr_all.to(torch.float32).view(-1,16,6)
-        R_stack = torch.zeros(arr_all.shape[0],16,9)
-        w_kc = torch.ones(arr_all.shape[0],16)
-        for b in range(arr_all.shape[0]):
+        R_stack = torch.zeros(arr_all.size(0),16,9)
+        w_kc = torch.ones(arr_all.size(0),16)
+
+        for b in range(arr_all.size(0)):
             for k in range(16):
                 arr = arr_all[b,k,:]
                 assert len(arr) == 6, len(arr)
-                a_1, a_2 = arr[:3], arr[3:]
-                row_1 = self.normalize(a_1)
-                row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
-                row_3 = self.normalize(torch.cross(row_1,row_2))
-                R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
-                assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+                R = self.gram_schmidt(arr)
                 R_stack[b,k,:] = R.to(self.device).flatten()
             # Impose NN outputs SO(3) on kinematic model and get punishing weights
             h = Human(1.8, "cpu")
