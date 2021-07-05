@@ -1,5 +1,6 @@
 import cmath
 import torch
+from common.human import *
 
 
 def pck(predicted, target):
@@ -80,7 +81,7 @@ def maev(predicted, target, w_kc=None):
     return maev
 
 
-def mpbve(predicted, target):
+def mpbve(predicted, target, w_kc):
     """
     MPBVE - Mean Per Bone Vector Error
     Novel pose accuracy evaluation metric-
@@ -103,10 +104,6 @@ def mpbve(predicted, target):
         tar = Human(1.8, "cpu")
         tar_model = tar.update_pose(target[b])
         tar_info[b,:] = vectorize(tar_model, "h36m")[:,:3]
-    return torch.mean(torch.norm(pred_info - tar_info, dim=len(tar_info.shape)-1))
-
-if __name__ == "__main__":
-    from human import *
-    a = torch.rand(2,16,9)
-    b = torch.rand(2,16,9)
-    print(mpbve(a, b))
+    mpbve = torch.mean(torch.norm(pred_info - tar_info, dim=len(tar_info.shape)-1))
+    print(mpbve.requires_grad)
+    return mpbve
