@@ -56,6 +56,17 @@ class Data:
                     self.gt_vecs3d.append(convert_gt(gt_3d, t_info, "h36m"))
                     self.img_path.append(frames[f]["directory"])
 
+        elif "mpi_inf_3dhp_test_set" in npz_path:
+            t_info = vectorize(model)[:,:3]
+            if action is not None:
+                print("Only support action parameter in H3.6M dataset.")
+                exit(0)
+            print("INFO: Using MPI-INF-3DHP testing dataset.")
+            pts_2d = data["positions_3d"].flatten()[0].keys()
+            pts_3d = data["positions_2d"].flatten()[0].keys()
+            img_paths = data["img_paths"].flatten()[0].keys()
+            self.gt_pts2d.append()
+
         else:
             t_info = vectorize(model)[:,:3]
             if action is not None:
