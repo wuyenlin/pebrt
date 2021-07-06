@@ -37,8 +37,8 @@ parser.add_argument("--resume", type=str, default=None, help="Loading model chec
 parser.add_argument("--distributed", action="store_true")
 
 # SLI
-parser.add_argument("--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility.")
-parser.add_argument("--random_seed", type=int, help="Random seed.", default=0)
+parser.add_argument("--local_rank", type=int, help="local rank")
+parser.add_argument("--random_seed", type=int, help="random seed", default=0)
 
 args = parser.parse_args()
 
@@ -61,7 +61,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         epoch_loss_3d_train = 0.0
         N = 0
         if ep%5 == 0 and ep != 0:
-            exp_name = "./peltra/epoch_{}.bin".format(ep)
+            exp_name = "./peltra/4_lay_epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -162,7 +162,7 @@ def evaluate(test_loader, model, device):
             # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
             # e0 = mpjpe(predicted_3d_pos, vec_3d)
             n1 = maev(predicted_3d_pos, vec_3d)
-            n2 = mpbve(predicted_3d_pos, vec_3d)
+            n2 = mpbve(predicted_3d_pos, vec_3d, 0)
             
             # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
@@ -188,7 +188,7 @@ def run_evaluation(model, actions=None):
     errors_n2 = []
     if actions is not None:
         # evaluting on h36m
-        model.load_state_dict(torch.load("./peltra/ft_h36m.bin")["model"])
+        model.load_state_dict(torch.load("./peltra/6_lay_epoch_30.bin")["model"])
         model = model.cuda()
         model.eval()
         for action in actions:
