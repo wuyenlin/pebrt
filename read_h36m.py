@@ -2,12 +2,52 @@ import numpy as np
 import h5py
 
 def read_mat():
-    filepath = "./Directions.54138969.mat"
+    filepath = "./mpi_inf_3dhp_test_set/TS1/annot_data.mat"
     arrays = {}
-    f = h5py.File(filepath)
+    f = h5py.File(filepath, "r")
     for k, v in f.items():
         arrays[k] = np.array(v)
-    print(arrays['Masks'][0])
+    print(arrays.keys())
+    n1 = np.array(f["annot3"][:]).squeeze(1)
+    bbox = np.array(f["bb_crop"][:])
+    val_frame = np.array(f["valid_frame"])
+    print(val_frame[6150])
+    print(val_frame.shape)
+    print(len(val_frame))
+
+    first = n1[6149]
+    first -= first[14,:]
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    bones = (
+        (14,15), (15,1), (1,16), (16,0),  # spine + head
+        (1,5), (5,6), (6,7), 
+        (1,2), (2,3), (3,4), # arms
+        (14,11), (11,12), (12,13),
+        (14,8), (8,9), (9,10), # legs
+    )
+    k = 0
+    for p in first:
+        if k == 12:
+            ax.scatter(p[0], p[1], p[2], c='b', alpha=0.5)
+        else:
+            ax.scatter(p[0], p[1], p[2], c='r', alpha=0.5)
+        k+=1
+        
+    for index in bones:
+        xS = (first[index[0]][0],first[index[1]][0])
+        yS = (first[index[0]][1],first[index[1]][1])
+        zS = (first[index[0]][2],first[index[1]][2])
+        ax.plot(xS, yS, zS)
+    ax.view_init(elev=-130, azim=-90)
+    # ax.set_xlim3d([-1.0, 1.0])
+    ax.set_xlabel("X")
+    # ax.set_ylim3d([-1.0, 1.0])
+    ax.set_ylabel("Y")
+    # ax.set_zlim3d([0, 2.0])
+    ax.set_zlabel("Z")
+    plt.show()
 
 
 def try_read():
