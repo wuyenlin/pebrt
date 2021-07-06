@@ -9,6 +9,7 @@ class Data:
     def __init__(self, npz_path, transforms=None, train=True, action=None):
         self.img_path = []
         self.gt_pts2d = []
+        self.gt_pts3d = []
         self.gt_vecs3d = []
         self.transforms = transforms
 
@@ -44,7 +45,8 @@ class Data:
             random.seed(100)
             for act in to_load:
                 frames = data[act].flatten()[0]
-                reduced = random.sample(list(frames), int(len(frames)*0.01))
+                reduced = random.sample(list(frames), int(len(frames)*0.1)) \
+                    if action is None else random.sample(list(frames), int(len(frames)))
                 num_frame += len(reduced)
                 for f in reduced:
                     gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
@@ -53,6 +55,7 @@ class Data:
 
                     assert gt_2d.shape == (17,2) and gt_3d.shape == (17,3)
                     self.gt_pts2d.append(gt_2d)
+                    self.gt_pts3d.append(gt_3d)
                     self.gt_vecs3d.append(convert_gt(gt_3d, t_info, "h36m"))
                     self.img_path.append(frames[f]["directory"])
 
@@ -89,6 +92,7 @@ class Data:
                     gt_3d = self.zero_center(cam_3d)/1000
 
                     self.gt_pts2d.append(gt_2d)
+                    self.gt_pts3d.append(gt_3d)
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
 
@@ -100,10 +104,11 @@ class Data:
             #img = Image.open(img_path)
             #img = self.transforms(img)
             kpts_2d = self.gt_pts2d[index]
+            kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
         except:
             return None
-        return img_path, img_path, kpts_2d, vecs_3d
+        return img_path, kpts_2d, kpts_3d, vecs_3d
         
 
     def __len__(self):
