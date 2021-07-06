@@ -70,20 +70,20 @@ class Human:
             "r_lower_arm": ((0,0), (-2.62,0), (0,0)),
 
             "l_hip": ((0,0), (0,0), (0,0)), #10
-            "l_thigh": ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
+            "l_thigh": ((-0.785,0.785), (-0.87,0.35), (-2.09,0.52)),
             "l_calf": ((0,0), (0,0), (0,2.79)),
             "r_hip": ((0,0), (0,0), (0,0)),
-            "r_thigh": ((-0.35,0.87), (-0.785,0.785), (-2.09,0.52)),
+            "r_thigh": ((-0.785,0.785), (-0.35,0.87), (-0.785,0.785)),
             "r_calf": ((0,0), (0,0), (0,2.79)),
         }
 
 
     def init_bones(self):
         self.bones = {
-            "lower_spine": torch.tensor([0, -self.lower_spine, 0]),
-            "upper_spine": torch.tensor([0, -self.upper_spine, 0]),
-            "neck": torch.tensor([0, -self.neck, 0]),
-            "head": torch.tensor([0, -self.half_face, 0]),
+            "lower_spine": torch.tensor([0, 0, self.lower_spine]),
+            "upper_spine": torch.tensor([0, 0, self.upper_spine]),
+            "neck": torch.tensor([0, 0, self.neck]),
+            "head": torch.tensor([0, 0, self.half_face]),
 
             "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
             "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
@@ -93,11 +93,11 @@ class Human:
             "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
 
             "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
-            "l_thigh": torch.tensor([0, self.thigh, 0]),
-            "l_calf": torch.tensor([0, self.calf, 0]),
+            "l_thigh": torch.tensor([0, 0, -self.thigh]),
+            "l_calf": torch.tensor([0, 0, -self.calf]),
             "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
-            "r_thigh": torch.tensor([0, self.thigh, 0]),
-            "r_calf": torch.tensor([0, self.calf, 0])
+            "r_thigh": torch.tensor([0, 0, -self.thigh]),
+            "r_calf": torch.tensor([0, 0, -self.calf])
         }
         self.bones = { bone: self.bones[bone].to(self.device) for bone in self.bones.keys() }
         
@@ -107,13 +107,12 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if high != low:
-                if angles[i] < low:
-                    angles[i] = low
-                    punish_w += 1.0
-                elif angles[i] > high:
-                    angles[i] = high
-                    punish_w += 1.0
+            if round(angles[i],3) < low:
+                angles[i] = low
+                punish_w += 1.0
+            elif round(angles[i],3) > high:
+                angles[i] = high
+                punish_w += 1.0
         return angles, punish_w
 
 
@@ -256,8 +255,9 @@ def vis_model(model):
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
-    ax.autoscale()
+    ax.view_init(elev=10, azim=-90)
+    plt.xlim([-1,1])
+    plt.ylim([-1,1])
     ax.set_zlim([-1,1])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
@@ -269,10 +269,10 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 8
-    a[9*k:9*k+9] = rot((0,-1,0)).flatten()
+    k = 11
+    a[9*k:9*k+9] = rot((0,-0.3,0)).flatten()
     model = h.update_pose(a)
-    print(model)
+    print(model.shape)
     print(h.punish_list)
     vis_model(model)
 
