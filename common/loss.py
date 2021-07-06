@@ -105,5 +105,4 @@ def mpbve(predicted, target, w_kc):
         tar_model = tar.update_pose(target[b])
         tar_info[b,:] = vectorize(tar_model, "h36m")[:,:3]
     mpbve = torch.mean(torch.norm(pred_info - tar_info, dim=len(tar_info.shape)-1))
-    print(mpbve.requires_grad)
     return mpbve
