@@ -175,7 +175,7 @@ class Human:
         Punish (by adding weights) if NN outputs are beyond joint rotation constraints.
         """
         import torch.nn.functional as f
-        absolute_angles = rot_to_euler(np.array(R).reshape(3,-1))
+        absolute_angles = rot_to_euler(R.reshape(3,-1))
         if parent is not None:
             parent_angles = rot_to_euler(parent.detach().cpu().numpy())
             child_angles = absolute_angles
@@ -194,10 +194,10 @@ class Human:
         process NN output to rotation matrix of 16 bones
         """
         elem = elem.flatten()
-        assert len(elem) == 144
+        assert len(elem) == 144, len(elem)
         self.rot_mat, self.punish_list = {}, []
         for k, bone in enumerate(self.constraints.keys()):
-            R = elem[9*k:9*(k+1)].detach().cpu().numpy()
+            R = elem[9*k:9*(k+1)]
             if bone in self.child.keys():
                 parent = self.child[bone]
                 self.rot_mat[bone], punish_w = self.check_constraints(bone, R, self.rot_mat[parent])
@@ -213,6 +213,7 @@ class Human:
         """
         self._init_bones()
         if elem is not None:
+            elem = elem.detach().cpu().numpy() if torch.is_tensor(elem) else elem
             self.sort_rot(elem)
             self.bones = { bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys() }
 
