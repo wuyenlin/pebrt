@@ -107,12 +107,13 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if round(angles[i],3) < low:
-                angles[i] = low
-                punish_w += 1.0
-            elif round(angles[i],3) > high:
-                angles[i] = high
-                punish_w += 1.0
+            if high!=low:
+                if round(angles[i],3) < low:
+                    angles[i] = low
+                    punish_w += 1.0
+                elif round(angles[i],3) > high:
+                    angles[i] = high
+                    punish_w += 1.0
         return angles, punish_w
 
 
@@ -244,7 +245,8 @@ def vis_model(model):
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=0, azim=-90)
+    # ax.view_init(elev=0, azim=-90)
+    ax.view_init(elev=25, azim=25)
     plt.xlim([-1,1])
     plt.ylim([-1,1])
     ax.set_zlim([-1,1])
