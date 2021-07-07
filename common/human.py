@@ -1,7 +1,7 @@
 import numpy as np
 import cmath
 import torch
-
+# Human3.6M
 
 def rot(euler: tuple) -> torch.tensor:
     """
@@ -57,17 +57,17 @@ class Human:
         }
 
         self.constraints = {
-            "lower_spine": ((-0.61,0.61), (-0.52,0.52), (-0.52,1.31)),
+            "lower_spine": ((-0.52,0.61), (-0.61,0.61), (-0.52,1.31)),
             "upper_spine": ((0,0), (0,0), (0,1.66)),
             "neck": ((0,0), (0,0), (0,1.22)),
-            "head": ((-0.61,0.61), (-1.22,1.22), (-0.96,1.39)),
+            "head": ((-1.22,1.22), (-0.61,0.61), (-0.96,1.39)),
 
             "l_clavicle": ((0,0), (0,0), (0,0)), #4
-            "l_upper_arm": ((-1.57,2.28), (-0.707,2.27), (-1.57,3.14)),
-            "l_lower_arm": ((0,0), (0,2.62), (0,0)),
+            "l_upper_arm": ((-2.27,0.707), (-2.28,1.57), (-1.57,3.14)),
+            "l_lower_arm": ((-2.62,0), (0,0), (0,0)),
             "r_clavicle": ((0,0), (0,0), (0,0)),
-            "r_upper_arm": ((-2.28,1.57), (-2.27,0.707), (-1.57,3.14)),
-            "r_lower_arm": ((0,0), (-2.62,0), (0,0)),
+            "r_upper_arm": ((-0.707,2.27), (-1.57,2.28), (-1.57,3.14)),
+            "r_lower_arm": ((0,2.62), (0,0), (0,0)),
 
             "l_hip": ((0,0), (0,0), (0,0)), #10
             "l_thigh": ((-0.785,0.785), (-0.87,0.35), (-2.09,0.52)),
@@ -195,29 +195,18 @@ class Human:
         return self.model
 
 
-def vectorize(gt_3d, dataset="mpi") -> torch.tensor:
+def vectorize(gt_3d) -> torch.tensor:
     """
     process gt_3d (17,3) into a (16,4) that contains bone vector and length
     :return bone_info: [unit bone vector (,3) + bone length (,1)]
     """
-    if dataset == "mpi":
-        indices = (
-            (2,1), (1,0), (0,3), (3,4),  # spine + head
-            (0,5), (5,6), (6,7), 
-            (0,8), (8,9), (9,10), # arms
-            (2,11), (11,12), (12,13),
-            (2,14), (14,15), (15,16), # legs
-        )
-    elif dataset == "h36m":
-        indices = (
-            (0,7), (7,8), (8,9), (9,10),  # spine + head
-            (8,11), (11,12), (12,13), 
-            (8,14), (14,15), (15,16), # arms
-            (0,4), (4,5), (5,6),
-            (0,1), (1,2), (2,3), # legs
-        )
-    else:
-        print("Unrecognized dataset name.")
+    indices = (
+        (2,1), (1,0), (0,3), (3,4),  # spine + head
+        (0,5), (5,6), (6,7), 
+        (0,8), (8,9), (9,10), # arms
+        (2,11), (11,12), (12,13),
+        (2,14), (14,15), (15,16), # legs
+    )
 
     num_bones = len(indices)
     try:
@@ -255,7 +244,7 @@ def vis_model(model):
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=10, azim=-90)
+    ax.view_init(elev=0, azim=-90)
     plt.xlim([-1,1])
     plt.ylim([-1,1])
     ax.set_zlim([-1,1])
@@ -269,8 +258,8 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 11
-    a[9*k:9*k+9] = rot((0,-0.3,0)).flatten()
+    k = 14
+    a[9*k:9*k+9] = rot((0,-0.5,0)).flatten()
     model = h.update_pose(a)
     print(model.shape)
     print(h.punish_list)
