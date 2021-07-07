@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser("Set PEBRT parameters", add_help=False)
 parser.add_argument("--start_epoch", type=int, default=0)
 parser.add_argument("--epoch", type=int, default=50)
 parser.add_argument("--bs", type=int, default=2)
+parser.add_argument("--num_layers", type=int, default=2)
 parser.add_argument("--lr", type=float, default=2e-04)
 parser.add_argument("--lr_backbone", type=float, default=0)
 parser.add_argument("--weight_decay", type=float, default=1e-05)
@@ -61,7 +62,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         epoch_loss_3d_train = 0.0
         N = 0
         if ep%5 == 0 and ep != 0:
-            exp_name = "./peltra/new_2_lay_epoch_{}.bin".format(ep)
+            exp_name = "./peltra/new_4_lay_epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -215,7 +216,7 @@ def run_evaluation(model, actions=None):
 
 def main(args):
     device = torch.device(args.device)
-    model = PELTRA(device, bs=args.bs)
+    model = PELTRA(device, bs=args.bs, num_layers=args.num_layers)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))

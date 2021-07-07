@@ -41,12 +41,11 @@ class PELTRA(nn.Module):
     """
     PELTRA - Pose Estimation Lifting using TRansformer outputing Angles
     """
-    def __init__(self, device, bs=1):
+    def __init__(self, device, bs=1, num_layers=4):
         super().__init__()
         
         self.bs = bs
         self.device = device
-        num_layers = 8
         self.transformer = TransformerEncoder(num_layers=num_layers).to(device)
         print("INFO: Using {} layers of Transformer Encoder.".format(num_layers))
 
