@@ -1,7 +1,7 @@
 import numpy as np
 import cmath
 import torch
-# Human3.6M
+
 
 def rot(euler: tuple) -> torch.tensor:
     """
@@ -34,8 +34,9 @@ def rot_to_euler(R: np.array) -> np.array:
 
 class Human:
     """ Implementation of Winter human model """
-    def __init__(self, H, device="cuda:0"):
+    def __init__(self, H, device="cuda:0", human="h36m"):
         self.device = device
+        self.human = human
         self.half_face = 0.066*H
         self.neck = 0.052*H
         self.upper_spine, self.lower_spine = 0.144*H, 0.144*H
@@ -56,49 +57,101 @@ class Human:
             "r_calf": "r_thigh",
         }
 
-        self.constraints = {
-            "lower_spine": ((-0.52,0.61), (-0.61,0.61), (-0.52,1.31)),
-            "upper_spine": ((0,0), (0,0), (0,1.66)),
-            "neck": ((0,0), (0,0), (0,1.22)),
-            "head": ((-1.22,1.22), (-0.61,0.61), (-0.96,1.39)),
+    def _fetch_constraints(self):
+        if self.human == "h36m":
+            self.constraints = {
+                "lower_spine": ((-0.52,0.61), (-0.61,0.61), (-0.52,1.31)),
+                "upper_spine": ((0,0), (0,0), (0,1.66)),
+                "neck": ((0,0), (0,0), (0,1.22)),
+                "head": ((-1.22,1.22), (-0.61,0.61), (-0.96,1.39)),
 
-            "l_clavicle": ((0,0), (0,0), (0,0)), #4
-            "l_upper_arm": ((-2.27,0.707), (-2.28,1.57), (-1.57,3.14)),
-            "l_lower_arm": ((-2.62,0), (0,0), (0,0)),
-            "r_clavicle": ((0,0), (0,0), (0,0)),
-            "r_upper_arm": ((-0.707,2.27), (-1.57,2.28), (-1.57,3.14)),
-            "r_lower_arm": ((0,2.62), (0,0), (0,0)),
+                "l_clavicle": ((0,0), (0,0), (0,0)), #4
+                "l_upper_arm": ((-2.27,0.707), (-2.28,1.57), (-1.57,3.14)),
+                "l_lower_arm": ((-2.62,0), (0,0), (0,0)),
+                "r_clavicle": ((0,0), (0,0), (0,0)),
+                "r_upper_arm": ((-0.707,2.27), (-1.57,2.28), (-1.57,3.14)),
+                "r_lower_arm": ((0,2.62), (0,0), (0,0)),
 
-            "l_hip": ((0,0), (0,0), (0,0)), #10
-            "l_thigh": ((-0.785,0.785), (-0.87,0.35), (-2.09,0.52)),
-            "l_calf": ((0,0), (0,0), (0,2.79)),
-            "r_hip": ((0,0), (0,0), (0,0)),
-            "r_thigh": ((-0.785,0.785), (-0.35,0.87), (-0.785,0.785)),
-            "r_calf": ((0,0), (0,0), (0,2.79)),
-        }
+                "l_hip": ((0,0), (0,0), (0,0)), #10
+                "l_thigh": ((-0.785,0.785), (-0.87,0.35), (-2.09,0.52)),
+                "l_calf": ((0,0), (0,0), (0,2.79)),
+                "r_hip": ((0,0), (0,0), (0,0)),
+                "r_thigh": ((-0.785,0.785), (-0.35,0.87), (-0.785,0.785)),
+                "r_calf": ((0,0), (0,0), (0,2.79)),
+            }
+        elif self.human == "mpi":
+            self.constraints = {
+                "lower_spine": ((-0.61,0.61), (-0.52,0.52), (-0.52,1.31)),
+                "upper_spine": ((0,0), (0,0), (0,1.66)),
+                "neck": ((0,0), (0,0), (0,1.22)),
+                "head": ((-0.61,0.61), (-1.22,1.22), (-0.96,1.39)),
+
+                "l_clavicle": ((0,0), (0,0), (0,0)), #4
+                "l_upper_arm": ((-1.57,2.28), (-0.707,2.27), (-1.57,3.14)),
+                "l_lower_arm": ((0,0), (0,2.62), (0,0)),
+                "r_clavicle": ((0,0), (0,0), (0,0)),
+                "r_upper_arm": ((-2.28,1.57), (-2.27,0.707), (-1.57,3.14)),
+                "r_lower_arm": ((0,0), (-2.62,0), (0,0)),
+
+                "l_hip": ((0,0), (0,0), (0,0)), #10
+                "l_thigh": ((-0.87,0.35), (-0.785,0.785), (-2.09,0.52)),
+                "l_calf": ((0,0), (0,0), (0,2.79)),
+                "r_hip": ((0,0), (0,0), (0,0)),
+                "r_thigh": ((-0.35,0.87), (-0.785,0.785), (-2.09,0.52)),
+                "r_calf": ((0,0), (0,0), (0,2.79)),
+            }
+        else:
+            print("Unrecognized dataset name.")
 
 
-    def init_bones(self):
-        self.bones = {
-            "lower_spine": torch.tensor([0, 0, self.lower_spine]),
-            "upper_spine": torch.tensor([0, 0, self.upper_spine]),
-            "neck": torch.tensor([0, 0, self.neck]),
-            "head": torch.tensor([0, 0, self.half_face]),
 
-            "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
-            "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
-            "l_lower_arm": torch.tensor([self.lower_arm, 0, 0]),
-            "r_clavicle": torch.tensor([-self.clavicle, 0, 0]),
-            "r_upper_arm": torch.tensor([-self.upper_arm, 0, 0]),
-            "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
+    def _init_bones(self):
+        self._fetch_constraints()
 
-            "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
-            "l_thigh": torch.tensor([0, 0, -self.thigh]),
-            "l_calf": torch.tensor([0, 0, -self.calf]),
-            "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
-            "r_thigh": torch.tensor([0, 0, -self.thigh]),
-            "r_calf": torch.tensor([0, 0, -self.calf])
-        }
+        if self.human == "h36m":
+            self.bones = {
+                "lower_spine": torch.tensor([0, 0, self.lower_spine]),
+                "upper_spine": torch.tensor([0, 0, self.upper_spine]),
+                "neck": torch.tensor([0, 0, self.neck]),
+                "head": torch.tensor([0, 0, self.half_face]),
+
+                "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
+                "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
+                "l_lower_arm": torch.tensor([self.lower_arm, 0, 0]),
+                "r_clavicle": torch.tensor([-self.clavicle, 0, 0]),
+                "r_upper_arm": torch.tensor([-self.upper_arm, 0, 0]),
+                "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
+
+                "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
+                "l_thigh": torch.tensor([0, 0, -self.thigh]),
+                "l_calf": torch.tensor([0, 0, -self.calf]),
+                "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
+                "r_thigh": torch.tensor([0, 0, -self.thigh]),
+                "r_calf": torch.tensor([0, 0, -self.calf])
+            }
+        elif self.human == "mpi":
+            self.bones = {
+                "lower_spine": torch.tensor([0, -self.lower_spine, 0]),
+                "upper_spine": torch.tensor([0, -self.upper_spine, 0]),
+                "neck": torch.tensor([0, -self.neck, 0]),
+                "head": torch.tensor([0, -self.half_face, 0]),
+
+                "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
+                "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
+                "l_lower_arm": torch.tensor([self.lower_arm, 0, 0]),
+                "r_clavicle": torch.tensor([-self.clavicle, 0, 0]),
+                "r_upper_arm": torch.tensor([-self.upper_arm, 0, 0]),
+                "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
+
+                "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
+                "l_thigh": torch.tensor([0, self.thigh, 0]),
+                "l_calf": torch.tensor([0, self.calf, 0]),
+                "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
+                "r_thigh": torch.tensor([0, self.thigh, 0]),
+                "r_calf": torch.tensor([0, self.calf, 0])
+            }
+        else:
+            print("Unrecognized dataset name.")
         self.bones = { bone: self.bones[bone].to(self.device) for bone in self.bones.keys() }
         
 
@@ -158,7 +211,7 @@ class Human:
         Initiates a T-Pose human model and rotate each bone using the given rotation matrices
         :return model: a numpy array of (17,3)
         """
-        self.init_bones()
+        self._init_bones()
         if elem is not None:
             self.sort_rot(elem)
             self.bones = { bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys() }
@@ -245,8 +298,8 @@ def vis_model(model):
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
         ax.plot(xS, yS, zS)
-    # ax.view_init(elev=0, azim=-90)
-    ax.view_init(elev=25, azim=25)
+    ax.view_init(elev=90, azim=90)
+    # ax.view_init(elev=25, azim=25)
     plt.xlim([-1,1])
     plt.ylim([-1,1])
     ax.set_zlim([-1,1])
