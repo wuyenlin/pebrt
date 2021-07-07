@@ -16,13 +16,13 @@ class Data:
         # T pose
         h = Human(1.8, "cpu")
         model = h.update_pose()
+        t_info = vectorize(model)[:,:3]
 
         data = np.load(npz_path, allow_pickle=True)
         num_frame = 0
 
         if "h36m" in npz_path:
             print("INFO: Using Human3.6M dataset.")
-            t_info = vectorize(model, "h36m")[:,:3]
             subject = {
                 "subjects_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
                 "subjects_test": ["S9/", "S11/"]
@@ -49,18 +49,17 @@ class Data:
                     if action is None else random.sample(list(frames), int(len(frames)))
                 num_frame += len(reduced)
                 for f in reduced:
-                    gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
+                    gt_2d = self.zero_center(frames[f]["positions_2d"])
                     gt_3d = self.zero_center(self.remove_joints( \
-                            frames[f]["positions_3d"], "h36m"), "h36m")
+                            frames[f]["positions_3d"], "h36m"))
 
                     assert gt_2d.shape == (17,2) and gt_3d.shape == (17,3)
                     self.gt_pts2d.append(gt_2d)
                     self.gt_pts3d.append(gt_3d)
-                    self.gt_vecs3d.append(convert_gt(gt_3d, t_info, "h36m"))
+                    self.gt_vecs3d.append(convert_gt(gt_3d, t_info))
                     self.img_path.append(frames[f]["directory"])
 
         elif "mpi_inf_3dhp_test_set" in npz_path:
-            t_info = vectorize(model)[:,:3]
             if action is not None:
                 print("Only support action parameter in H3.6M dataset.")
                 exit(0)
@@ -71,7 +70,6 @@ class Data:
             self.gt_pts2d.append()
 
         else:
-            t_info = vectorize(model)[:,:3]
             if action is not None:
                 print("Only support action parameter in H3.6M dataset.")
                 exit(0)
@@ -84,10 +82,10 @@ class Data:
             for vid in vid_list:
                 num_frame += len(data[vid].keys())
                 for frame in data[vid].keys():
-                    pts_2d = data[vid][frame]["positions_2d"]
+                    pts_2d = data[vid][frame]["pts_2d"]
                     gt_2d = self.zero_center(self.remove_joints(pts_2d))
 
-                    pts_3d = data[vid][frame]["positions_3d"]
+                    pts_3d = data[vid][frame]["pts_3d"]
                     cam_3d = self.to_camera_coordinate(pts_2d, pts_3d, vid)
                     gt_3d = self.zero_center(cam_3d)/1000
 
@@ -132,6 +130,7 @@ class Data:
             keep = [0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27]
             for row in range(17):
                 new_skel[row, :] = kpts[keep[row], :]
+            new_skel = self.remap_h36m(new_skel)
         else:
             print("Unrecognized dataset name.")
         return new_skel
@@ -166,11 +165,23 @@ class Data:
         return cam_3d
 
     
-    def zero_center(self, cam, dataset="mpi") -> np.array:
+    def zero_center(self, cam) -> np.array:
         """translate root joint to origin (0,0,0)"""
-        if dataset == "mpi":
-            return cam - cam[2,:]
-        elif dataset == "h36m":
-            return cam - cam[0,:]
-        else:
-            print("Unrecognized dataset name.")
+        return cam - cam[2,:]
+
+
+    def remap_h36m(self, h36m_joints):
+        """
+        convert Human3.6M joint order
+        to normal MPI-INF-3DHP one
+        """
+        mpi_joints = np.zeros_like(h36m_joints)
+        replace_list = (
+            (0,8), (1,7), (2,0), (3,9), (4,10),
+            (5,11), (6,12), (7,13), (8,14), (9,15), (10,16),
+            (11,4), (12,5), (13,6), (14,1), (15,2), (16,3)
+        )
+        for joint in replace_list:
+            mpi_joints[joint[0]] = h36m_joints[joint[1]]
+
+        return mpi_joints
