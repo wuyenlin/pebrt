@@ -46,7 +46,9 @@ class PELTRA(nn.Module):
         
         self.bs = bs
         self.device = device
-        self.transformer = TransformerEncoder(num_layers=8).to(device)
+        num_layers = 8
+        self.transformer = TransformerEncoder(num_layers=num_layers).to(device)
+        print("INFO: Using {} layers of Transformer Encoder.".format(num_layers))
 
  
     def normalize(self, x: torch.tensor) -> torch.tensor:
