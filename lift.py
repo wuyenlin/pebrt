@@ -146,7 +146,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 
 def evaluate(test_loader, model, device):
-    e0 = 0
     epoch_loss_e0 = 0.0
     epoch_loss_n1 = 0.0
     epoch_loss_n2 = 0.0
@@ -154,20 +153,22 @@ def evaluate(test_loader, model, device):
     with torch.no_grad():
         N = 0
         for data in test_loader:
-            _, image, inputs_2d, vec_3d = data
+            _, inputs_2d, inputs_3d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
+            inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             predicted_3d_pos, _ = model(inputs_2d)
 
-            # pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
-            # h = Human(1.8, "cpu")
-            # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
-            # e0 = mpjpe(predicted_3d_pos, vec_3d)
+            pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
+            for b in range(predicted_3d_pos.size(0)):
+                h = Human(1.8, "cpu")
+                pose_stack[b] = h.update_pose(predicted_3d_pos[b].detach().cpu().numpy())
+            e0 = mpjpe(pose_stack, inputs_3d)
             n1 = maev(predicted_3d_pos, vec_3d)
             n2 = mpbve(predicted_3d_pos, vec_3d, 0)
             
-            # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
             N += vec_3d.shape[0]
@@ -191,7 +192,7 @@ def run_evaluation(model, actions=None):
     errors_n2 = []
     if actions is not None:
         # evaluting on h36m
-        model.load_state_dict(torch.load("./peltra/fuse_4_lay_epoch_45.bin")["model"])
+        model.load_state_dict(torch.load("./peltra/new_2_lay_epoch_10.bin")["model"])
         model = model.cuda()
         model.eval()
         for action in actions:
