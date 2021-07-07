@@ -92,7 +92,7 @@ def mpbve(predicted, target, w_kc):
     if torch.cuda.is_available():
         predicted = predicted.cuda()
         target = target.cuda()
-    bs, num_bones = predicted.shape[0], predicted.shape[1]
+    bs, num_bones = predicted.size(0), predicted.size(1)
 
     pred_info = torch.zeros(bs, num_bones, 3)
     tar_info = torch.zeros(bs, num_bones, 3)
@@ -100,9 +100,9 @@ def mpbve(predicted, target, w_kc):
     for b in range(bs):
         pred = Human(1.8, "cpu")
         pred_model = pred.update_pose(predicted[b])
-        pred_info[b,:] = vectorize(pred_model, "h36m")[:,:3]
+        pred_info[b,:] = vectorize(pred_model)[:,:3]
         tar = Human(1.8, "cpu")
         tar_model = tar.update_pose(target[b])
-        tar_info[b,:] = vectorize(tar_model, "h36m")[:,:3]
+        tar_info[b,:] = vectorize(tar_model)[:,:3]
     mpbve = torch.mean(torch.norm(pred_info - tar_info, dim=len(tar_info.shape)-1))
     return mpbve
