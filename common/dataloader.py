@@ -13,15 +13,16 @@ class Data:
         self.gt_vecs3d = []
         self.transforms = transforms
 
-        # T pose
-        h = Human(1.8, "cpu")
-        model = h.update_pose()
-        t_info = vectorize(model)[:,:3]
 
         data = np.load(npz_path, allow_pickle=True)
         num_frame = 0
 
         if "h36m" in npz_path:
+            # T pose
+            h = Human(1.8, "cpu", "h36m")
+            model = h.update_pose()
+            t_info = vectorize(model)[:,:3]
+
             print("INFO: Using Human3.6M dataset.")
             subject = {
                 "subjects_train": ["S1/", "S5/", "S6/", "S7/", "S8/"],
@@ -70,6 +71,11 @@ class Data:
             self.gt_pts2d.append()
 
         else:
+            # T pose
+            h = Human(1.8, "cpu", "mpi")
+            model = h.update_pose()
+            t_info = vectorize(model)[:,:3]
+
             if action is not None:
                 print("Only support action parameter in H3.6M dataset.")
                 exit(0)
