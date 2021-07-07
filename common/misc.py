@@ -27,14 +27,14 @@ def get_rot_from_vecs(vec1: np.array, vec2: np.array) -> np.array:
     return R
 
 
-def convert_gt(gt_3d: np.array, t_info, dataset="mpi") -> np.array:
+def convert_gt(gt_3d: np.array, t_info) -> np.array:
     """
     Compare GT3D kpts with T pose and obtain 16 rotation matrices
 
     :return R_stack: a (16,9) arrays with flattened rotation matrix for 16 bones
     """
     # process GT
-    bone_info = vectorize(gt_3d, dataset)[:,:3] # (16,3) bone vecs
+    bone_info = vectorize(gt_3d)[:,:3] # (16,3) bone vecs
 
     num_row = bone_info.shape[0]
     R_stack = np.zeros([num_row, 9])
