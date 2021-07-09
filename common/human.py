@@ -160,7 +160,8 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if high!=low:
+            if high!=low or high==0 or low==0:
+            # if high!=low:
                 if round(angles[i],3) < low:
                     angles[i] = low
                     punish_w += 1.0
@@ -188,7 +189,7 @@ class Human:
         return f.normalize(R.to(torch.float32).to(self.device)), punish_w
 
 
-    def sort_rot(self, elem):
+    def sort_rot(self, elem: np.array):
         """
         :param ang: a list of 144 elements (9 * 16)
         process NN output to rotation matrix of 16 bones
@@ -208,7 +209,8 @@ class Human:
 
     def update_bones(self, elem=None):
         """
-        Initiates a T-Pose human model and rotate each bone using the given rotation matrices
+        Initiates a T-Pose human model and 
+        rotate each bone using the rotation matrices if given
         :return model: a numpy array of (17,3)
         """
         self._init_bones()
@@ -218,7 +220,7 @@ class Human:
             self.bones = { bone: self.rot_mat[bone] @ self.bones[bone] for bone in self.constraints.keys() }
 
 
-    def update_pose(self, elem=None):
+    def update_pose(self, elem=None) -> torch.tensor:
         """
         Assemble bones to make a human body
         """
@@ -264,10 +266,8 @@ def vectorize(gt_3d) -> torch.tensor:
     )
 
     num_bones = len(indices)
-    try:
-        gt_3d_tensor = torch.from_numpy(gt_3d)
-    except TypeError:
-        gt_3d_tensor = gt_3d
+    gt_3d_tensor = gt_3d if torch.is_tensor(gt_3d) \
+                    else torch.from_numpy(gt_3d)
 
     bone_info = torch.zeros([num_bones, 4], requires_grad=False) # (16, 4)
     for i in range(num_bones):
@@ -299,8 +299,10 @@ def vis_model(model):
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=90, azim=90)
-    # ax.view_init(elev=25, azim=25)
+    if model.human == "h36m":
+        ax.view_init(elev=0, azim=-90)
+    elif model.human == "mpi":
+        ax.view_init(elev=-90, azim=-90)
     plt.xlim([-1,1])
     plt.ylim([-1,1])
     ax.set_zlim([-1,1])
@@ -314,8 +316,8 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 14
-    a[9*k:9*k+9] = rot((0,-0.5,0)).flatten()
+    k = 11
+    a[9*k:9*k+9] = rot((0,0,0.7)).flatten()
     model = h.update_pose(a)
     print(model.shape)
     print(h.punish_list)
