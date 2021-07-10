@@ -76,7 +76,7 @@ class Human:
                 "l_thigh": ((-0.785,0.785), (-0.87,0.35), (-2.09,0.52)),
                 "l_calf": ((0,0), (0,0), (0,2.79)),
                 "r_hip": ((0,0), (0,0), (0,0)),
-                "r_thigh": ((-0.785,0.785), (-0.35,0.87), (-0.785,0.785)),
+                "r_thigh": ((-0.785,0.785), (-0.35,0.87), (-2.09,0.52)),
                 "r_calf": ((0,0), (0,0), (0,2.79)),
             }
         elif self.human == "mpi":
@@ -160,8 +160,7 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if high!=low or high==0 or low==0:
-            # if high!=low:
+            if high!=low:
                 if round(angles[i],3) < low:
                     angles[i] = low
                     punish_w += 1.0
@@ -299,10 +298,7 @@ def vis_model(model):
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
         ax.plot(xS, yS, zS)
-    if model.human == "h36m":
-        ax.view_init(elev=0, azim=-90)
-    elif model.human == "mpi":
-        ax.view_init(elev=-90, azim=-90)
+    ax.view_init(elev=20, azim=60)
     plt.xlim([-1,1])
     plt.ylim([-1,1])
     ax.set_zlim([-1,1])
@@ -316,8 +312,8 @@ def rand_pose():
     h = Human(1.8, "cpu")
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
-    k = 11
-    a[9*k:9*k+9] = rot((0,0,0.7)).flatten()
+    k = 14
+    a[9*k:9*k+9] = rot((0,0,2)).flatten()
     model = h.update_pose(a)
     print(model.shape)
     print(h.punish_list)
