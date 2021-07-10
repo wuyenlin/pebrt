@@ -46,7 +46,7 @@ class Data:
             random.seed(100)
             for act in to_load:
                 frames = data[act].flatten()[0]
-                reduced = random.sample(list(frames), int(len(frames)*0.1)) \
+                reduced = random.sample(list(frames), int(len(frames))) \
                     if action is None else random.sample(list(frames), int(len(frames)))
                 num_frame += len(reduced)
                 for f in reduced:
