@@ -37,7 +37,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         N = 0
 
         if ep%5 == 0 and ep != 0:
-            exp_name = "./petr/epoch_{}_h36m.bin".format(ep)
+            exp_name = "./petr/all_2_lay_epoch_{}_h36m.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -150,10 +150,10 @@ def evaluate(test_loader, model, device):
 
 
     e1 = (epoch_loss_3d_pos / N)*1000
-    n2 = epoch_loss_3d_n2 / N
+    n2 = (epoch_loss_3d_n2 / N)*1000
 
     print("Protocol #1 Error (MPJPE):", e1, "mm")
-    print("New Metric #2 Error (MBVE):", n2, "-")
+    print("New Metric #2 Error (MPBVE):", n2, "mm")
     print("----------")
 
     return e1, n2
@@ -171,7 +171,7 @@ def run_evaluation(actions, model):
         errors_n2.append(n2)
         print()
     print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e1), 1), "mm")
-    print("New Metric #2   (MBVE) action-wise average:", round(np.mean(errors_n2), 1), "-")
+    print("New Metric #2   (MPBVE) action-wise average:", round(np.mean(errors_n2), 1), "mm")
 
 
 def set_random_seeds(random_seed=0):
@@ -186,7 +186,7 @@ def set_random_seeds(random_seed=0):
 def main(args):
     device = torch.device(args.device)
     ddp_model = PETR(device)
-    # model = model.to(device)
+    ddp_model = ddp_model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
 
@@ -266,7 +266,7 @@ def main(args):
         print("INFO: Using optimizer {}".format(optimizer))
 
         train_list, val_list = train(args.start_epoch, args.epoch,
-                                    train_loader, val_loader, model, device,
+                                    train_loader, val_loader, ddp_model, device,
                                     optimizer, lr_scheduler)
 
 
