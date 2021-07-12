@@ -13,21 +13,13 @@ def coco_mpi(coco_joints):
     convert predicted COCO joints to MPI-INF-3DHP joints order
     """
     mpi_joints = np.zeros_like(coco_joints)
-    mpi_joints[4,:] = coco_joints[0,:]
-    # arms
-    mpi_joints[5,:] = coco_joints[6,:]
-    mpi_joints[6,:] = coco_joints[8,:]
-    mpi_joints[7,:] = coco_joints[10,:]
-    mpi_joints[8,:] = coco_joints[5,:]
-    mpi_joints[9,:] = coco_joints[7,:]
-    mpi_joints[10,:] = coco_joints[9,:]
-    # legs
-    mpi_joints[11,:] = coco_joints[12,:]
-    mpi_joints[12,:] = coco_joints[14,:]
-    mpi_joints[13,:] = coco_joints[16,:]
-    mpi_joints[14,:] = coco_joints[11,:]
-    mpi_joints[15,:] = coco_joints[13,:]
-    mpi_joints[16,:] = coco_joints[15,:]
+    replace_list = (
+        (4,0), (5,6), (6,8), (7,10), (8,5), (9,7), (10,9),
+        (11,12), (12,14), (13,16), (14,11), (15,13),(16,15)
+    )
+    for joint in replace_list:
+        mpi_joints[joint[0]] = coco_joints[joint[1]]
+
     # spine (manual interpolation)
     mpi_joints[0,:] = (coco_joints[5,:] + coco_joints[6,:])/2
     mpi_joints[2,:] = (coco_joints[11,:] + coco_joints[12,:])/2
