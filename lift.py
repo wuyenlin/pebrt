@@ -62,7 +62,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         epoch_loss_3d_train = 0.0
         N = 0
         if ep%5 == 0 and ep != 0:
-            exp_name = "./peltra/new_4_lay_epoch_{}.bin".format(ep)
+            exp_name = "./peltra/all_2_lay_epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -192,7 +192,7 @@ def run_evaluation(model, actions=None):
     errors_n2 = []
     if actions is not None:
         # evaluting on h36m
-        model.load_state_dict(torch.load("./peltra/new_2_lay_epoch_10.bin")["model"])
+        model.load_state_dict(torch.load("./peltra/all_2_lay_epoch_15.bin")["model"])
         model = model.cuda()
         model.eval()
         for action in actions:
