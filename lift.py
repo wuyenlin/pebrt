@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from common.peltra import *
+from common.pebrt import *
 from common.dataloader import *
 from common.loss import *
 from common.human import *
@@ -18,7 +18,8 @@ parser = argparse.ArgumentParser("Set PEBRT parameters", add_help=False)
 parser.add_argument("--start_epoch", type=int, default=0)
 parser.add_argument("--epoch", type=int, default=50)
 parser.add_argument("--bs", type=int, default=2)
-parser.add_argument("--lr", type=float, default=1e-04)
+parser.add_argument("--num_layers", type=int, default=2)
+parser.add_argument("--lr", type=float, default=2e-04)
 parser.add_argument("--lr_backbone", type=float, default=0)
 parser.add_argument("--weight_decay", type=float, default=1e-05)
 parser.add_argument("--lr_drop", default=10, type=int)
@@ -56,12 +57,12 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
     losses_3d_train = []
     losses_3d_valid = []
 
-    for ep in tqdm(range(start_epoch, epoch)):
+    for ep in tqdm(range(start_epoch, epoch+1)):
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
         if ep%5 == 0 and ep != 0:
-            exp_name = "./peltra/4_lay_epoch_{}.bin".format(ep)
+            exp_name = "./peltra/all_2_lay_epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -74,18 +75,16 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         model.train()
     # train
         for data in train_loader:
-            _, image, inputs_2d, vec_3d = data
+            _, inputs_2d, inputs_3d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
+            inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             optimizer.zero_grad()
 
-            predicted_3d_pos, w_kc = model(inputs_2d)
+            predicted_3d, w_kc = model(inputs_2d)
 
-            # loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
-            e1 = maev(predicted_3d_pos, vec_3d, w_kc)
-            e2 = mpbve(predicted_3d_pos, vec_3d, w_kc)
-            loss_3d_pos = e1 + e2
+            loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) 
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -103,16 +102,14 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             N = 0
 
             for data in val_loader:
-                _, image, inputs_2d, vec_3d = data
+                _, inputs_2d, inputs_3d, vec_3d = data
                 inputs_2d = inputs_2d.to(device)
+                inputs_3d = inputs_3d.to(device)
                 vec_3d = vec_3d.to(device)
 
-                predicted_3d_pos, w_kc = model(inputs_2d)
+                predicted_3d, w_kc = model(inputs_2d)
 
-                # loss_3d_pos = maev(predicted_3d_pos, vec_3d, w_kc)
-                e1 = maev(predicted_3d_pos, vec_3d, w_kc)
-                e2 = mpbve(predicted_3d_pos, vec_3d, w_kc)
-                loss_3d_pos = e1 + e2
+                loss_3d_pos = maev(predicted_3d, vec_3d, w_kc)
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
                 N += vec_3d.shape[0]
 
@@ -149,7 +146,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 
 def evaluate(test_loader, model, device):
-    e0 = 0
     epoch_loss_e0 = 0.0
     epoch_loss_n1 = 0.0
     epoch_loss_n2 = 0.0
@@ -157,20 +153,22 @@ def evaluate(test_loader, model, device):
     with torch.no_grad():
         N = 0
         for data in test_loader:
-            _, image, inputs_2d, vec_3d = data
+            _, inputs_2d, inputs_3d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
+            inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
             predicted_3d_pos, _ = model(inputs_2d)
 
-            # pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
-            # h = Human(1.8, "cpu")
-            # pose = h.update_pose(predicted_3d_pos.detach().cpu().numpy())
-            # e0 = mpjpe(predicted_3d_pos, vec_3d)
+            pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
+            for b in range(predicted_3d_pos.size(0)):
+                h = Human(1.8, "cpu")
+                pose_stack[b] = h.update_pose(predicted_3d_pos[b].detach().cpu().numpy())
+            e0 = mpjpe(pose_stack, inputs_3d)
             n1 = maev(predicted_3d_pos, vec_3d)
             n2 = mpbve(predicted_3d_pos, vec_3d, 0)
             
-            # epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n1 += vec_3d.shape[0] * n1.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
             N += vec_3d.shape[0]
@@ -194,7 +192,7 @@ def run_evaluation(model, actions=None):
     errors_n2 = []
     if actions is not None:
         # evaluting on h36m
-        model.load_state_dict(torch.load("./peltra/6_lay_epoch_30.bin")["model"])
+        model.load_state_dict(torch.load("./peltra/all_2_lay_epoch_15.bin")["model"])
         model = model.cuda()
         model.eval()
         for action in actions:
@@ -219,7 +217,7 @@ def run_evaluation(model, actions=None):
 
 def main(args):
     device = torch.device(args.device)
-    model = PELTRA(device, bs=args.bs)
+    model = PEBRT(device, bs=args.bs, num_layers=args.num_layers)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))

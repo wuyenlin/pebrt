@@ -37,16 +37,17 @@ class TransformerEncoder(nn.Module):
         return x
 
 
-class PELTRA(nn.Module):
+class PEBRT(nn.Module):
     """
-    PELTRA - Pose Estimation Lifting using TRansformer outputing Angles
+    PEBRT - Pose Estimation via Bone Rotation using Transformer
     """
-    def __init__(self, device, bs=1):
+    def __init__(self, device, bs=1, num_layers=2):
         super().__init__()
         
         self.bs = bs
         self.device = device
-        self.transformer = TransformerEncoder(num_layers=8).to(device)
+        self.transformer = TransformerEncoder(num_layers=num_layers).to(device)
+        print("INFO: Using {} layers of Transformer Encoder.".format(num_layers))
 
  
     def normalize(self, x: torch.tensor) -> torch.tensor:

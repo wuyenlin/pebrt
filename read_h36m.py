@@ -56,12 +56,12 @@ def try_read():
     print(data["arr_0"].reshape(1,-1)[0][0].keys())
 
 
-def debug(plot=False):
+def debug(plot=True):
     output_2d = "./h36m/data_2d_h36m_gt.npz"
     data_2d = np.load(output_2d, allow_pickle=True)
     
     photo = data_2d["positions_2d"].reshape(1,-1)[0][0]['S1']["Discussion"][0]
-    print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S1']['Photo'])
+    # print(data_2d["positions_2d"].reshape(1,-1)[0][0]['S1']['Photo'])
     first = photo[0,:,:]
     
     if plot: 
@@ -76,8 +76,13 @@ def debug(plot=False):
             (0,1), (1,2), (2,3),
             (0,4), (4,5), (5,6) # legs
         )
+        k = 0
         for p in first:
-            ax.scatter(p[0], p[1], c='r', alpha=0.5)
+            if k == 14:
+                ax.scatter(p[0], p[1], c='b', alpha=0.5)
+            else:
+                ax.scatter(p[0], p[1], c='r', alpha=0.5)
+            k+=1
         for index in bones:
             xS = (first[index[0]][0],first[index[1]][0])
             yS = (first[index[0]][1],first[index[1]][1])
@@ -102,7 +107,7 @@ def count_frame():
 
 
 def viz():
-    npz_path = "./data_3d_h36m.npz"
+    npz_path = "./h36m/data_3d_h36m.npz"
     data = np.load(npz_path, allow_pickle=True)
     photo = data["positions_3d"].reshape(1,-1)[0][0]['S1']["Photo"] 
     keep = [0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27]
@@ -139,15 +144,7 @@ def viz():
     plt.show()
 
 
-def read():
-    import cdflib
-    output_2d = "./Poses_D2_Positions/Directions.54138969.cdf"
-    output_2d = "./Directions.cdf"
-    f = cdflib.CDF(output_2d)
-    print(f.cdf_info())
-    
-
 if __name__ == "__main__":
     # try_read()
-    # debug()
-    read_mat()
+    viz()
+    # read_mat()

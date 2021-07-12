@@ -9,30 +9,15 @@ def convert_mpi(test_joints):
     convert predicted MPI-INF-3DHP test set joint order
     to normal MPI-INF-3DHP one
     """
-    # spine
     mpi_joints = np.zeros_like(test_joints)
-    mpi_joints[0,:] = test_joints[1,:]
-    mpi_joints[1,:] = test_joints[15,:]
-    mpi_joints[2,:] = test_joints[14,:]
-    mpi_joints[3,:] = test_joints[16,:]
-    mpi_joints[4,:] = test_joints[0,:]
-    # arms
-    mpi_joints[5,:] = test_joints[5,:]
-    mpi_joints[6,:] = test_joints[6,:]
-    mpi_joints[7,:] = test_joints[7,:]
-    mpi_joints[8,:] = test_joints[2,:]
-    mpi_joints[9,:] = test_joints[3,:]
-    mpi_joints[10,:] = test_joints[4,:]
-    # legs
-    mpi_joints[11,:] = test_joints[11,:]
-    mpi_joints[12,:] = test_joints[12,:]
-    mpi_joints[13,:] = test_joints[13,:]
-    mpi_joints[14,:] = test_joints[8,:]
-    mpi_joints[15,:] = test_joints[9,:]
-    mpi_joints[16,:] = test_joints[10,:]
-
+    replace_list = (
+        (0,1), (1,15), (2,14), (3,16), (4,0),
+        (5,5), (6,6), (7,7), (8,2), (9,3), (10,4),
+        (11,11), (12,12), (13,13), (14,8), (15,9), (16,10)
+    )
+    for joint in replace_list:
+        mpi_joints[joint[0]] = test_joints[joint[1]]
     return mpi_joints
-
 
 
 def crop_square(img_path):
