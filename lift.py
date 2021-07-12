@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from common.peltra import *
+from common.pebrt import *
 from common.dataloader import *
 from common.loss import *
 from common.human import *
@@ -217,7 +217,7 @@ def run_evaluation(model, actions=None):
 
 def main(args):
     device = torch.device(args.device)
-    model = PELTRA(device, bs=args.bs, num_layers=args.num_layers)
+    model = PEBRT(device, bs=args.bs, num_layers=args.num_layers)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
     model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))

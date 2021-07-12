@@ -37,9 +37,9 @@ class TransformerEncoder(nn.Module):
         return x
 
 
-class PELTRA(nn.Module):
+class PEBRT(nn.Module):
     """
-    PELTRA - Pose Estimation Lifting using TRansformer outputing Angles
+    PEBRT - Pose Estimation via Bone Rotation using Transformer
     """
     def __init__(self, device, bs=1, num_layers=2):
         super().__init__()
