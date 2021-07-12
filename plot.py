@@ -7,6 +7,7 @@ from common.dataloader import *
 from torch.utils.data import DataLoader
 from common.peltra import PELTRA
 from common.human import *
+from common.misc import *
 
 
 
@@ -35,7 +36,7 @@ def plot3d(ax, output):
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS)
     # ax.view_init(elev=-90, azim=-90)
-    ax.view_init(elev=0, azim=90)
+    ax.view_init(elev=20, azim=90)
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
     ax.set_ylim3d([-1.0, 1.0])
@@ -46,17 +47,18 @@ def plot3d(ax, output):
 
 def viz(savefig=False):
     # train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
-    train_npz = "./h36m/data_h36m_frame_S1.npz"
-    train_dataset = Data(train_npz, transforms, True)
+    # train_npz = "./h36m/data_h36m_frame_S1.npz"
+    train_npz = "./h36m/data_h36m_frame_all.npz"
+    train_dataset = Data(train_npz, transforms, False)
     trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=8, drop_last=True)
+                        shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
     print("data loaded!")
     dataiter = iter(trainloader)
-    img_path, kpts, _, labels = dataiter.next()
+    img_path, kpts, gt_3d, vec_3d = dataiter.next()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = PELTRA(device)
-    net.load_state_dict(torch.load("./peltra/new_2_lay_epoch_5.bin")["model"])
+    net = PELTRA(device, num_layers=2)
+    net.load_state_dict(torch.load("./peltra/new_2_lay_epoch_50.bin")["model"])
     net = net.cuda()
     net.eval()
 
@@ -65,6 +67,12 @@ def viz(savefig=False):
         ax = fig.add_subplot(2, 4, k)
         plt.imshow(Image.open(img_path[k-1]))
 
+# 2nd row - GT
+        # output = gt_3d[k-1]
+        # ax = fig.add_subplot(3, 4, k+4, projection="3d")
+        # plot3d(ax, output)
+
+# 3rd row - pred
         pts = kpts[k-1].unsqueeze(0).cuda()
         output, _ = net(pts)
         h = Human(1.8, "cpu")
