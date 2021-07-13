@@ -37,15 +37,16 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         N = 0
 
         if ep%5 == 0 and ep != 0:
-            exp_name = "./petr/all_2_lay_epoch_{}_h36m.bin".format(ep)
-            torch.save({
-                "epoch": ep,
-                "lr_scheduler": lr_scheduler.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "model": model.state_dict(),
-                "args": args,
-            }, exp_name)
-            print("Parameters saved to ", exp_name)
+            if local_rank == 0:
+                exp_name = "./petr/all_2_lay_epoch_{}_h36m.bin".format(ep)
+                torch.save({
+                    "epoch": ep,
+                    "lr_scheduler": lr_scheduler.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "model": model.state_dict(),
+                    "args": args,
+                }, exp_name)
+                print("Parameters saved to ", exp_name)
 
         model.train()
     # train
