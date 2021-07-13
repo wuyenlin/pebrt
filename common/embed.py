@@ -40,4 +40,6 @@ if __name__ == "__main__":
     a = torch.zeros(1, 196, 512)
     output = pe(a)
     plt.imshow(output[0].detach().numpy())
+    plt.xlabel("Embedding size", fontsize=50)
+    plt.ylabel("Sequence position", fontsize=50)
     plt.show()
