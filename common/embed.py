@@ -34,56 +34,12 @@ class PositionalEncoder(nn.Module):
         return x
 
 
-
-"""
-Direction 3D pose regression method uses the model referring to Vision Transformer
-Its implementation in PyTorch is availble at https://github.com/asyml/vision-transformer-pytorch.
-Part of this file is borrowed from their src/model.py.
-"""
-
-class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=256, patch_size=16, in_channel=3, embed_dim=768):
-        super().__init__()
-        self.img_size = (img_size, img_size)
-        self.patch_size = (patch_size, patch_size)
-        self.H, self.W = self.img_size[0]/self.patch_size[0] , self.img_size[1]/self.patch_size[1] 
-        self.num_patches = self.H * self.W
-        self.in_channel = in_channel
-        self.embed_dim = embed_dim
-
-        self.proj = nn.Conv2d(in_channel, embed_dim, kernel_size=patch_size, stride=patch_size)
-        self.norm = nn.LayerNorm(embed_dim)
-
-    def forward(self, x):
-        bs, c, h, w = x.shape
-        x = self.proj(x).flatten(2).transpose(1,2)
-        x = self.norm(x)
-        H, W = h/self.patch_size[0] , w/self.patch_size[1]
-
-        return x, (H,W)
-
-
-class PositionalEmbedding(nn.Module):
-    """
-    Positional embedding used in Vision Transformer (An Image is Worth 16x16 Words)
-    """
-    def __init__(self, num_patches, d_model, dropout=0.1):
-        super().__init__()
-        self.pos_embed = nn.Parameter(torch.randn(1, num_patches+1, d_model))
-        self.dropout = nn.Dropout(dropout) if dropout>0 else None
-
-    def forward(self, x):
-        x += self.pos_embed
-        if self.dropout:
-            x = self.dropout(x)
-        
-        return x
-
-
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    pe = PositionalEmbedding(196, 768)
-    a = torch.zeros(1,196,768)
+    pe = PositionalEncoder(512, 1024)
+    a = torch.zeros(1, 196, 512)
     output = pe(a)
     plt.imshow(output[0].detach().numpy())
+    plt.xlabel("Embedding size", fontsize=50)
+    plt.ylabel("Sequence position", fontsize=50)
     plt.show()
