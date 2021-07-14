@@ -46,11 +46,11 @@ class Data:
             random.seed(100)
             for act in to_load:
                 frames = data[act].flatten()[0]
-                reduced = random.sample(list(frames), int(len(frames))) \
+                reduced = random.sample(list(frames), int(len(frames)*0.001)) \
                     if action is None else random.sample(list(frames), int(len(frames)))
                 num_frame += len(reduced)
                 for f in reduced:
-                    gt_2d = self.zero_center(frames[f]["positions_2d"])
+                    gt_2d = self.zero_center(self.remap_h36m(frames[f]["positions_2d"]))
                     gt_3d = self.zero_center(self.remove_joints( \
                             frames[f]["positions_3d"], "h36m"))
 
