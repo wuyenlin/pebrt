@@ -5,7 +5,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from common.dataloader import *
 from torch.utils.data import DataLoader
-from common.peltra import PELTRA
+from common.pebrt import PEBRT
 from common.human import *
 from common.misc import *
 
@@ -34,9 +34,9 @@ def plot3d(ax, output):
         xS = (output[index[0]][0],output[index[1]][0])
         yS = (output[index[0]][1],output[index[1]][1])
         zS = (output[index[0]][2],output[index[1]][2])
-        ax.plot(xS, yS, zS)
+        ax.plot(xS, yS, zS, linewidth=5)
     # ax.view_init(elev=-90, azim=-90)
-    ax.view_init(elev=20, azim=90)
+    ax.view_init(elev=20, azim=60)
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
     ax.set_ylim3d([-1.0, 1.0])
@@ -57,8 +57,8 @@ def viz(savefig=False):
     img_path, kpts, gt_3d, vec_3d = dataiter.next()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = PELTRA(device, num_layers=2)
-    net.load_state_dict(torch.load("./peltra/new_2_lay_epoch_50.bin")["model"])
+    net = PEBRT(device, num_layers=2)
+    net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_20.bin")["model"])
     net = net.cuda()
     net.eval()
 
