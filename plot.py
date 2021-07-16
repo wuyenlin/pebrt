@@ -16,17 +16,27 @@ transforms = transforms.Compose([
 
 
 def att():
-    model = PETR(device="cuda:0",lift=True)
+    import matplotlib.pyplot as plt
+    model = PETR(device="cuda:0")
     model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
     model = model.cuda()
     model.eval()
 
-    img = "dataset/S5/Seq2/imageSequence/video_7/frame004884.jpg"
+    # img = "dataset/S5/Seq2/imageSequence/video_7/frame004884.jpg"
+    img = "dataset/S1/Seq1/imageSequence/video_8/frame000049.jpg"
     img_read = Image.open(img)
     img = transforms(img_read)
     img = img.unsqueeze(0)
     img = img.cuda()
     output = model(img)
+    print(output.shape)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    output = output.detach().cpu().numpy().squeeze(0)
+    heat = output@output.transpose()
+    ax.imshow(heat)
+    plt.show()
+
 
 
 def extract_bone(pred, bone, k):
@@ -40,8 +50,8 @@ def plot3d(ax, bones, output):
         xS = extract_bone(output, bone, 0)
         yS = extract_bone(output, bone, 1)
         zS = extract_bone(output, bone, 2)
-        ax.plot(xS, yS, zS)
-    # ax.view_init(elev=-80, azim=-90)
+        ax.plot(xS, yS, zS, linewidth=5)
+    ax.view_init(elev=-80, azim=-90)
     # ax.autoscale()
     # plt.xlim(-1,1)
     # plt.ylim(-1,1)
@@ -49,7 +59,6 @@ def plot3d(ax, bones, output):
     # ax.set_xticklabels([])
     # ax.set_yticklabels([])
     # ax.set_zticklabels([])
-    ax.view_init(elev=5, azim=90)
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
     ax.set_ylim3d([-1.0, 1.0])
@@ -78,16 +87,11 @@ def plot_human(ax, bones, output):
 def viz(bones, img_list, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device)
-    # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
     # model.load_state_dict(torch.load('./petr/ft_1_h36m.bin')['model'])
-    model.load_state_dict(torch.load('./petr/epoch_45_h36m.bin')['model'])
+    # model.load_state_dict(torch.load('./petr/epoch_45_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
-    if compare:
-        model_2 = PEBRT(device)
-        model_2.load_state_dict(torch.load('./pebrt/epoch_25.bin')['model'])
-        model_2 = model_2.cuda()
-        model_2.eval()
 
     fig = plt.figure()
     num_row = 3 if comp else 2
@@ -111,15 +115,15 @@ def viz(bones, img_list, compare=False, savefig=False):
         plot3d(ax, bones, output)
 
 # 3rd row
-        if compare:
-            h = Human(1.8, "cpu")
-            output = model_2(img)
-            # output = h.update_pose(output.detach().numpy())
-            output = h.update_pose(output)
-            ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
-            plot_human(ax, bones, output)
-            plt.xlim(-1,1)
-            plt.ylim(-1,1)
+        # if compare:
+        #     h = Human(1.8, "cpu")
+        #     output = model_2(img)
+        #     # output = h.update_pose(output.detach().numpy())
+        #     output = h.update_pose(output)
+        #     ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
+        #     plot_human(ax, bones, output)
+        #     plt.xlim(-1,1)
+        #     plt.ylim(-1,1)
 
     plt.show()
     if savefig:
@@ -209,4 +213,5 @@ if __name__ == "__main__":
         )
     }
     comp = False
-    viz(bones["h36m"], imgs[8], comp)
+    viz(bones["mpi"], imgs[2], comp)
+    # att()
