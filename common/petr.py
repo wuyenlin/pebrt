@@ -93,6 +93,7 @@ class PETR(nn.Module):
 if __name__ == "__main__":
     from torchvision import transforms
     from PIL import Image
+    from time import time
 
     transforms = transforms.Compose([
         transforms.Resize([256,256]),
@@ -106,5 +107,9 @@ if __name__ == "__main__":
     img = img.unsqueeze(0)
     print(img.shape)
     img = img.cuda()
+
+    start = time()
     output = model(img)
+    elapsed = (time() - start)/60
+    print(elapsed)
     print(output.shape)
