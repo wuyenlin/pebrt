@@ -12,10 +12,11 @@ def rot(euler: tuple) -> torch.tensor:
     """
     from math import sin, cos
     a, b, r = euler[0], euler[1], euler[2]
-    row1 = torch.tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
-    row2 = torch.tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
-    row3 = torch.tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
+    row1 = torch.Tensor([cos(a)*cos(b), cos(a)*sin(b)*sin(r)-sin(a)*cos(r), cos(a)*sin(b)*cos(r)+sin(a)*sin(r)])
+    row2 = torch.Tensor([sin(a)*cos(b), sin(a)*sin(b)*sin(r)+cos(a)*cos(r), sin(a)*sin(b)*cos(r)-cos(a)*sin(r)])
+    row3 = torch.Tensor([-sin(b), cos(b)*sin(r), cos(b)*cos(r)])
     R = torch.stack((row1, row2, row3), 0)
+    
     assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
     return R
 
@@ -110,45 +111,45 @@ class Human:
 
         if self.human == "h36m":
             self.bones = {
-                "lower_spine": torch.tensor([0, 0, self.lower_spine]),
-                "upper_spine": torch.tensor([0, 0, self.upper_spine]),
-                "neck": torch.tensor([0, 0, self.neck]),
-                "head": torch.tensor([0, 0, self.half_face]),
+                "lower_spine": torch.Tensor([0, 0, self.lower_spine]),
+                "upper_spine": torch.Tensor([0, 0, self.upper_spine]),
+                "neck": torch.Tensor([0, 0, self.neck]),
+                "head": torch.Tensor([0, 0, self.half_face]),
 
-                "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
-                "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
-                "l_lower_arm": torch.tensor([self.lower_arm, 0, 0]),
-                "r_clavicle": torch.tensor([-self.clavicle, 0, 0]),
-                "r_upper_arm": torch.tensor([-self.upper_arm, 0, 0]),
-                "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
+                "l_clavicle": torch.Tensor([self.clavicle, 0, 0]),
+                "l_upper_arm": torch.Tensor([self.upper_arm, 0, 0]),
+                "l_lower_arm": torch.Tensor([self.lower_arm, 0, 0]),
+                "r_clavicle": torch.Tensor([-self.clavicle, 0, 0]),
+                "r_upper_arm": torch.Tensor([-self.upper_arm, 0, 0]),
+                "r_lower_arm": torch.Tensor([-self.lower_arm, 0, 0]),
 
-                "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
-                "l_thigh": torch.tensor([0, 0, -self.thigh]),
-                "l_calf": torch.tensor([0, 0, -self.calf]),
-                "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
-                "r_thigh": torch.tensor([0, 0, -self.thigh]),
-                "r_calf": torch.tensor([0, 0, -self.calf])
+                "l_hip": torch.Tensor([self.pelvis/2, 0, 0]),
+                "l_thigh": torch.Tensor([0, 0, -self.thigh]),
+                "l_calf": torch.Tensor([0, 0, -self.calf]),
+                "r_hip": torch.Tensor([-self.pelvis/2, 0, 0]),
+                "r_thigh": torch.Tensor([0, 0, -self.thigh]),
+                "r_calf": torch.Tensor([0, 0, -self.calf])
             }
         elif self.human == "mpi":
             self.bones = {
-                "lower_spine": torch.tensor([0, -self.lower_spine, 0]),
-                "upper_spine": torch.tensor([0, -self.upper_spine, 0]),
-                "neck": torch.tensor([0, -self.neck, 0]),
-                "head": torch.tensor([0, -self.half_face, 0]),
+                "lower_spine": torch.Tensor([0, -self.lower_spine, 0]),
+                "upper_spine": torch.Tensor([0, -self.upper_spine, 0]),
+                "neck": torch.Tensor([0, -self.neck, 0]),
+                "head": torch.Tensor([0, -self.half_face, 0]),
 
-                "l_clavicle": torch.tensor([self.clavicle, 0, 0]),
-                "l_upper_arm": torch.tensor([self.upper_arm, 0, 0]),
-                "l_lower_arm": torch.tensor([self.lower_arm, 0, 0]),
-                "r_clavicle": torch.tensor([-self.clavicle, 0, 0]),
-                "r_upper_arm": torch.tensor([-self.upper_arm, 0, 0]),
-                "r_lower_arm": torch.tensor([-self.lower_arm, 0, 0]),
+                "l_clavicle": torch.Tensor([self.clavicle, 0, 0]),
+                "l_upper_arm": torch.Tensor([self.upper_arm, 0, 0]),
+                "l_lower_arm": torch.Tensor([self.lower_arm, 0, 0]),
+                "r_clavicle": torch.Tensor([-self.clavicle, 0, 0]),
+                "r_upper_arm": torch.Tensor([-self.upper_arm, 0, 0]),
+                "r_lower_arm": torch.Tensor([-self.lower_arm, 0, 0]),
 
-                "l_hip": torch.tensor([self.pelvis/2, 0, 0]),
-                "l_thigh": torch.tensor([0, self.thigh, 0]),
-                "l_calf": torch.tensor([0, self.calf, 0]),
-                "r_hip": torch.tensor([-self.pelvis/2, 0, 0]),
-                "r_thigh": torch.tensor([0, self.thigh, 0]),
-                "r_calf": torch.tensor([0, self.calf, 0])
+                "l_hip": torch.Tensor([self.pelvis/2, 0, 0]),
+                "l_thigh": torch.Tensor([0, self.thigh, 0]),
+                "l_calf": torch.Tensor([0, self.calf, 0]),
+                "r_hip": torch.Tensor([-self.pelvis/2, 0, 0]),
+                "r_thigh": torch.Tensor([0, self.thigh, 0]),
+                "r_calf": torch.Tensor([0, self.calf, 0])
             }
         else:
             print("Unrecognized dataset name.")
@@ -317,7 +318,7 @@ def rand_pose():
     model = h.update_pose(a)
     print(model.shape)
     print(h.punish_list)
-    vis_model(model)
+    # vis_model(model)
 
 
 if __name__ == "__main__":
