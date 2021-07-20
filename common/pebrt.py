@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import cmath
-from common.embed import *
-from common.human import *
+# from common.embed import *
+# from common.human import *
 
 
 
@@ -99,3 +99,12 @@ class PEBRT(nn.Module):
         x, w_kc = self.process(x)
 
         return x, w_kc
+
+
+if __name__ == "__main__":
+    from human import *
+    from embed import *
+    model = PEBRT("cpu")
+    a = torch.rand(1,17,2)
+    output, _ = model(a)
+    print(output.shape)
