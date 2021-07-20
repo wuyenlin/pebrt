@@ -1,8 +1,6 @@
-import os, math
-import numpy as np
-import torch, torchvision
+import math
+import torch
 import torch.nn as nn
-from torchvision import transforms
 
 
 class PositionalEncoder(nn.Module):
