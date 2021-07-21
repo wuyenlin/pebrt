@@ -46,7 +46,7 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, device):
+    def __init__(self, device, num_layers=2):
         super().__init__()
         
         self.device = device
@@ -54,7 +54,6 @@ class PETR(nn.Module):
         pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
         self.backbone.load_state_dict(torch.load(pretrained_weight))
         print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
-        num_layers = 2
         self.transformer = TransformerEncoder(num_layers=num_layers)
         print("INFO: Using {} layers of Transformer Encoder.".format(num_layers))
                                     
