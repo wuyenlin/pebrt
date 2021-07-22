@@ -30,6 +30,7 @@ parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate app
 # dataset
 parser.add_argument("--num_workers", default=1, type=int)
 parser.add_argument("--eval", action="store_true")
+parser.add_argument("--checkpoint", type=str, default=None, help="Loading model checkpoint for evaluation")
 parser.add_argument("--export_training_curves", action="store_true", help="Save train/val curves in .png file")
 # parser.add_argument("--dataset", type=str, default="./dataset/S1/Seq1/imageSequence/S1.npz")
 parser.add_argument("--dataset", type=str, default="./h36m/data_h36m_frame_all.npz")
@@ -192,9 +193,6 @@ def run_evaluation(model, actions=None):
     errors_n2 = []
     if actions is not None:
         # evaluting on h36m
-        model.load_state_dict(torch.load("./peltra/all_2_lay_epoch_15.bin")["model"])
-        model = model.cuda()
-        model.eval()
         for action in actions:
             test_dataset = Data(args.dataset, transforms, False, action)
             test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False, \
@@ -229,6 +227,9 @@ def main(args):
     print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
 
     if args.eval:
+        model.load_state_dict(torch.load(args.checkpoint)["model"])
+        model = model.cuda()
+        model.eval()
         if "h36m" in args.dataset:
             actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
                     "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
