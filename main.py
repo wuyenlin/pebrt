@@ -37,7 +37,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         N = 0
 
         if ep%5 == 0 and ep != 0:
-            exp_name = "./petr/all_2_lay_epoch_{}_h36m.bin".format(ep)
+            exp_name = "./petr/all_1_lay_epoch_{}_h36m.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
