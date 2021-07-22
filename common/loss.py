@@ -106,3 +106,22 @@ def mpbve(predicted, target, w_kc):
         tar_info[b,:] = vectorize(tar_model)[:,:3]
     mpbve = torch.mean(torch.norm(pred_info - tar_info, dim=len(tar_info.shape)-1))
     return mpbve
+
+
+def pje(predicted, target):
+    """
+    Novel pose accuracy evaluation metric-
+    Normalize each bone to 1m and calculate the mean L2 norms
+    :param predicted: (16,9) tensor
+    :param target:  (16,9) tensor
+    """
+    if torch.cuda.is_available():
+        predicted = predicted.cuda()
+        target = target.cuda()
+
+    pred = Human(1.8, "cpu")
+    pred_model = pred.update_pose(predicted)
+    tar = Human(1.8, "cpu")
+    tar_model = tar.update_pose(target)
+
+    return mpjpe(pred_model, tar_model)

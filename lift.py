@@ -62,6 +62,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
+        pee = []
         if ep%5 == 0 and ep != 0:
             exp_name = "./peltra/all_2_lay_epoch_{}.bin".format(ep)
             torch.save({
@@ -85,13 +86,10 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             predicted_3d, w_kc = model(inputs_2d)
 
-            with torch.no_grad():
-                pose_stack = torch.zeros([predicted_3d.size(0),17,3], requires_grad=True)
-                for b in range(predicted_3d.size(0)):
-                    h = Human(1.8, "cpu")
-                    pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
-            pe = mpjpe(pose_stack, inputs_3d)
-            loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pe
+            pee.append(pje(predicted_3d[pose], inputs_3d[pose]) \
+                for pose in range(predicted_3d.size(0)))
+            # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pee
+            loss_3d_pos = sum(pee)
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -107,6 +105,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             model.eval()
             epoch_loss_3d_valid = 0.0
             N = 0
+            pee = []
 
             for data in val_loader:
                 _, inputs_2d, inputs_3d, vec_3d = data
@@ -116,12 +115,10 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
                 predicted_3d, w_kc = model(inputs_2d)
 
-                pose_stack = torch.zeros([predicted_3d.size(0),17,3], requires_grad=True)
-                for b in range(predicted_3d.size(0)):
-                    h = Human(1.8, "cpu")
-                    pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
-                pe = mpjpe(pose_stack, inputs_3d)
-                loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pe
+                pee.append(pje(predicted_3d[pose], inputs_3d[pose]) \
+                    for pose in range(predicted_3d.size(0)))
+                # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pee
+                loss_3d_pos = sum(pee)
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
                 N += vec_3d.shape[0]
 
