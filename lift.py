@@ -86,9 +86,10 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             predicted_3d, w_kc = model(inputs_2d)
 
-            pee.append(pje(predicted_3d[pose], inputs_3d[pose]) \
-                for pose in range(predicted_3d.size(0)))
+            for pose in range(predicted_3d.size(0)):
+                pee.append(pje(predicted_3d[pose], inputs_3d[pose]))
             # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pee
+            print(pee)
             loss_3d_pos = sum(pee)
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
@@ -115,8 +116,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
                 predicted_3d, w_kc = model(inputs_2d)
 
-                pee.append(pje(predicted_3d[pose], inputs_3d[pose]) \
-                    for pose in range(predicted_3d.size(0)))
+                for pose in range(predicted_3d.size(0)):
+                    pee.append(pje(predicted_3d[pose], inputs_3d[pose]))
                 # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pee
                 loss_3d_pos = sum(pee)
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
