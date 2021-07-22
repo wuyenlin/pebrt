@@ -11,7 +11,7 @@ def args_parser():
     parser.add_argument("--epoch", type=int, default=50)
     parser.add_argument("--bs", type=int, default=2)
     parser.add_argument("--num_layers", type=int, default=2)
-    parser.add_argument("--lr", type=float, default=2e-04)
+    parser.add_argument("--lr", type=float, default=1e-04)
     parser.add_argument("--lr_backbone", type=float, default=0)
     parser.add_argument("--weight_decay", type=float, default=1e-05)
     parser.add_argument("--lr_drop", default=10, type=int)
