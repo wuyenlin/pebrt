@@ -42,9 +42,9 @@ class Data:
                     if action is None else random.sample(list(frames), int(len(frames)))
                 num_frame += len(reduced)
                 for f in reduced:
-                    gt_2d = self.zero_center(frames[f]["positions_2d"], "h36m")
+                    gt_2d = self.zero_center(self.remap_h36m(frames[f]["positions_2d"]))
                     gt_3d = self.zero_center(self.remove_joints( \
-                            frames[f]["positions_3d"], "h36m"), "h36m")
+                            frames[f]["positions_3d"], "h36m"))
 
                     assert gt_2d.shape == (17,2) and gt_3d.shape == (17,3)
                     self.gt_pts2d.append(gt_2d)
@@ -147,14 +147,9 @@ class Data:
         return cam_3d
 
     
-    def zero_center(self, cam, dataset="mpi") -> np.array:
+    def zero_center(self, cam) -> np.array:
         """translate root joint to origin (0,0,0)"""
-        if dataset == "mpi":
-            return cam - cam[2,:]
-        elif dataset == "h36m":
-            return cam - cam[0,:]
-        else:
-            print("Unrecognized dataset name.")
+        return cam - cam[2,:]
 
     def remap_h36m(self, h36m_joints):
         """
