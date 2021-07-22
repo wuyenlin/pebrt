@@ -85,13 +85,13 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             predicted_3d, w_kc = model(inputs_2d)
 
-            pose_stack = torch.zeros([predicted_3d.size(0),17,3], requires_grad=True)
-            for b in range(predicted_3d.size(0)):
-                h = Human(1.8, "cpu")
-                pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
+            with torch.no_grad():
+                pose_stack = torch.zeros([predicted_3d.size(0),17,3], requires_grad=True)
+                for b in range(predicted_3d.size(0)):
+                    h = Human(1.8, "cpu")
+                    pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
             pe = mpjpe(pose_stack, inputs_3d)
-            # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pe
-            loss_3d_pos = pe
+            loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pe
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -121,9 +121,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
                     h = Human(1.8, "cpu")
                     pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
                 pe = mpjpe(pose_stack, inputs_3d)
-                # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pe
-                loss_3d_pos = pe
-                # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc)
+                loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pe
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
                 N += vec_3d.shape[0]
 
@@ -263,6 +261,7 @@ def main(args):
             shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
         optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+#        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
 
         if args.resume:
