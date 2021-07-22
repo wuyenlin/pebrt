@@ -1,6 +1,5 @@
 import numpy as np
 import cv2 as cv
-from PIL import Image
 from common.human import *
 from common.misc import *
 
@@ -46,7 +45,7 @@ class Data:
             random.seed(100)
             for act in to_load:
                 frames = data[act].flatten()[0]
-                reduced = random.sample(list(frames), int(len(frames)*0.001)) \
+                reduced = random.sample(list(frames), int(len(frames))) \
                     if action is None else random.sample(list(frames), int(len(frames)))
                 num_frame += len(reduced)
                 for f in reduced:
