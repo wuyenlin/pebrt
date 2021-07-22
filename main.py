@@ -116,7 +116,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 def evaluate(test_loader, model, device):
     epoch_loss_3d_pos = 0.0
-    epoch_loss_3d_n2 = 0
 
     with torch.no_grad():
         model.eval()
@@ -132,46 +131,24 @@ def evaluate(test_loader, model, device):
 
             epoch_loss_3d_pos += inputs_3d.shape[0] * error.item()
             N += inputs_3d.shape[0]
-
-
-            # convert bone kpts (17,3) to rotation matrix (16,9)
-            h = Human(1.8, "cpu")
-            human_model = h.update_pose()
-            t_info = vectorize(human_model)[:,:3]
-            pred = torch.zeros(predicted_3d_pos.shape[0], 16, 9)
-            tar = torch.zeros(inputs_3d.shape[0], 16, 9)
-            for pose in range(predicted_3d_pos.shape[0]):
-                pred[pose,:,:] = torch.from_numpy(convert_gt(predicted_3d_pos[pose,:,:], t_info))
-                tar[pose,:,:] = torch.from_numpy(convert_gt(inputs_3d[pose,:,:], t_info))
-                
-            # new metrics
-            n2 = mbve(pred, tar)
-            epoch_loss_3d_n2 += inputs_3d.shape[0] * n2.item()
-
-
     e1 = (epoch_loss_3d_pos / N)*1000
-    n2 = (epoch_loss_3d_n2 / N)*1000
 
     print("Protocol #1 Error (MPJPE):", e1, "mm")
-    print("New Metric #2 Error (MPBVE):", n2, "mm")
     print("----------")
 
-    return e1, n2
+    return e1
 
 
 def run_evaluation(actions, model):
     error_e1 = []
-    errors_n2 = []
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
         print("-----"+action+"-----")
-        e1, n2 = evaluate(test_loader, model, args.device)
+        e1 = evaluate(test_loader, model, args.device)
         error_e1.append(e1)
-        errors_n2.append(n2)
         print()
     print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e1), 1), "mm")
-    print("New Metric #2   (MPBVE) action-wise average:", round(np.mean(errors_n2), 1), "mm")
 
 
 def main(args):
