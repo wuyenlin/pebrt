@@ -136,13 +136,13 @@ def evaluate(test_loader, model, device):
 
             # convert bone kpts (17,3) to rotation matrix (16,9)
             h = Human(1.8, "cpu")
-            model = h.update_pose()
-            t_info = vectorize(model)[:,:3]
+            human_model = h.update_pose()
+            t_info = vectorize(human_model)[:,:3]
             pred = torch.zeros(predicted_3d_pos.shape[0], 16, 9)
             tar = torch.zeros(inputs_3d.shape[0], 16, 9)
             for pose in range(predicted_3d_pos.shape[0]):
-                pred[pose,:,:] = torch.from_numpy(convert_gt(predicted_3d_pos[pose,:,:], t_info, dataset="h36m"))
-                tar[pose,:,:] = torch.from_numpy(convert_gt(inputs_3d[pose,:,:], t_info, dataset="h36m"))
+                pred[pose,:,:] = torch.from_numpy(convert_gt(predicted_3d_pos[pose,:,:], t_info))
+                tar[pose,:,:] = torch.from_numpy(convert_gt(inputs_3d[pose,:,:], t_info))
                 
             # new metrics
             n2 = mbve(pred, tar)
@@ -174,32 +174,12 @@ def run_evaluation(actions, model):
     print("New Metric #2   (MPBVE) action-wise average:", round(np.mean(errors_n2), 1), "mm")
 
 
-def set_random_seeds(random_seed=0):
-    import random
-    torch.manual_seed(random_seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-
-
 def main(args):
     device = torch.device(args.device)
     ddp_model = PETR(device, num_layers=args.num_layers)
     ddp_model = ddp_model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
-
-    if args.distributed:
-        from torch.utils.data.distributed import DistributedSampler
-        print("INFO: Running on SLI")
-        local_rank = args.local_rank
-        random_seed = args.random_seed
-        set_random_seeds(random_seed=random_seed)
-        torch.distributed.init_process_group(backend="nccl")
-        device = torch.device("cuda:{}".format(local_rank))
-        model = PETR(device)
-        ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
 
     backbone_params = 0
     if args.lr_backbone == 0:
@@ -220,25 +200,21 @@ def main(args):
         actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
                 "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
                 "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
-        checkpoint = torch.load(args.resume, map_location="cpu")
+        checkpoint = torch.load(args.checkpoint, map_location="cpu")
+        print("INFO: Loaded ", args.checkpoint, " for evaluation.")
         ddp_model.load_state_dict(checkpoint["model"])
+        ddp_model = ddp_model.cuda()
+        ddp_model.eval()
         print("Evaluation starts...")
         run_evaluation(actions, ddp_model)
 
     else:
         train_dataset = Data(args.dataset, transforms)
         val_dataset = Data(args.dataset, transforms, False)
-        if args.distributed:
-            train_sampler = DistributedSampler(dataset=train_dataset)
-            train_loader = DataLoader(train_dataset, batch_size=args.bs, \
-                num_workers=args.num_workers, sampler=train_sampler)
-            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
-                    num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-        else:
-            train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False, \
-                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
-            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
-                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+        train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False, \
+            num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+        val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
+            num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
 
         param_dicts = [
