@@ -161,7 +161,8 @@ class Human:
         for i in range(3):
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
-            if high!=low:
+            no_bend = (low==high and low==0)
+            if high!=low or no_bend:
                 if round(angles[i],3) < low:
                     angles[i] = low
                     punish_w += 1.0
@@ -314,11 +315,11 @@ def rand_pose():
     euler = (0,0,0)
     a = rot(euler).flatten().repeat(16)
     k = 14
-    a[9*k:9*k+9] = rot((0,0,2)).flatten()
+    a[9*k:9*k+9] = rot((0,1,0)).flatten()
     model = h.update_pose(a)
     print(model.shape)
     print(h.punish_list)
-    # vis_model(model)
+    vis_model(model)
 
 
 if __name__ == "__main__":
