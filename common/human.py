@@ -153,7 +153,7 @@ class Human:
             }
         else:
             print("Unrecognized dataset name.")
-        self.bones = { bone: self.bones[bone].to(self.device) for bone in self.bones.keys() }
+        self.bones = { bone: self.bones[bone].to(self.device).requires_grad_() for bone in self.bones.keys() }
         
 
     def check_range(self, bone, angles):
@@ -317,9 +317,10 @@ def rand_pose():
     k = 14
     a[9*k:9*k+9] = rot((0,1,0)).flatten()
     model = h.update_pose(a)
+    print(model.requires_grad)
     print(model.shape)
     print(h.punish_list)
-    vis_model(model)
+    # vis_model(model)
 
 
 if __name__ == "__main__":
