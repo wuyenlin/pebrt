@@ -121,4 +121,5 @@ def pje(predicted, target):
 
     pred = Human(1.8, "cpu")
     pred_model = pred.update_pose(predicted)
-    return mpjpe(pred_model, target)
+    err = mpjpe(pred_model, target)
+    return err.requires_grad_()
