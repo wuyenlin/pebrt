@@ -112,8 +112,8 @@ def pje(predicted, target):
     """
     Novel pose accuracy evaluation metric-
     Normalize each bone to 1m and calculate the mean L2 norms
-    :param predicted: (16,9) tensor
-    :param target:  (17,3) tensor
+    :param predicted: (bs,16,9) tensor
+    :param target:  (bs,17,3) tensor
     """
     if torch.cuda.is_available():
         predicted = predicted.cuda()
@@ -121,5 +121,5 @@ def pje(predicted, target):
 
     pred = Human(1.8, "cpu")
     pred_model = pred.update_pose(predicted)
-    err = mpjpe(pred_model, target)
-    return err.requires_grad_()
+    assert pred_model.requires_grad
+    return mpjpe(pred_model, target)
