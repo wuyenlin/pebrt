@@ -62,7 +62,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
-        pee = []
         if ep%5 == 0 and ep != 0:
             exp_name = "./peltra/all_2_lay_epoch_{}.bin".format(ep)
             torch.save({
@@ -86,11 +85,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
             predicted_3d, w_kc = model(inputs_2d)
 
-            for pose in range(predicted_3d.size(0)):
-                pee.append(pje(predicted_3d[pose], inputs_3d[pose]))
-            # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pee
-            print(pee)
-            loss_3d_pos = sum(pee)
+            # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc)
+            loss_3d_pos = pje(predicted_3d, inputs_3d)
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -106,7 +102,6 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             model.eval()
             epoch_loss_3d_valid = 0.0
             N = 0
-            pee = []
 
             for data in val_loader:
                 _, inputs_2d, inputs_3d, vec_3d = data
@@ -116,10 +111,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
                 predicted_3d, w_kc = model(inputs_2d)
 
-                for pose in range(predicted_3d.size(0)):
-                    pee.append(pje(predicted_3d[pose], inputs_3d[pose]))
-                # loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) + pee
-                loss_3d_pos = sum(pee)
+                loss_3d_pos = pje(predicted_3d, inputs_3d)
                 epoch_loss_3d_valid += vec_3d.shape[0] * loss_3d_pos.item()
                 N += vec_3d.shape[0]
 
