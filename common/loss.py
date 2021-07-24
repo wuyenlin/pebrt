@@ -119,7 +119,10 @@ def pje(predicted, target):
         predicted = predicted.cuda()
         target = target.cuda()
 
-    pred = Human(1.8, "cpu")
-    pred_model = pred.update_pose(predicted)
-    assert pred_model.requires_grad
-    return mpjpe(pred_model, target)
+    err = []
+    bs = predicted.size(0)
+    for b in range(bs):
+        pred = Human(1.8, "cpu")
+        pred_model = pred.update_pose(predicted[b])
+        err.append(mpjpe(pred_model, target[b]))
+    return sum(err)
