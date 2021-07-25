@@ -38,6 +38,7 @@ def convert_gt(gt_3d: np.array, t_info) -> np.array:
 
     num_row = bone_info.shape[0]
     R_stack = np.zeros([num_row, 9])
+    t_info = t_info.detach().cpu().numpy()
     # get rotation matrix for each bone
     for k in range(num_row):
         R = get_rot_from_vecs(t_info[k,:], bone_info[k,:]).flatten()
