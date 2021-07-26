@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import torch
-from torchvision import transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 from common.dataloader import *
@@ -8,14 +7,6 @@ from torch.utils.data import DataLoader
 from common.pebrt import PEBRT
 from common.human import *
 from common.misc import *
-
-
-
-transforms = transforms.Compose([
-    transforms.Resize([256,256]),
-    transforms.ToTensor(),  
-    transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-]) 
 
 
 
@@ -49,7 +40,7 @@ def viz(savefig=False):
     # train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
     # train_npz = "./h36m/data_h36m_frame_S1.npz"
     train_npz = "./h36m/data_h36m_frame_all.npz"
-    train_dataset = Data(train_npz, transforms, False)
+    train_dataset = Data(train_npz, train=False)
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
     print("data loaded!")
@@ -58,7 +49,7 @@ def viz(savefig=False):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PEBRT(device, num_layers=2)
-    net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_20.bin")["model"])
+    net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_latest.bin")["model"])
     net = net.cuda()
     net.eval()
 
