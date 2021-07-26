@@ -45,14 +45,9 @@ parser.add_argument("--random_seed", type=int, help="random seed", default=0)
 args = parser.parse_args()
 
 
-transforms = transforms.Compose([
-    transforms.Resize([256,256]),
-    transforms.ToTensor(),  
-    transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-])
 
-
-def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer, lr_scheduler):
+def train(start_epoch, epoch, train_loader, val_loader, 
+            model, device, optimizer, lr_scheduler, local_rank):
     print("Training starts...")
 
     losses_3d_train = []
@@ -62,7 +57,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
-        if ep%5 == 0 and ep != 0:
+        if ep%5 == 0 and ep != 0 and local_rank==0:
             exp_name = "./peltra/all_2_lay_epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
@@ -119,7 +114,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
         lr_scheduler.step()
         elapsed = (time() - start_time)/60
 
-        print("[%d] time %.2f 3d_train %f 3d_valid %f" % (
+        print("[{}] time {0:.2f} 3d_train {} 3d_valid {}".format(
                 ep + 1,
                 elapsed,
                 losses_3d_train[-1] * 1000,
@@ -137,10 +132,8 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
             plt.ylabel("MPJPE (m)")
             plt.xlabel("Epoch")
             plt.xlim((3, epoch))
-            plt.savefig("./peltra/loss_3d.png")
-
+            plt.savefig("./checkpoint/loss_3d.png")
             plt.close("all")
-
 
     print("Finished Training.")
     return losses_3d_train , losses_3d_valid
@@ -194,7 +187,7 @@ def run_evaluation(model, actions=None):
     if actions is not None:
         # evaluting on h36m
         for action in actions:
-            test_dataset = Data(args.dataset, transforms, False, action)
+            test_dataset = Data(args.dataset, train=False, action=action)
             test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False, \
                                     num_workers=args.num_workers, collate_fn=collate_fn)
             print("-----"+action+"-----")
@@ -207,47 +200,76 @@ def run_evaluation(model, actions=None):
         print("New Metric #2   (MPBVE) action-wise average:", round(np.mean(errors_n2), 1), "(mm)")
     else:
         # evaluting on MPI-INF-3DHP
-        test_dataset = Data(args.dataset, transforms, False)
+        test_dataset = Data(args.dataset, train=False)
         test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
                                 num_workers=args.num_workers, collate_fn=collate_fn)
         e0, n1, n2 = evaluate(test_loader, model, args.device)
 
 
+def set_random_seeds(random_seed=0):
+    import random
+    torch.manual_seed(random_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+
 def main(args):
     device = torch.device(args.device)
     model = PEBRT(device, bs=args.bs, num_layers=args.num_layers)
     print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
-    model = model.to(device)
+    ddp_model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
 
+    if args.distributed:
+        print("INFO: Running on DDP")
+        local_rank = args.local_rank
+        random_seed = args.random_seed
+        set_random_seeds(random_seed=random_seed)
+        torch.distributed.init_process_group(backend="nccl")
+        device = torch.device("cuda:{}".format(local_rank))
+        model = PEBRT(device, bs=args.bs)
+        ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
+
     model_params = 0
-    for parameter in model.parameters():
+    for parameter in ddp_model.parameters():
         model_params += parameter.numel()
-    print("INFO: Trainable parameter count:", model_params, " (%.2f M)" %(model_params/1e06))
+    print("INFO: Trainable parameter count:", model_params, " ({0:.2f} M)".format(model_params/1e06))
 
     if args.eval:
-        model.load_state_dict(torch.load(args.checkpoint)["model"])
-        model = model.cuda()
-        model.eval()
+        # evaluation mode
+        ddp_model.load_state_dict(torch.load(args.checkpoint)["model"])
+        ddp_model.eval()
         if "h36m" in args.dataset:
             actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
                     "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
                     "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
             print("Evaluation on Human3.6M starts...")
-            run_evaluation(model, actions)
+            run_evaluation(ddp_model, actions)
         else:
             print("Evaluation on MPI-INF-3DHP starts...")
-            run_evaluation(model)
+            run_evaluation(ddp_model)
 
     else:
-        train_dataset = Data(args.dataset, transforms)
-        train_loader = DataLoader(train_dataset, batch_size=args.bs, \
-            shuffle=True, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+        # training mode
+        train_dataset = Data(args.dataset)
+        val_dataset = Data(args.dataset, train=False)
 
-        val_dataset = Data(args.dataset, transforms, False)
-        val_loader = DataLoader(val_dataset, batch_size=args.bs, \
-            shuffle=False, num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+        if args.distributed:
+            from torch.utils.data.distributed import DistributedSampler
+            train_sampler = DistributedSampler(dataset=train_dataset)
+            train_loader = DataLoader(train_dataset, batch_size=args.bs, \
+                num_workers=args.num_workers, sampler=train_sampler)
+            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
+                    num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+
+        else:
+            local_rank = 0
+            train_loader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False, \
+                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
+            val_loader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False, \
+                num_workers=args.num_workers, drop_last=True, collate_fn=collate_fn)
 
         optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_drop)
@@ -264,8 +286,8 @@ def main(args):
         print("INFO: Using optimizer {}".format(optimizer))
 
         train_list, val_list = train(args.start_epoch, args.epoch, 
-                                    train_loader, val_loader, model, device,
-                                    optimizer, lr_scheduler)
+                                    train_loader, val_loader, ddp_model, device,
+                                    optimizer, lr_scheduler, local_rank)
 
 if __name__ == "__main__":
     main(args)
