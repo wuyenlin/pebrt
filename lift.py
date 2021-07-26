@@ -214,10 +214,11 @@ def set_random_seeds(random_seed=0):
     np.random.seed(random_seed)
     random.seed(random_seed)
 
+
 def main(args):
     device = torch.device(args.device)
     model = PEBRT(device, bs=args.bs, num_layers=args.num_layers)
-    print("INFO: Using PELTRA and Gram-Schmidt process to recover SO(3) rotation matrix")
+    print("INFO: Using PEBRT and Gram-Schmidt process to recover SO(3) rotation matrix")
     ddp_model = model.to(device)
     print("INFO: Model loaded on {}".format(torch.cuda.get_device_name(torch.cuda.current_device())))
     print("INFO: Training using dataset {}".format(args.dataset))
