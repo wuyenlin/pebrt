@@ -98,7 +98,7 @@ python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 cluster.py
 - [x] Train and test on Human3.6M
 - [x] Run on distributed systems (for SLI)
 - [x] Added human model for both Human3.6M and MPI-IND-3DHP datasets
+- [x] Fix camera angle issue / add 3D joint position in loss 
+- [x] Test evaluation metrics on existing methods (working on it now)
 - [ ] Separate human model configurations into yaml files
-- [ ] Test evaluation metrics on existing methods (working on it now)
 - [ ] Online implementations of PETR (training & finetuning now)
-- [ ] Fix camera angle issue / add 3D joint position in loss 
