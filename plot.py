@@ -42,14 +42,15 @@ def viz(savefig=False):
     train_npz = "./h36m/data_h36m_frame_all.npz"
     train_dataset = Data(train_npz, train=False)
     trainloader = DataLoader(train_dataset, batch_size=4, 
-                        shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
+                        shuffle=False, num_workers=8, drop_last=True, collate_fn=collate_fn)
     print("data loaded!")
     dataiter = iter(trainloader)
     img_path, kpts, gt_3d, vec_3d = dataiter.next()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = PEBRT(device, num_layers=2)
-    net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_latest.bin")["model"])
+    net = PEBRT(device, num_layers=4)
+    # net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_latest.bin")["model"])
+    net.load_state_dict(torch.load("/home/ylwu/Downloads/all_4_lay_epoch_latest.bin")["model"])
     net = net.cuda()
     net.eval()
 
