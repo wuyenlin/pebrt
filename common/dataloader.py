@@ -104,8 +104,6 @@ class Data:
     def __getitem__(self, index):
         try:
             img_path = self.img_path[index]
-            #img = Image.open(img_path)
-            #img = self.transforms(img)
             kpts_2d = self.gt_pts2d[index]
             kpts_3d = self.gt_pts3d[index]
             vecs_3d = self.gt_vecs3d[index]
