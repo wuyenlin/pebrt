@@ -1,4 +1,4 @@
-# One-pose-fits-all
+# One pose fits all
 
 This repository contains files used in the thesis done by Yen-Lin Wu in partial fulfillment of his MSc programme in Mechanical Engineering at Delft University of Technology (2021), supervised by Osama Mazhar and Jens Kober. 
 
@@ -73,25 +73,27 @@ python3 common/h36m_dataset.py
 ## Evaluation on pre-trained models
 Run 
 ```
-python3 main.py --eval --resume ./checkpoint/weight.bin
+python3 lift.py --eval --checkpoint ./checkpoint/weight.bin
 ```
 
 
 ### New evaluation metrics
+We propose a new metric, called Mean Per Bone Vector Error (MPBVE), that assess the pose similarity indepedent from human body shape, age, or gender.
 
 
 ## Training from scratch
-To start training the model, run
+To start training the model with 1 layer of Transformer Encoder, run
 ```
-python3 lift.py
+python3 lift.py --num_layers 1
 ```
 
 If you are running on a SLI enabled machine or computing cluster, run the following Pytorch DDP code (example of using 2 GPUs):
 ```
-python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 cluster.py
+python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 lift.py
 ```
 
 
+### TODO
 - [x] Animate results (see animation.py)
 - [x] Create evaluation metrics for bone rotation error
 - [x] Add kinematic constraints
