@@ -16,17 +16,17 @@ transforms = transforms.Compose([
 path = './h36m/data_h36m_frame_all.npz'
 val_dataset = Data(path, transforms, False)
 val_loader = DataLoader(val_dataset, batch_size=4, \
-	shuffle=False, num_workers=16, drop_last=True, collate_fn=collate_fn)
+	shuffle=True, num_workers=2, drop_last=True, collate_fn=collate_fn)
 
 dataiter = iter(val_loader)
 img_path, inputs_2d, inputs3d, vec_3d = dataiter.next()
-print(vec_3d[0].shape)
+print(img_path[0])
 r = vec_3d[0].flatten()
 
 h = Human(1.8, "cpu", "h36m")
 model = h.update_pose(r)
 print(h.punish_list)
-vis_model(model)
+# vis_model(model)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
@@ -41,18 +41,20 @@ bones= (
 
 first = inputs3d[0]
 for p in first:
-	ax.scatter(p[0], p[1], p[2], c='r', alpha=0.5)
+	ax.scatter(p[0], p[1], p[2], c='r', linewidths=5)
 for index in bones:
 	xS = (first[index[0]][0],first[index[1]][0])
 	yS = (first[index[0]][1],first[index[1]][1])
 	zS = (first[index[0]][2],first[index[1]][2])
-	ax.plot(xS, yS, zS)
+	ax.plot(xS, yS, zS, linewidth=5)
 # ax.view_init(elev=90, azim=90)
-ax.view_init(elev=20, azim=60)
+ax.view_init(elev=10, azim=60)
 ax.set_xlim3d([-1.0, 1.0])
 ax.set_xlabel("X")
 ax.set_ylim3d([-1.0, 1.0])
 ax.set_ylabel("Y")
 ax.set_zlim3d([-1.0, 1.0])
 ax.set_zlabel("Z")
+# ax.grid(False)
+plt.axis('off')
 plt.show()

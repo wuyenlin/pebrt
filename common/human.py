@@ -292,20 +292,21 @@ def vis_model(model):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     for p in model:
-        ax.scatter(p[0], p[1], p[2], c="r")
+        ax.scatter(p[0], p[1], p[2], c="r", linewidths=5)
 
     for index in indices:
         xS = (model[index[0]][0], model[index[1]][0])
         yS = (model[index[0]][1], model[index[1]][1])
         zS = (model[index[0]][2], model[index[1]][2])
-        ax.plot(xS, yS, zS)
-    ax.view_init(elev=20, azim=60)
+        ax.plot(xS, yS, zS, linewidth=5)
+    ax.view_init(elev=20, azim=90)
     plt.xlim([-1,1])
     plt.ylim([-1,1])
     ax.set_zlim([-1,1])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
+    plt.axis('off')
     plt.show()
 
 
@@ -315,9 +316,9 @@ def rand_pose():
     a = rot(euler).flatten().repeat(16)
     k = 14
     a[9*k:9*k+9] = rot((0,0,2)).flatten()
-    model = h.update_pose(a)
+    # model = h.update_pose(a)
+    model = h.update_pose()
     print(model.shape)
-    print(h.punish_list)
     vis_model(model)
 
 
