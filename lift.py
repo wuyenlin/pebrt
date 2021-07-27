@@ -7,7 +7,6 @@ from common.human import *
 
 import argparse
 from tqdm import tqdm
-from torchvision import transforms
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from time import time
