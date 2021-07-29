@@ -97,6 +97,5 @@ python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 cluster.py
 - [x] Add kinematic constraints
 - [x] Train and test on Human3.6M
 - [x] Run on distributed systems (for SLI)
-- [ ] Test evaluation metrics on existing methods (working on it now)
-- [ ] Online implementations of PETR (training & finetuning now)
-- [ ] Fix camera angle issue / add 3D joint position in loss 
+- [x] Test evaluation metrics on existing methods
+- [ ] Fix camera angle issue / add 3D joint position in loss (working on it now)
