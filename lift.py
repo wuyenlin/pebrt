@@ -44,6 +44,18 @@ parser.add_argument("--random_seed", type=int, help="random seed", default=0)
 args = parser.parse_args()
 
 
+intrinsic_matrix = torch.tensor([[1145.0494384765625, 0, 512.54150390625],
+                            [0, 1143.7811279296875, 515.4514770507812],
+                            [0, 0, 1]])
+
+def project_2d(intrinsic_matrix: torch.tensor, predicted_3d: torch.tensor):
+    """
+    (3,17) = (3,3) @ (3,17)
+    return (17,2)
+    """
+    projected = intrinsic_matrix @ predicted_3d.T
+    return projected[:2,...].T
+
 
 def train(start_epoch, epoch, train_loader, val_loader, 
             model, device, optimizer, lr_scheduler, local_rank):
