@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
 import cmath
-from common.embed import *
-from common.human import *
+try:
+    from common.embed import *
+    from common.human import *
+except ModuleNotFoundError:
+    from embed import *
+    from human import *
 
 
 
@@ -63,7 +67,7 @@ class PEBRT(nn.Module):
         row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
         row_3 = self.normalize(torch.cross(row_1,row_2))
         R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
-        assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+        # assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
         return R
 
 
@@ -88,9 +92,9 @@ class PEBRT(nn.Module):
                 R = self.gram_schmidt(arr)
                 R_stack[b,k,:] = R.to(self.device).flatten()
             # Impose NN outputs SO(3) on kinematic model and get punishing weights
-            h = Human(1.8, "cpu")
-            h.update_pose(R_stack[b,:,:].flatten())
-            w_kc[b,:] = torch.tensor(h.punish_list)
+            # h = Human(1.8, "cpu")
+            # h.update_pose(R_stack[b,:,:].flatten())
+            # w_kc[b,:] = torch.tensor(h.punish_list)
         return R_stack, w_kc
 
 
@@ -99,3 +103,17 @@ class PEBRT(nn.Module):
         x, w_kc = self.process(x)
 
         return x, w_kc
+
+if __name__ == "__main__":
+    from time import time
+    tlist = []
+    for _ in range(10):
+        now = time()
+        a = torch.rand(2,17,2)
+        model = PEBRT("cpu", 2)
+        output, _ = model(a)
+        elasped = time() - now
+        print(elasped, " seconds")
+        tlist.append(elasped)
+    
+    print(sum(tlist)/10)
