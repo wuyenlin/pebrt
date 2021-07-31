@@ -54,7 +54,7 @@ def project_2d(bs, predicted_3d):
     intrinsic_matrix = torch.tensor([[1145.0494384765625, 0, 512.54150390625],
                                 [0, 1143.7811279296875, 515.4514770507812],
                                 [0, 0, 1]])
-    intrins = intrinsic_matrix.repeat(bs, 1, 1)
+    intrins = intrinsic_matrix.repeat(bs, 1, 1).cuda()
     projected = intrins @ predicted_3d.transpose(1,2)
     return projected[:,:2,:].transpose(1,2)
 
