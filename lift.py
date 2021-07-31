@@ -44,17 +44,18 @@ parser.add_argument("--random_seed", type=int, help="random seed", default=0)
 args = parser.parse_args()
 
 
-intrinsic_matrix = torch.tensor([[1145.0494384765625, 0, 512.54150390625],
-                            [0, 1143.7811279296875, 515.4514770507812],
-                            [0, 0, 1]])
 
-def project_2d(intrinsic_matrix: torch.tensor, predicted_3d: torch.tensor):
+def project_2d(bs, predicted_3d):
     """
-    (3,17) = (3,3) @ (3,17)
+    (2,3,17) = (2,3,3) @ (2,3,17)
     return (17,2)
     """
-    projected = intrinsic_matrix @ predicted_3d.T
-    return projected[:2,...].T
+    intrinsic_matrix = torch.tensor([[1145.0494384765625, 0, 512.54150390625],
+                                [0, 1143.7811279296875, 515.4514770507812],
+                                [0, 0, 1]])
+    intrins = intrinsic_matrix.repeat(bs, 1, 1)
+    projected = intrins @ predicted_3d.transpose(1,2)
+    return projected[:,:2,:].transpose(1,2)
 
 
 def train(start_epoch, epoch, train_loader, val_loader, 
@@ -64,12 +65,14 @@ def train(start_epoch, epoch, train_loader, val_loader,
     losses_3d_train = []
     losses_3d_valid = []
 
+    recycle = 3
+
     for ep in tqdm(range(start_epoch, epoch+1)):
         start_time = time()
         epoch_loss_3d_train = 0.0
         N = 0
         if ep%5 == 0 and ep != 0 and local_rank==0:
-            exp_name = "./peltra/all_2_lay_epoch_{}.bin".format(ep)
+            exp_name = "./peltra/recycle_2_lay_epoch_{}.bin".format(ep)
             torch.save({
                 "epoch": ep,
                 "lr_scheduler": lr_scheduler.state_dict(),
@@ -81,6 +84,7 @@ def train(start_epoch, epoch, train_loader, val_loader,
 
         model.train()
     # train
+        recycle_loss = 0.0
         for data in train_loader:
             _, inputs_2d, inputs_3d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
@@ -92,6 +96,20 @@ def train(start_epoch, epoch, train_loader, val_loader,
             predicted_3d, w_kc = model(inputs_2d)
 
             loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) 
+            ### recycle
+            for _ in range(recycle):
+                pose_stack = torch.zeros_like(inputs_3d)
+                for b in range(predicted_3d.size(0)):
+                    h = Human(1.8, "cpu")
+                    pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
+
+                projected = project_2d(predicted_3d.size(0), predicted_3d)
+                predicted_3d, w_kc = model(projected)
+
+                recycle_loss += maev(predicted_3d, vec_3d, w_kc) 
+            ### recycle ends
+            loss_3d_pos += recycle_loss
+
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
@@ -162,14 +180,14 @@ def evaluate(test_loader, model, device):
             inputs_3d = inputs_3d.to(device)
             vec_3d = vec_3d.to(device)
 
-            predicted_3d_pos, _ = model(inputs_2d)
+            predicted_3d, _ = model(inputs_2d)
 
-            pose_stack = torch.zeros(predicted_3d_pos.size(0),17,3)
-            for b in range(predicted_3d_pos.size(0)):
+            pose_stack = torch.zeros(predicted_3d.size(0),17,3)
+            for b in range(predicted_3d.size(0)):
                 h = Human(1.8, "cpu")
-                pose_stack[b] = h.update_pose(predicted_3d_pos[b].detach().cpu().numpy())
+                pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
             e0 = mpjpe(pose_stack, inputs_3d)
-            n2 = mpbve(predicted_3d_pos, vec_3d, 0)
+            n2 = mpbve(predicted_3d, vec_3d, 0)
             
             epoch_loss_e0 += vec_3d.shape[0] * e0.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
