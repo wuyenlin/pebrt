@@ -55,7 +55,8 @@ def project_2d(bs, predicted_3d):
                                 [0, 1143.7811279296875, 515.4514770507812],
                                 [0, 0, 1]])
     intrins = intrinsic_matrix.repeat(bs, 1, 1).cuda()
-    projected = intrins @ predicted_3d.transpose(1,2)
+    predicted_3d = predicted_3d.float()
+    projected = intrins.float() @ predicted_3d.transpose(1,2)
     return projected[:,:2,:].transpose(1,2)
 
 
@@ -85,7 +86,6 @@ def train(start_epoch, epoch, train_loader, val_loader,
 
         model.train()
     # train
-        recycle_loss = 0.0
         for data in train_loader:
             _, inputs_2d, inputs_3d, vec_3d = data
             inputs_2d = inputs_2d.to(device)
@@ -96,26 +96,25 @@ def train(start_epoch, epoch, train_loader, val_loader,
 
             predicted_3d, w_kc = model(inputs_2d)
 
-            loss_3d_pos = maev(predicted_3d, vec_3d, w_kc) 
+            init_loss = maev(predicted_3d, vec_3d, w_kc) 
             ### recycle
-            for _ in range(recycle):
-                pose_stack = torch.zeros_like(inputs_3d)
-                for b in range(predicted_3d.size(0)):
-                    h = Human(1.8, "cpu")
-                    pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
+            pose_stack = torch.zeros_like(inputs_3d)
+            for b in range(predicted_3d.size(0)):
+                h = Human(1.8, "cpu")
+                pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
 
-                projected = project_2d(predicted_3d.size(0), pose_stack)
-                predicted_3d, w_kc = model(projected)
+            projected = project_2d(predicted_3d.size(0), pose_stack)
+            predicted_3d, w_kc = model(projected)
 
-                recycle_loss += maev(predicted_3d, vec_3d, w_kc) 
+            recycle_loss = maev(predicted_3d, vec_3d, w_kc) 
             ### recycle ends
-            loss_3d_pos += recycle_loss
+            loss_3d_pos = init_loss + recycle_loss
 
             epoch_loss_3d_train += vec_3d.shape[0] * loss_3d_pos.item()
             N += vec_3d.shape[0]
 
             loss_total = loss_3d_pos
-            loss_total.backward()
+            loss_total.backward(retain_graph=True)
 
             optimizer.step()
 
