@@ -50,6 +50,7 @@ def project_2d(bs, predicted_3d):
     (2,3,17) = (2,3,3) @ (2,3,17)
     return (17,2)
     """
+    assert predicted_3d.shape[1:] == (17,3)
     intrinsic_matrix = torch.tensor([[1145.0494384765625, 0, 512.54150390625],
                                 [0, 1143.7811279296875, 515.4514770507812],
                                 [0, 0, 1]])
@@ -103,7 +104,7 @@ def train(start_epoch, epoch, train_loader, val_loader,
                     h = Human(1.8, "cpu")
                     pose_stack[b] = h.update_pose(predicted_3d[b].detach().cpu().numpy())
 
-                projected = project_2d(predicted_3d.size(0), predicted_3d)
+                projected = project_2d(predicted_3d.size(0), pose_stack)
                 predicted_3d, w_kc = model(projected)
 
                 recycle_loss += maev(predicted_3d, vec_3d, w_kc) 
