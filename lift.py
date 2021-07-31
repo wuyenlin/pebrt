@@ -143,7 +143,7 @@ def train(start_epoch, epoch, train_loader, val_loader,
         lr_scheduler.step()
         elapsed = (time() - start_time)/60
 
-        print("[{}] time {0:.2f} 3d_train {} 3d_valid {}".format(
+        print("[%d] time %.2f 3d_train %f 3d_valid %f" % (
                 ep + 1,
                 elapsed,
                 losses_3d_train[-1] * 1000,
