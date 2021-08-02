@@ -140,6 +140,7 @@ def train(start_epoch, epoch, train_loader, val_loader,
 
 def evaluate(test_loader, model, device):
     epoch_loss_e0 = 0.0
+    epoch_loss_n1 = 0.0
     epoch_loss_n2 = 0.0
 
     with torch.no_grad():
@@ -157,25 +158,30 @@ def evaluate(test_loader, model, device):
                 h = Human(1.8, "cpu")
                 pose_stack[b] = h.update_pose(predicted_3d_pos[b].detach().cpu().numpy())
             e0 = mpjpe(pose_stack, inputs_3d)
+            n1 = maev(predicted_3d_pos, vec_3d)
             n2 = mpbve(predicted_3d_pos, vec_3d, 0)
             
             epoch_loss_e0 += vec_3d.shape[0] * e0.item()
+            epoch_loss_n1 += vec_3d.shape[0] * n1.item()
             epoch_loss_n2 += vec_3d.shape[0] * n2.item()
             N += vec_3d.shape[0]
 
             e0 = (epoch_loss_e0 / N)*1000
+            n1 = epoch_loss_n1 / N
             n2 = (epoch_loss_n2 / N)*1000
 
     print("Protocol #0 Error (MPJPE):\t", e0, "\t(mm)")
+    print("New Metric #1 Error (MAEV):\t", n1)
     print("New Metric #2 Error (MPBVE):\t", n2, "\t(mm)")
     print("----------")
     
-    return e0, n2
+    return e0, n1, n2
 
 
 def run_evaluation(model, actions=None):
     """ Evalution on Human3.6M dataset """
     error_e0 = []
+    errors_n1 = []
     errors_n2 = []
     if actions is not None:
         # evaluting on h36m
@@ -184,17 +190,19 @@ def run_evaluation(model, actions=None):
             test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True, shuffle=False, \
                                     num_workers=args.num_workers, collate_fn=collate_fn)
             print("-----"+action+"-----")
-            e0, n2 = evaluate(test_loader, model, args.device)
+            e0, n1, n2 = evaluate(test_loader, model, args.device)
             error_e0.append(e0)
+            errors_n1.append(n1)
             errors_n2.append(n2)
         print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e0), 1), "(mm)")
+        print("New Metric #1   (MAEV) action-wise average:", round(np.mean(errors_n1), 1), "-")
         print("New Metric #2   (MPBVE) action-wise average:", round(np.mean(errors_n2), 1), "(mm)")
     else:
         # evaluting on MPI-INF-3DHP
         test_dataset = Data(args.dataset, train=False)
         test_loader = DataLoader(test_dataset, batch_size=512, drop_last=True,
                                 num_workers=args.num_workers, collate_fn=collate_fn)
-        e0, n2 = evaluate(test_loader, model, args.device)
+        e0, n1, n2 = evaluate(test_loader, model, args.device)
 
 
 def set_random_seeds(random_seed=0):
