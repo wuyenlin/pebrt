@@ -1,12 +1,8 @@
 import torch
 import torch.nn as nn
 import cmath
-try:
-    from common.embed import *
-    from common.human import *
-except ModuleNotFoundError:
-    from embed import *
-    from human import *
+from common.embed import *
+from common.human import *
 
 
 
@@ -61,14 +57,19 @@ class PEBRT(nn.Module):
     def gram_schmidt(self, arr) -> torch.tensor:
         """
         Detail implementation of Gram-Schmidt orthogonalization
+        :param arr: a tensor of shape (16,6)
+        :return Rs: a stack of flattened rotation matrix, i.e. (16,9)
         """
-        a_1, a_2 = arr[:3], arr[3:]
-        row_1 = self.normalize(a_1)
-        row_2 = self.normalize(a_2 - (row_1@a_2)*row_1)
-        row_3 = self.normalize(torch.cross(row_1,row_2))
-        R = torch.stack((row_1, row_2, row_3), 1) # SO(3)
+        import torch.nn.functional as F
+        a_1, a_2 = arr[:,:3], arr[:,3:]
+        row_1 = F.normalize(a_1, dim=1)
+        dot = torch.sum((row_1*a_2),dim=1).unsqueeze(1)
+        row_2 = F.normalize(a_2 - dot*row_1, dim=1)
+        row_3 = torch.cross(row_1, row_2)
+        R = torch.cat((row_1, row_2, row_3), 1) # stack + transpose
+        R = R.view(-1,3,3).transpose(1,2)
         # assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
-        return R
+        return R.reshape(-1,9)
 
 
     def process(self, arr_all):
@@ -86,15 +87,15 @@ class PEBRT(nn.Module):
         w_kc = torch.ones(arr_all.size(0),16)
 
         for b in range(arr_all.size(0)):
-            for k in range(16):
-                arr = arr_all[b,k,:]
-                assert len(arr) == 6, len(arr)
-                R = self.gram_schmidt(arr)
-                R_stack[b,k,:] = R.to(self.device).flatten()
+            # for k in range(16):
+            arr = arr_all[b,:]
+            assert arr.size(1) == 6
+            R = self.gram_schmidt(arr)
+            R_stack[b,:] = R.to(self.device)
             # Impose NN outputs SO(3) on kinematic model and get punishing weights
-            # h = Human(1.8, "cpu")
-            # h.update_pose(R_stack[b,:,:].flatten())
-            # w_kc[b,:] = torch.tensor(h.punish_list)
+            h = Human(1.8, "cpu")
+            h.update_pose(R_stack[b,:,:].flatten())
+            w_kc[b,:] = torch.tensor(h.punish_list)
         return R_stack, w_kc
 
 
@@ -104,16 +105,3 @@ class PEBRT(nn.Module):
 
         return x, w_kc
 
-if __name__ == "__main__":
-    from time import time
-    tlist = []
-    for _ in range(10):
-        now = time()
-        a = torch.rand(2,17,2)
-        model = PEBRT("cpu", 2)
-        output, _ = model(a)
-        elasped = time() - now
-        print(elasped, " seconds")
-        tlist.append(elasped)
-    
-    print(sum(tlist)/10)
