@@ -3,10 +3,10 @@ dataset/h36m/
 h36m/
 mpi_inf_3dhp_test_set/
 checkpoint/
-anth_checkpoint/
 weights/
+.DS_Store
+*/.DS_Store
 *.bin
-*.out
 
 # Byte-compiled / optimized / DLL files
 */__pycache__/
