@@ -6,79 +6,31 @@ The thesis aims to address the widely challenged computer vision task - 3D Human
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
 On top of that, we integrate human kinemtic constraints to improve prediction accuracies and proposed a new evaluation metric that focuses on human postures, independent of human body shape, age, or gender.
 
+<p align="center"><img src="doc/output.gif" width="55%" alt="" /></p>
 
 ## PEBRT (Pose Estimation by Bone Rotation using Transformer)
 
-PEBRT estimates rotation matrix parameters for each bone which are casted to a human kinematic model.
-Each rotation matrix is recovered by Gram-Schmidt orthogonalization.
-
-![](doc/output.gif)
-
-## PETR (Pose Estimation using TRansformer)
-
-PETR is an end-to-end lifting pipeline used to predict human 3D keypoints from RGB images.
-It uses pre-trained [HRNet](https://github.com/HRNet/HigherHRNet-Human-Pose-Estimation) as backbone and could be later finetuned.
-
-![](doc/demo_1.png)
+PEBRT estimates rotation matrix parameters for each bone which are applied to a human kinematic model.
+Each rotation matrix is recovered by Gram-Schmidt orthogonalization proposed by [Zhou et al.](https://openaccess.thecvf.com/content_CVPR_2019/papers/Zhou_On_the_Continuity_of_Rotation_Representations_in_Neural_Networks_CVPR_2019_paper.pdf).
 
 
-## Getting started
-
-Make sure there is 200GB on local hard drive in order to save the original dataset and its processed frames.
 
 ### Installation
-
-Clone the repository and install required modules.
+Clone the repository and install required dependencies to proceed.
 ```
 git clone https://github.com/wuyenlin/thesis
 cd thesis/
 pip3 install -r requirements.txt
 ```
+For dataset setup, please refer to [`DATASETS.md`](DATASETS.md).
 
-### Pretrained Weight
 
-The pretrained weight of HRNet is only required when running PETR.
+### Evaluation our pre-trained models
+Download pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1OYqnEO28A0Ft5XAw4YeBzkK9NNOknZqh?usp=sharing).
+For example, to run evaluation on 4 layers of Transformer Encoders:
 ```
-mkdir weights && cd weights/
+python3 lift.py --num_layers 4 --eval --checkpoint ./all_4_lay_epoch_latest.bin
 ```
-The pretrained weight of HRNet can be downloaded from their official GitHub page [here](https://github.com/leoxiaobin/deep-high-resolution-net.pytorch). 
-The weight used in this project is "pose_hrnet_w32_256x192.pth".
-Download it and place it in the `weights` folder.
-
-### Download dataset
-
-### 1. MPI-INF-3DHP
-The MPI-INF-3DHP dataset can be downloaded [here](http://gvv.mpi-inf.mpg.de/3dhp-dataset/).
-
-After downloading the dataset, run the following command to extract frames and create `.npz` files for each character:
-```
-python3 common/mpi_dataset.py
-```
-
-### 2. Human3.6M
-1. Download the Human3.6M dataset from their [official website](vision.imar.ro/human3.6m/) and follow the setup from [VideoPose3D](https://github.com/facebookresearch/VideoPose3D/blob/master/DATASETS.md) to create `data_2d_h36m_gt.npz` and `data_3d_h36m.npz`.
-
-or
-
-2. Download 2D detection files for Human3.6M from the same [page](https://github.com/facebookresearch/VideoPose3D/blob/master/DATASETS.md).
-
-After downloading the files, your directory should look like this:
-```
-```
-Now, run the following command to extract video frames and merge 2D/3D annotations into one single `.npz` file.
-```
-python3 common/h36m_dataset.py
-```
-
-## Evaluation on pre-trained models
-Run 
-```
-python3 lift.py --eval --checkpoint ./checkpoint/weight.bin
-```
-
-
-### New evaluation metrics
-We propose a new metric, called Mean Per Bone Vector Error (MPBVE), that assess the pose similarity indepedent from human body shape, age, or gender.
 
 
 ## Training from scratch
