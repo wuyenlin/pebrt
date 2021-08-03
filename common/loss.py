@@ -3,37 +3,6 @@ import torch
 from common.human import *
 
 
-def pck(predicted, target):
-    """
-    Modified from sunnychencool/Anatomy3D
-    (https://github.com/sunnychencool/Anatomy3D/blob/master/common/loss.py)
-    """
-    assert predicted.shape == target.shape
-    dis = torch.norm(predicted - target, dim=len(target.shape)-1)
-    # threshold
-    t = torch.Tensor([0.15]).cuda() if torch.cuda.is_available() else torch.Tensor([0.15])
-    out = (dis < t).float() * 1
-    return out.sum()/14.0
-
-
-def auc(predicted, target):
-    """
-    Modified from sunnychencool/Anatomy3D
-    (https://github.com/sunnychencool/Anatomy3D/blob/master/common/loss.py)
-    """
-    assert predicted.shape == target.shape
-    dis = torch.norm(predicted - target, dim=len(target.shape)-1)
-    outall = 0
-    for i in range(150):
-        # threshold
-        t = torch.Tensor([float(i)/1000]).cuda() if torch.cuda.is_available() \
-            else torch.Tensor([float(i)/1000])
-        out = (dis < t).float() * 1
-        outall+=out.sum()/14.0
-    outall = outall/150
-    return outall
-
-
 def mpjpe(predicted, target):
     """
     Mean per-joint position error (i.e. mean Euclidean distance),
