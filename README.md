@@ -20,8 +20,8 @@ For details of implementation please refer to [`DOCUMENTATIONS.md`](DOCUMENTATIO
 ### Installation
 Clone the repository and install required dependencies to proceed.
 ```
-git clone https://github.com/wuyenlin/thesis
-cd thesis/
+git clone https://github.com/wuyenlin/pebrt
+cd pebrt/
 pip3 install -r requirements.txt
 ```
 For dataset setup, please refer to [`DATASETS.md`](DATASETS.md).
