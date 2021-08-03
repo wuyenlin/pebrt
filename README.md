@@ -13,6 +13,8 @@ On top of that, we integrate human kinemtic constraints to improve prediction ac
 PEBRT estimates rotation matrix parameters for each bone which are applied to a human kinematic model.
 Each rotation matrix is recovered by Gram-Schmidt orthogonalization proposed by [Zhou et al.](https://openaccess.thecvf.com/content_CVPR_2019/papers/Zhou_On_the_Continuity_of_Rotation_Representations_in_Neural_Networks_CVPR_2019_paper.pdf).
 
+For details of implementation please refer to [`DOCUMENTATIONS.md`](DOCUMENTATIONS.md).
+
 
 
 ### Installation
