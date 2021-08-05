@@ -1,13 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
-try:
-    from common.hrnet import *
-    from common.embed import *
-except ModuleNotFoundError:
-    from hrnet import *
-    from embed import *
+from common.hrnet import *
+from common.embed import *
 
 
 class TransformerEncoder(nn.Module):
@@ -88,27 +83,3 @@ class PETR(nn.Module):
 
         return out_x
 
-
-if __name__ == "__main__":
-    from torchvision import transforms
-    from PIL import Image
-    from time import time
-
-    transforms = transforms.Compose([
-        transforms.Resize([256,256]),
-        transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-    ]) 
-    model = PETR(device="cuda:0")
-    model = model.cuda()
-    img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
-    img = transforms(img)
-    img = img.unsqueeze(0)
-    print(img.shape)
-    img = img.cuda()
-
-    start = time()
-    output = model(img)
-    elapsed = (time() - start)/60
-    print(elapsed)
-    print(output.shape)
