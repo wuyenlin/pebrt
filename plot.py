@@ -18,7 +18,7 @@ transforms = transforms.Compose([
 def att():
     import matplotlib.pyplot as plt
     model = PETR(device="cuda:0")
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
 
@@ -51,7 +51,8 @@ def plot3d(ax, bones, output):
         yS = extract_bone(output, bone, 1)
         zS = extract_bone(output, bone, 2)
         ax.plot(xS, yS, zS, linewidth=5)
-    ax.view_init(elev=-80, azim=-90)
+    # ax.view_init(elev=-80, azim=-90)
+    ax.view_init(elev=0, azim=80)
     # ax.autoscale()
     # plt.xlim(-1,1)
     # plt.ylim(-1,1)
@@ -76,7 +77,8 @@ def plot_human(ax, bones, output):
         yS = (output[index[0]][1],output[index[1]][1])
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS)
-    ax.view_init(elev=-80, azim=-90)
+    # ax.view_init(elev=-80, azim=-90)
+    ax.view_init(elev=0, azim=80)
     ax.autoscale()
     ax.set_zlim(-1,1)
     ax.set_xlabel("X")
@@ -87,7 +89,8 @@ def plot_human(ax, bones, output):
 def viz(bones, img_list, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device)
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
     # model.load_state_dict(torch.load('./petr/ft_1_h36m.bin')['model'])
     # model.load_state_dict(torch.load('./petr/epoch_45_h36m.bin')['model'])
     model = model.cuda()
@@ -213,5 +216,5 @@ if __name__ == "__main__":
         )
     }
     comp = False
-    viz(bones["mpi"], imgs[2], comp)
+    viz(bones["mpi"], imgs[9], comp)
     # att()
