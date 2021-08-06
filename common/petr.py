@@ -51,9 +51,9 @@ class PETR(nn.Module):
         
         self.device = device
         self.backbone = HRNet(32, 17, 0.1)
-        pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
-        self.backbone.load_state_dict(torch.load(pretrained_weight))
-        print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
+#        pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
+#        self.backbone.load_state_dict(torch.load(pretrained_weight))
+#        print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
         self.transformer = TransformerEncoder(num_layers=num_layers)
         print("INFO: Using {} layers of Transformer Encoder.".format(num_layers))
                                     
@@ -99,16 +99,11 @@ if __name__ == "__main__":
         transforms.ToTensor(),  
         transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
     ]) 
-    model = PETR(device="cuda:0")
-    model = model.cuda()
-    img = Image.open("dataset/S1/Seq1/imageSequence/video_8/frame006192.jpg")
-    img = transforms(img)
-    img = img.unsqueeze(0)
-    print(img.shape)
-    img = img.cuda()
+    a = torch.rand(1,3,256,256)
+    model = PETR(device="cpu")
 
     start = time()
-    output = model(img)
-    elapsed = (time() - start)/60
+    output = model(a.float())
+    elapsed = (time() - start)
     print(elapsed)
     print(output.shape)
