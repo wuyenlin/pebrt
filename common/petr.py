@@ -1,13 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
-try:
-    from common.hrnet import *
-    from common.embed import *
-except ModuleNotFoundError:
-    from hrnet import *
-    from embed import *
+from common.hrnet import *
+from common.embed import *
 
 
 class TransformerEncoder(nn.Module):
@@ -88,22 +83,3 @@ class PETR(nn.Module):
 
         return out_x
 
-
-if __name__ == "__main__":
-    from torchvision import transforms
-    from PIL import Image
-    from time import time
-
-    transforms = transforms.Compose([
-        transforms.Resize([256,256]),
-        transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
-    ]) 
-    a = torch.rand(1,3,256,256)
-    model = PETR(device="cpu")
-
-    start = time()
-    output = model(a.float())
-    elapsed = (time() - start)
-    print(elapsed)
-    print(output.shape)
