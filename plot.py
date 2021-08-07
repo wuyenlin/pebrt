@@ -102,7 +102,7 @@ def viz(savefig=False):
         ax = fig.add_subplot(3, 4, k)
         plt.imshow(Image.open(img_path[k-1]))
 
-# 2nd row - GT
+# 2nd row - PETR
         img_read = Image.open(img_path[k-1])
         img = transforms(img_read)
         img = img.unsqueeze(0)
@@ -112,7 +112,7 @@ def viz(savefig=False):
         ax = fig.add_subplot(3, 4, k+4, projection="3d")
         plot_kpt(ax, output)
 
-# 3rd row - pred
+# 3rd row - PEBRT
         pts = kpts[k-1].unsqueeze(0).cuda()
         output, _ = net(pts)
         h = Human(1.7, "cpu")
