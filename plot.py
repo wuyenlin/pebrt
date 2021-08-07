@@ -21,7 +21,6 @@ def att():
     model = model.cuda()
     model.eval()
 
-    # img = "dataset/S5/Seq2/imageSequence/video_7/frame004884.jpg"
     img = "dataset/S1/Seq1/imageSequence/video_8/frame000049.jpg"
     img_read = Image.open(img)
     img = transforms(img_read)
@@ -50,15 +49,9 @@ def plot3d(ax, bones, output):
         yS = extract_bone(output, bone, 1)
         zS = extract_bone(output, bone, 2)
         ax.plot(xS, yS, zS, linewidth=5)
-    # ax.view_init(elev=-80, azim=-90)
-    ax.view_init(elev=0, azim=80)
-    # ax.autoscale()
-    # plt.xlim(-1,1)
-    # plt.ylim(-1,1)
-    # ax.set_zlim(-1,1)
-    # ax.set_xticklabels([])
-    # ax.set_yticklabels([])
-    # ax.set_zticklabels([])
+    ax.view_init(elev=-80, azim=-90)
+    # ax.view_init(elev=20, azim=80)
+
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
     ax.set_ylim3d([-1.0, 1.0])
@@ -77,7 +70,7 @@ def plot_human(ax, bones, output):
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS)
     # ax.view_init(elev=-80, azim=-90)
-    ax.view_init(elev=0, azim=80)
+    ax.view_init(elev=20, azim=80)
     ax.autoscale()
     ax.set_zlim(-1,1)
     ax.set_xlabel("X")
@@ -87,11 +80,9 @@ def plot_human(ax, bones, output):
 
 def viz(bones, img_list, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETR(device)
-    # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
-    model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
-    # model.load_state_dict(torch.load('./petr/ft_1_h36m.bin')['model'])
-    # model.load_state_dict(torch.load('./petr/epoch_45_h36m.bin')['model'])
+    model = PETR(device, num_layers=8)
+    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    # model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
 
@@ -115,17 +106,6 @@ def viz(bones, img_list, compare=False, savefig=False):
         output = output.cpu().detach().numpy()
         ax = fig.add_subplot(num_row, len(img_list), k+len(img_list)+1, projection='3d')
         plot3d(ax, bones, output)
-
-# 3rd row
-        # if compare:
-        #     h = Human(1.8, "cpu")
-        #     output = model_2(img)
-        #     # output = h.update_pose(output.detach().numpy())
-        #     output = h.update_pose(output)
-        #     ax = fig.add_subplot(num_row, len(img_list), k+2*len(img_list), projection='3d')
-        #     plot_human(ax, bones, output)
-        #     plt.xlim(-1,1)
-        #     plt.ylim(-1,1)
 
     plt.show()
     if savefig:
@@ -198,22 +178,13 @@ if __name__ == "__main__":
         ]
 
     
-    bones = {
-        "mpi": (
+    bones = (
             (2,1), (1,0), (0,3), (3,4),  # spine + head
             (0,5), (5,6), (6,7), 
             (0,8), (8,9), (9,10), # arms
             (2,14), (11,12), (12,13),
             (2,11), (14,15), (15,16) # legs
-        ),
-        "h36m": (
-            (0,7), (7,8), (8,9), (9,10),  # spine + head
-            (8,14), (14,15), (15,16), 
-            (8,11), (11,12), (12,13), # arms
-            (0,1), (1,2), (2,3),
-            (0,4), (4,5), (5,6) # legs
         )
-    }
+
     comp = False
-    viz(bones["mpi"], imgs[9], comp)
-    # att()
+    viz(bones, imgs[3], comp)
