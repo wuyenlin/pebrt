@@ -162,7 +162,8 @@ class Human:
             low = self.constraints[bone][i][0]
             high = self.constraints[bone][i][1]
             no_bend = (low==high and low==0)
-            if high!=low or no_bend:
+            # if high!=low or no_bend:
+            if high!=low:
                 if round(angles[i],3) < low:
                     angles[i] = low
                     punish_w += 1.0
