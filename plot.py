@@ -4,7 +4,6 @@ from torchvision import transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 from common.petr import PETR
-from common.pebrt import PEBRT
 from common.human import *
 
 
