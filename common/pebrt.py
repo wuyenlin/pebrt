@@ -68,7 +68,7 @@ class PEBRT(nn.Module):
         row_3 = torch.cross(row_1, row_2)
         R = torch.cat((row_1, row_2, row_3), 1) # stack + transpose
         R = R.view(-1,3,3).transpose(1,2)
-        # assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
+        assert cmath.isclose(torch.linalg.det(R), 1, rel_tol=1e-04), torch.linalg.det(R)
         return R.reshape(-1,9)
 
 
@@ -87,7 +87,6 @@ class PEBRT(nn.Module):
         w_kc = torch.ones(arr_all.size(0),16)
 
         for b in range(arr_all.size(0)):
-            # for k in range(16):
             arr = arr_all[b,:]
             assert arr.size(1) == 6
             R = self.gram_schmidt(arr)
