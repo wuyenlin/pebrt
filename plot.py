@@ -5,6 +5,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from common.dataloader import *
 from torch.utils.data import DataLoader
+from common.petr import PETR
 from common.pebrt import PEBRT
 from common.human import *
 from common.misc import *
@@ -16,6 +17,33 @@ transforms = transforms.Compose([
     transforms.ToTensor(),  
     transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]),
 ]) 
+
+def extract_bone(pred, bone, k):
+    out = (pred[:,bone[0],k].tolist()[0], pred[:,bone[1],k].tolist()[0])
+    return out
+
+def plot_kpt(ax, output):
+    ax.scatter(output[:,:,0], output[:,:,1], output[:,:,2])
+    bones = (
+        (2,1), (1,0), (0,3), (3,4),  # spine + head
+        (0,5), (5,6), (6,7), 
+        (0,8), (8,9), (9,10), # arms
+        (2,14), (11,12), (12,13),
+        (2,11), (14,15), (15,16) # legs
+    )
+    for bone in bones:
+        xS = extract_bone(output, bone, 0)
+        yS = extract_bone(output, bone, 1)
+        zS = extract_bone(output, bone, 2)
+        ax.plot(xS, yS, zS, linewidth=5)
+ 
+    ax.view_init(elev=20, azim=60)
+    ax.set_xlim3d([-1.0, 1.0])
+    ax.set_xlabel("X")
+    ax.set_ylim3d([-1.0, 1.0])
+    ax.set_ylabel("Y")
+    ax.set_zlim3d([-1.0, 1.0])
+    ax.set_zlabel("Z")
 
 
 
@@ -46,10 +74,11 @@ def plot3d(ax, output):
 
 
 def viz(savefig=False):
-    # train_npz = "./dataset/S1/Seq1/imageSequence/S1.npz"
-    # train_npz = "./h36m/data_h36m_frame_S1.npz"
+    actions = ["Directions", "Discussion", "Eating", "Greeting", "Phoning",
+            "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
+            "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
     train_npz = "./h36m/data_h36m_frame_all.npz"
-    train_dataset = Data(train_npz, transforms, False)
+    train_dataset = Data(train_npz, transforms, False, "Phoning")
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
     print("data loaded!")
@@ -58,28 +87,39 @@ def viz(savefig=False):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = PEBRT(device, num_layers=2)
-    net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_20.bin")["model"])
+    net.load_state_dict(torch.load("./peltra/all_2_lay_epoch_latest.bin")["model"])
     net = net.cuda()
     net.eval()
 
+    petr = PETR(device)
+    petr.load_state_dict(torch.load("./petr/all_2_lay_latest_h36m.bin")["model"])
+    petr = petr.cuda()
+    petr.eval()
+
+    print(img_path)
     fig = plt.figure()
     for k in range(1,5):
-        ax = fig.add_subplot(2, 4, k)
+        ax = fig.add_subplot(3, 4, k)
         plt.imshow(Image.open(img_path[k-1]))
 
 # 2nd row - GT
-        # output = gt_3d[k-1]
-        # ax = fig.add_subplot(3, 4, k+4, projection="3d")
-        # plot3d(ax, output)
+        img_read = Image.open(img_path[k-1])
+        img = transforms(img_read)
+        img = img.unsqueeze(0)
+        img = img.cuda()
+        output = petr(img)
+        output = output.cpu().detach().numpy()
+        ax = fig.add_subplot(3, 4, k+4, projection="3d")
+        plot_kpt(ax, output)
 
 # 3rd row - pred
         pts = kpts[k-1].unsqueeze(0).cuda()
         output, _ = net(pts)
-        h = Human(1.8, "cpu")
+        h = Human(1.7, "cpu")
         output = h.update_pose(output)
 
-        ax = fig.add_subplot(2, 4, k+4, projection="3d")
-        plot3d(ax, output)
+        ax = fig.add_subplot(3, 4, k+8, projection="3d")
+        plot3d(ax, output.detach().cpu().numpy())
 
     plt.show()
 

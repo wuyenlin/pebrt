@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
 from common.hrnet import *
 from common.embed import *
 
@@ -10,7 +9,7 @@ class TransformerEncoder(nn.Module):
     """
     Pose Estimation with Transformer
     """
-    def __init__(self, d_model=34, nhead=2, num_layers=6, 
+    def __init__(self, d_model=34, nhead=2, num_layers=2, 
                     num_joints_in=17, num_joints_out=17):
         super().__init__()
 
@@ -42,15 +41,16 @@ class PETR(nn.Module):
     """
     PETR - Pose Estimation using TRansformer
     """
-    def __init__(self, device):
+    def __init__(self, device, num_layers=2):
         super().__init__()
         
         self.device = device
         self.backbone = HRNet(32, 17, 0.1)
-        pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
-        self.backbone.load_state_dict(torch.load(pretrained_weight))
-        print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
-        self.transformer = TransformerEncoder(num_layers=8)
+#        pretrained_weight = "../weights/pose_hrnet_w32_256x192.pth"
+#        self.backbone.load_state_dict(torch.load(pretrained_weight))
+#        print("INFO: Pre-trained weights of HRNet loaded from {}".format(pretrained_weight))
+        self.transformer = TransformerEncoder(num_layers=num_layers)
+        print("INFO: Using {} layers of Transformer Encoder.".format(num_layers))
                                     
 
     def _decode_joints(self, heatmap):
@@ -82,3 +82,4 @@ class PETR(nn.Module):
         out_x = self.transformer(x.float())
 
         return out_x
+
