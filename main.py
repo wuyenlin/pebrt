@@ -116,6 +116,7 @@ def train(start_epoch, epoch, train_loader, val_loader, model, device, optimizer
 
 def evaluate(test_loader, model, device):
     epoch_loss_3d_pos = 0.0
+    epoch_loss_3d_pck = 0.0
 
     with torch.no_grad():
         model.eval()
@@ -128,27 +129,34 @@ def evaluate(test_loader, model, device):
             predicted_3d_pos = model(images)
 
             error = mpjpe(predicted_3d_pos, inputs_3d)
+            error_2 = pck(predicted_3d_pos, inputs_3d)
 
             epoch_loss_3d_pos += inputs_3d.shape[0] * error.item()
+            epoch_loss_3d_pck += inputs_3d.shape[0] * error_2.item()
             N += inputs_3d.shape[0]
     e1 = (epoch_loss_3d_pos / N)*1000
+    e2 = (epoch_loss_3d_pck / N)*1000
 
     print("Protocol #1 Error (MPJPE):", e1, "mm")
+    print("PCK:", e2, " -")
     print("----------")
 
-    return e1
+    return e1, e2
 
 
 def run_evaluation(actions, model):
     error_e1 = []
+    error_e2 = []
     for action in actions:
         test_dataset = Data(args.dataset, transforms, False, action)
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=args.num_workers, collate_fn=collate_fn)
         print("-----"+action+"-----")
-        e1 = evaluate(test_loader, model, args.device)
+        e1, e2 = evaluate(test_loader, model, args.device)
         error_e1.append(e1)
+        error_e2.append(e2)
         print()
     print("Protocol #1   (MPJPE) action-wise average:", round(np.mean(error_e1), 1), "mm")
+    print("PCK:", round(np.mean(error_e2), 2), " -")
 
 
 def main(args):
