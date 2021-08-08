@@ -59,4 +59,3 @@ python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 lift.py
 - [ ] Add instructions for animation
 - [ ] Add MPBVE table
 - [ ] Separate human model configurations into yaml files
-- [ ] Online implementations of PETR (training & finetuning now)
