@@ -49,8 +49,8 @@ def plot3d(ax, bones, output):
         yS = extract_bone(output, bone, 1)
         zS = extract_bone(output, bone, 2)
         ax.plot(xS, yS, zS, linewidth=5)
-    ax.view_init(elev=-80, azim=-90)
-    # ax.view_init(elev=20, azim=80)
+    # ax.view_init(elev=-80, azim=-90)
+    ax.view_init(elev=20, azim=80)
 
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
@@ -80,9 +80,9 @@ def plot_human(ax, bones, output):
 
 def viz(bones, img_list, compare=False, savefig=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = PETR(device, num_layers=8)
-    model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
-    # model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
+    model = PETR(device, num_layers=2)
+    # model.load_state_dict(torch.load('./checkpoint/ft_5.bin')['model'])
+    model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
     model = model.cuda()
     model.eval()
 
@@ -165,9 +165,9 @@ if __name__ == "__main__":
 
         #8
             ["./h36m/S1/WalkTogether.54138969/frame000697.jpg",
-            "./h36m/S1/Walking.54138969/frame001092.jpg",
-            "./h36m/S1/Purchases.54138969/frame000437.jpg",
-            "./h36m/S1/SittingDown.54138969/frame001702.jpg"],
+            "./h36m/S8/Walking.54138969/frame002348.jpg",
+            "./h36m/S7/Photo 1.54138969/frame001136.jpg",
+            "./h36m/S6/Sitting 1.54138969/frame000293.jpg"],
 
         #9
             ["./h36m/S7/Directions 1.54138969/frame000655.jpg",
@@ -187,4 +187,4 @@ if __name__ == "__main__":
         )
 
     comp = False
-    viz(bones, imgs[3], comp)
+    viz(bones, imgs[8], comp)
