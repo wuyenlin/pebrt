@@ -1,5 +1,8 @@
 # One pose fits all
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MOVWrHnhsj_RVqZw90_BlMBUkgjv6Qkh?usp=sharing)
+
+
 This repository contains files used in the thesis done by Yen-Lin Wu in partial fulfillment of his MSc programme in Mechanical Engineering at Delft University of Technology (2021), supervised by Osama Mazhar and Jens Kober. 
 
 The thesis aims to address the widely challenged computer vision task - 3D Human Pose Estimation. 
