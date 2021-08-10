@@ -21,6 +21,7 @@ h36m/
 └── data_h36m_frame_all.npz
 doc/
 ```
+Then you are ready to go!
 
 
 ### 2. MPI-INF-3DHP
