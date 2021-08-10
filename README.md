@@ -6,7 +6,7 @@ The thesis aims to address the widely challenged computer vision task - 3D Human
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
 On top of that, we integrate human kinemtic constraints to improve prediction accuracies and proposed a new evaluation metric that focuses on human postures, independent of human body shape, age, or gender.
 
-<p align="center"><img src="doc/output.gif" width="55%" alt="" /></p>
+<p align="center"><img src="doc/pebrt_h1.png" width="100%" alt="" /></p>
 
 ## PEBRT (Pose Estimation by Bone Rotation using Transformer)
 
