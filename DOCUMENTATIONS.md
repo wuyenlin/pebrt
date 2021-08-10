@@ -51,7 +51,7 @@ The GT rotation matrices are applied to our human model with height set to 1.5m 
 ## New evaluation metrics
 We propose a new metric, called Mean Per Bone Vector Error (MPBVE), that assess the pose similarity indepedent from human body shape, age, or gender.
 
-<p align="center"><img src="doc/vectorized.png" width="70%" alt="" /></p>
+<p align="center"><img src="doc/vectorized.png" width="50%" alt="" /></p>
 
 To implement this metric on given 3D keypoints, the following procedures are applied
 1. Vectorize - obtain bone position vectors based on a predefined order

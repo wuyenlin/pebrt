@@ -56,6 +56,8 @@ python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 lift.py
 - [x] Added human model for both Human3.6M and MPI-IND-3DHP datasets
 - [x] Fix camera angle issue / add 3D joint position in loss 
 - [x] Test evaluation metrics on existing methods
+- [ ] Finish dataset setup instruction for MPI
+- [ ] Complete Documentations
 - [ ] Add instructions for animation
 - [ ] Add MPBVE table
 - [ ] Separate human model configurations into yaml files
