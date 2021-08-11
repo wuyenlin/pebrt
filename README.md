@@ -4,6 +4,7 @@
 
 
 This repository contains files used in the thesis done by Yen-Lin Wu in partial fulfillment of his MSc programme in Mechanical Engineering at Delft University of Technology (2021), supervised by Osama Mazhar and Jens Kober. 
+Thesis is available [here](http://resolver.tudelft.nl/uuid:8bcc7171-404e-4bb6-b2e2-e5877f5607d6).
 
 The thesis aims to address the widely challenged computer vision task - 3D Human Pose Estimation. 
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
