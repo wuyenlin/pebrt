@@ -55,6 +55,13 @@ If you are running on a SLI enabled machine or computing cluster, run the follow
 python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 lift.py
 ```
 
+Following arguments are available:
+- `--bs` : batch size. Default: 2.
+- `--num_layers` : number of Transformer encoder layers. Default: 2.
+- `--resume` : accepts the path to a trained weight when you want to resume training.
+- `checkpoint` : accepts the path to a trained weight when you want to evaluate or visualize the results.
+- `--eval` : activate evaluation mode, to be used together with `--checkpoint`.
+
 ## Animate results
 
 With (pre-)trained weights, you can visualize and animate the results on our huan model using the code below.
@@ -76,8 +83,8 @@ The output looks something like below.
 - [x] Added human model for both Human3.6M and MPI-IND-3DHP datasets
 - [x] Fix camera angle issue / add 3D joint position in loss 
 - [x] Test evaluation metrics on existing methods
-- [ ] Finish dataset setup instruction for MPI
+- [x] Add instructions for animation
 - [ ] Complete Documentations
-- [ ] Add instructions for animation
-- [ ] Add MPBVE table
+- [ ] Fix animation order issue
+- [ ] Finish dataset setup instruction
 - [ ] Separate human model configurations into yaml files
