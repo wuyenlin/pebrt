@@ -83,7 +83,6 @@ def animate(args, bones, format="mp4"):
     fig = plt.figure()
     # animate dataset image stream
     ax1 = fig.add_subplot(121)
-    file_list = sorted(os.listdir("./dataset/S1/Seq1/imageSequence/video_0/"))
     file_list = sorted(os.listdir("."+path))
     im = ax1.imshow(get_frame(path, file_list, 0))
 
@@ -109,7 +108,7 @@ def animate(args, bones, format="mp4"):
     output = output.detach().numpy()
 
     # Initialize scatters
-    scatters = [ ax2.scatter(output[p,0:1], output[p,1:2], output[p,2:]) for p in range(output.shape[0]) ]
+    scatters = [ ax2.scatter(output[p,0:1], output[p,1:2], output[p,2:], c='r') for p in range(output.shape[0]) ]
 
     # Initialize lines
     lines_3d = [[] for _ in range(len(bones))]
