@@ -55,6 +55,17 @@ If you are running on a SLI enabled machine or computing cluster, run the follow
 python3 -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 lift.py
 ```
 
+## Animate results
+
+With (pre-)trained weights, you can visualize and animate the results on our huan model using the code below.
+Run the following code, where `X` is the number of Transformer encoder layer:
+```
+python3 animation.py --checkpoint /path/to/weights/ --num_layers X --bs 64
+```
+The output looks something like below.
+
+<p align="center"><img src="doc/output.gif" width="55%" alt="" /></p>
+
 
 ### TODO
 - [x] Animate results (see animation.py)
