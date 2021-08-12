@@ -8,7 +8,8 @@ Thesis is available [here](http://resolver.tudelft.nl/uuid:8bcc7171-404e-4bb6-b2
 
 The thesis aims to address the widely challenged computer vision task - 3D Human Pose Estimation. 
 Different from most existing methods, we propose a novel estimating technique that discards convolutional layers, using only Transformer layers.
-On top of that, we integrate human kinemtic constraints to improve prediction accuracies and proposed a new evaluation metric that focuses on human postures, independent of human body shape, age, or gender.
+On top of that, we integrate a human kinemtic model that encapsulates bone length and joint angle constraints to improve prediction accuracies.
+We also propose a new evaluation metric, Mean Per Bone Vector Error (MPBVE), that focuses on human postures, independent of human body shape, age, or gender.
 
 <p align="center"><img src="doc/pebrt_h1.png" width="100%" alt="" /></p>
 
@@ -21,25 +22,29 @@ For details of implementation please refer to [`DOCUMENTATIONS.md`](DOCUMENTATIO
 
 
 
-### Installation
+## Quick start
 Clone the repository and install required dependencies to proceed.
 ```
 git clone https://github.com/wuyenlin/pebrt
 cd pebrt/
 pip3 install -r requirements.txt
 ```
+
+### Dataset setup
+This instruction only focuses on the setup of Human3.6M.
 For dataset setup, please refer to [`DATASETS.md`](DATASETS.md).
+While MPI-INF-3DHP can be used to train, the evaluation on their test set is not implemented here.
 
 
 ### Evaluation our pre-trained models
 Download pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1OYqnEO28A0Ft5XAw4YeBzkK9NNOknZqh?usp=sharing).
-For example, to run evaluation on 4 layers of Transformer Encoders:
+For example, to run evaluation on 4 layers of Transformer encoders:
 ```
-python3 lift.py --num_layers 4 --eval --checkpoint ./all_4_lay_epoch_latest.bin
+python3 lift.py --num_layers 4 --eval --checkpoint /path/to/all_4_lay_epoch_latest.bin
 ```
 
 
-## Training from scratch
+### Training from scratch
 To start training the model with 1 layer of Transformer Encoder, run
 ```
 python3 lift.py --num_layers 1
