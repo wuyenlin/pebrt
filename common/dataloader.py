@@ -89,8 +89,6 @@ class Data:
                     self.gt_vecs3d.append((convert_gt(gt_3d, t_info)))
                     self.img_path.append(data[vid][frame]["directory"])
 
-        print("INFO: Using ", num_frame, " frames")
-
     def __getitem__(self, index):
         try:
             img_path = self.img_path[index]
