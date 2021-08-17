@@ -120,6 +120,7 @@ def viz(savefig=False):
         ax = fig.add_subplot(3, 4, k+8, projection="3d")
         plot3d(ax, output.detach().cpu().numpy())
 
+    plt.tight_layout(pad=0.7, w_pad=0.7, h_pad=1.0)
     plt.show()
 
     if savefig:

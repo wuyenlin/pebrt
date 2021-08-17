@@ -80,7 +80,7 @@ def viz(savefig=False):
             "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
             "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
     train_npz = "./h36m/data_h36m_frame_all.npz"
-    train_dataset = Data(train_npz, transforms, False, "Phoning")
+    train_dataset = Data(train_npz, transforms, False)
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
     print("data loaded!")
@@ -113,6 +113,7 @@ def viz(savefig=False):
         ax = fig.add_subplot(3, 4, k+8, projection="3d")
         plot_kpt(ax, output)
 
+    plt.tight_layout(pad=0.7, w_pad=0.7, h_pad=1.0)
     plt.show()
 
     if savefig:
