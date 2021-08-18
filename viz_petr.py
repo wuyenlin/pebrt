@@ -51,7 +51,7 @@ def plot_kpt(ax, output):
 def plot3d(ax, output):
     """plot human"""
     for p in output:
-        ax.scatter(p[0], p[1], p[2], c="r", alpha=0.5)
+        ax.scatter(p[0], p[1], p[2], c="k", alpha=0.5)
 
     bones = (
         (2,1), (1,0), (0,3), (3,4),  # spine + head
@@ -65,7 +65,6 @@ def plot3d(ax, output):
         yS = (output[index[0]][1],output[index[1]][1])
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS, linewidth=5)
-    # ax.view_init(elev=-90, azim=-90)
     ax.view_init(elev=20, azim=60)
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
@@ -88,8 +87,8 @@ def viz(savefig=False):
     img_path, kpts, gt_3d, vec_3d = dataiter.next()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    petr = PETR(device, num_layers=2)
-    petr.load_state_dict(torch.load("./petr/all_2_lay_latest_h36m.bin")["model"])
+    petr = PETR(device, num_layers=4)
+    petr.load_state_dict(torch.load("./petr/all_4_lay_latest_h36m.bin")["model"])
     petr = petr.cuda()
     petr.eval()
 
