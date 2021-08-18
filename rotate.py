@@ -38,7 +38,7 @@ def plot3d(ax, bones, output):
 
 
 
-def viz(bones, img_list, savefig=False):
+def viz(bones, img_list):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = PETR(device, num_layers=2)
     model.load_state_dict(torch.load('./petr/all_2_lay_latest_h36m.bin')['model'])
