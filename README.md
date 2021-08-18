@@ -10,7 +10,7 @@ To run PEBRT, please check out branch 'gram'.
 PETR is an end-to-end lifting pipeline used to predict human 3D keypoints from RGB images.
 It uses pre-trained [HRNet](https://github.com/HRNet/HigherHRNet-Human-Pose-Estimation) as backbone and could be later finetuned.
 
-<p align="center"><img src="doc/demo.png" width="70%" alt="" /></p>
+<p align="center"><img src="doc/demo.gif" width="70%" alt="" /></p>
 <p align="center"><img src="doc/demo_1.png" width="100%" alt="" /></p>
 
 
