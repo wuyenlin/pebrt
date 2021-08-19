@@ -48,10 +48,13 @@ def plot_kpt(ax, output):
 
 
 
-def plot3d(ax, output):
+def plot3d(ax, output, gt=False):
     """plot human"""
     for p in output:
-        ax.scatter(p[0], p[1], p[2], c="r", alpha=0.5)
+        if gt:
+            ax.scatter(p[0], p[1], p[2], c="k", alpha=0.5)
+        else:
+            ax.scatter(p[0], p[1], p[2], c="r", alpha=0.5)
 
     bones = (
         (2,1), (1,0), (0,3), (3,4),  # spine + head
@@ -65,7 +68,6 @@ def plot3d(ax, output):
         yS = (output[index[0]][1],output[index[1]][1])
         zS = (output[index[0]][2],output[index[1]][2])
         ax.plot(xS, yS, zS, linewidth=5)
-    # ax.view_init(elev=-90, azim=-90)
     ax.view_init(elev=20, azim=60)
     ax.set_xlim3d([-1.0, 1.0])
     ax.set_xlabel("X")
@@ -101,7 +103,7 @@ def viz(savefig=False):
 
 # 2nd row - GT
         ax = fig.add_subplot(3, 4, k+4, projection="3d")
-        plot3d(ax, gt_3d[k-1])
+        plot3d(ax, gt_3d[k-1], gt=True)
 
 # 3rd row - PEBRT
         pts = kpts[k-1].unsqueeze(0).cuda()

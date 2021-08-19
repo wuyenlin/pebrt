@@ -79,7 +79,7 @@ def viz(savefig=False):
             "Photo",  "Posing", "Purchases", "Sitting", "SittingDown", 
             "Smoking", "Waiting", "Walking", "WalkDog", "WalkTogether"]
     train_npz = "./h36m/data_h36m_frame_all.npz"
-    train_dataset = Data(train_npz, transforms, False)
+    train_dataset = Data(train_npz, transforms, False, "Greeting")
     trainloader = DataLoader(train_dataset, batch_size=4, 
                         shuffle=True, num_workers=8, drop_last=True, collate_fn=collate_fn)
     print("data loaded!")
